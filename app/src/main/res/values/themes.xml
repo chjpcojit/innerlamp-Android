@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+      Launch = ảnh tĩnh handoff (drawable/launch_background). Android 12+ luôn chèn splash
+      hệ thống (chỉ vẽ được nền phẳng + icon) nên icon để trong suốt; ảnh sáng/tối
+      do MainActivity phủ ngay sau đó (LaunchImageOverlay). Bản tối ở values-night.
+    -->
+    <style name="Theme.InnerLamp" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowSplashScreenBackground">@color/launch_fill</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+        <item name="android:windowSplashScreenAnimationDuration">200</item>
+        <item name="android:windowBackground">@drawable/launch_background</item>
+    </style>
+</resources>

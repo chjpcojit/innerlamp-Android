@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+   Loại trừ file prefs bảo mật (innerlamp_secure.xml) khỏi auto backup. Xem
+   data_extraction_rules.xml để biết lý do.
+-->
+<full-backup-content>
+    <exclude domain="sharedpref" path="innerlamp_secure.xml" />
+</full-backup-content>

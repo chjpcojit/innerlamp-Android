@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Nền cửa sổ lúc khởi động (API 29–30 hiện ngay khi bấm icon; API 31+ nằm dưới splash hệ thống).
+  Ảnh tĩnh lấy từ Docs/design_handoff_innerlamp/launch/ — bản sáng ở drawable-nodpi,
+  bản tối ở drawable-night-nodpi (cùng tên launch_image). gravity="fill" kéo giãn nhẹ
+  (~3%) trên máy 20:9 vì XML bitmap không có chế độ cover.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/launch_fill" />
+    <item>
+        <bitmap
+            android:gravity="fill"
+            android:src="@drawable/launch_image" />
+    </item>
+</layer-list>

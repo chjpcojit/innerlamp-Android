@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Bản TỐI của launch (xem values/themes.xml): fill #100E0B, ảnh ở drawable-night-nodpi. -->
+    <style name="Theme.InnerLamp" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowSplashScreenBackground">@color/launch_fill</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+        <item name="android:windowSplashScreenAnimationDuration">200</item>
+        <item name="android:windowBackground">@drawable/launch_background</item>
+    </style>
+</resources>

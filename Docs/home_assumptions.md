@@ -1,0 +1,19 @@
+# Trang chủ (Home) — giả định & việc còn mở
+
+Nguồn thiết kế: `Docs/InnerLamp icon consistency/InnerLamp Prototype.dc.html` (màn `home`, bản mới có link "Sổ giỗ" và trạng thái rỗng). Code: `ui/screens/home/`, `domain/calendar/`.
+
+| # | Giả định | Lý do | Cách xác thực / bước tiếp |
+|---|---|---|---|
+| 1 | Ảnh (tượng Phật, ảnh chùa, thumbnail bài viết, ảnh chùa trong carousel) là gradient placeholder | Prototype dùng `<image-slot>`, chưa có ảnh thật và app chưa có thư viện tải ảnh | Thêm Coil + asset/API, thay `PlaceholderImage` và nền hero |
+| 2 | Số liệu thực hành (12/20 phút, chuỗi 42 ngày, 7 thanh tuần) và 27 hạt ban đầu là dữ liệu mẫu từ prototype | Chưa có repository thực hành | Nối Room/`SessionRepository`; tràng hạt nên ghi local-first |
+| 3 | Chùa, bài viết, câu kinh lấy từ `HomeSampleData` | Chưa có backend | Thay bằng repository khi có API |
+| 4 | Tên trong lời chào mặc định "quý Phật tử"; avatar chữ "A" | Chưa có nguồn pháp danh (prefs/auth) | Đọc từ hồ sơ người dùng, truyền vào `HomeUiState.create(displayName=…)` |
+| 5 | "Vào xem trước" đi thẳng Home như người dùng đã đăng nhập | Chưa có chế độ preview/guest | Định nghĩa hành vi guest khi có auth |
+| 6 | Bottom nav (Thư viện, Đèn, Đạo tràng, Tôi) và mọi callback đích của Home là no-op | Các route này chưa tồn tại | Nối vào `HomeCallbacks` khi có route |
+| 7 | Ngày "hôm nay" chốt lúc tạo ViewModel, không tự cập nhật qua nửa đêm | Đủ cho bản đầu | Thêm quan sát đổi ngày nếu app hay mở qua đêm |
+| 8 | Âm lịch dùng múi giờ cố định GMT+7 | Thuật toán Hồ Ngọc Đức cho lịch Việt Nam; port từ prototype | Test đối chiếu Tết 2024/2025/2026, tháng nhuận 2023 |
+| 9 | Carousel sự kiện đồng bộ chiều cao theo thẻ cao nhất đã đo | `LazyRow` không stretch như flex | Thẻ chưa cuộn tới có thể làm chiều cao tăng nhẹ khi xuất hiện |
+| 10 | `IlBottomNav` giữ nguyên đệm đáy 30dp (không cộng thêm inset thanh điều hướng) | Component dùng chung, đã có từ trước | Kiểm tra trên máy dùng nút 3 phím |
+| 11 | Ngày 30 âm của tháng thiếu tính là ngày 29 (ngày trai, lễ "30/7", "30/9"); tháng nhuận không lặp lại lễ vía (mùng 1/rằm nhuận vẫn là ngày trai) | Đồng bộ quy tắc đã chốt bên iOS (assumptions A1-A3); chưa được product/người hiểu truyền thống xác nhận | Xác nhận với product; test quét 2021-2030 trong `LunarCalendarTest`, `GetBuddhistEventMonthsUseCaseTest` |
+| 12 | Link "Sổ giỗ" trên dải tuần là no-op (`HomeCallbacks.onGio`) | Màn Sổ giỗ chạp (`gio`) có trong prototype mới nhưng app chưa có route | Thêm `GioRoute` + màn hình, nối vào `MainActivity` |
+| 13 | 3 khối chùa/Phật/bài viết: skeleton khi tải → dữ liệu; rỗng hoặc lỗi → thẻ rỗng. Lỗi mạng và "không có dữ liệu" hiện chung một thẻ rỗng. Nguồn hiện là `HomeSampleData.load()` giả lập trễ 900ms | Chưa có API; prototype chỉ có cờ `homeEmpty` | Thay `HomeSampleData::load` (truyền vào `HomeViewModel.contentLoader` ở `HomeScreen`) bằng repository thật; cân nhắc tách thông điệp lỗi mạng với rỗng |

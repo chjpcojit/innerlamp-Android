@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?><!--
+   Loại trừ file prefs bảo mật (innerlamp_secure.xml) khỏi cloud backup và device
+   transfer: khoá KeyStore không di chuyển được, blob khôi phục sẽ không giải mã.
+   Dữ liệu thường (innerlamp_prefs) vẫn được backup.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="sharedpref" path="innerlamp_secure.xml" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="innerlamp_secure.xml" />
+    </device-transfer>
+</data-extraction-rules>
