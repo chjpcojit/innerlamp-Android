@@ -50,11 +50,11 @@ object LoginRoute : IlDestination
 object HomeRoute : IlDestination
 
 /**
- * Đạo tràng — tab gốc của bottom nav. Vào từ bottom nav (tab "Đạo tràng").
+ * Chùa — tab gốc của bottom nav. Vào từ bottom nav (tab "Chùa").
  * Dùng transition mặc định (crossfade).
  */
 @Serializable
-object SanghaRoute : IlDestination
+object ChuaRoute : IlDestination
 
 /**
  * Thư viện — tab gốc thứ hai của bottom nav. Vào từ bottom nav / "Thư viện" trên
@@ -73,6 +73,14 @@ object LibraryRoute : IlDestination
  */
 @Serializable
 object EventsRoute : IlDestination
+
+/**
+ * Lịch lễ Phật giáo — toàn bộ lễ vía + Mùng Một/Rằm từ tháng 1 năm hiện tại đến hết 2 năm kế tiếp,
+ * kèm chùa tổ chức. Vào từ Trang chủ (khối "Sự kiện Phật giáo" → "Tất cả") và Chi tiết Phật/Bồ Tát
+ * ("Lịch lễ"). Dùng transition mặc định (crossfade).
+ */
+@Serializable
+object FestivalsRoute : IlDestination
 
 /**
  * Chuông mõ — màn thực hành (nhịp mõ + thỉnh chuông). Vào từ Trang chủ (thẻ "Chuông mõ").
@@ -179,3 +187,69 @@ data class SutraRoute(val sutraId: String) : IlDestination
  */
 @Serializable
 data class ReaderRoute(val sutraId: String) : IlDestination
+
+/**
+ * Chi tiết ngày âm — màn xem can chi, giờ hoàng đạo, tuổi xung khắc, hướng xuất hành của một ngày.
+ * Nhận [epochDay] (`LocalDate.toEpochDay()`) của ngày đang chọn; vào từ Trang chủ (thẻ âm lịch).
+ * Dùng transition mặc định (crossfade).
+ *
+ * Là route có tham số nên không có instance singleton — đăng ký graph bằng
+ * `composable<LunarDetailRoute> { ... }` thay vì `ilComposable(screen)`.
+ */
+@Serializable
+data class LunarDetailRoute(val epochDay: Long) : IlDestination
+
+/**
+ * Chư Phật & Bồ Tát — màn danh sách (lưới 2 cột, lọc Phật / Bồ Tát). Vào từ Trang chủ
+ * (khối "Thư viện Phật & Bồ Tát" → "Xem tất cả"). Dùng transition mặc định (crossfade).
+ */
+@Serializable
+object BuddhaListRoute : IlDestination
+
+/**
+ * Chi tiết Phật / Bồ Tát — tiểu sử, đại nguyện, thần chú, kinh liên quan. Nhận [buddhaId] để
+ * biết vị nào đang mở; vào từ Trang chủ (carousel) và màn Chư Phật & Bồ Tát. Dùng transition
+ * mặc định (crossfade).
+ *
+ * Là route có tham số nên không có instance singleton — đăng ký graph bằng
+ * `composable<BuddhaRoute> { ... }` thay vì `ilComposable(screen)`.
+ */
+@Serializable
+data class BuddhaRoute(val buddhaId: String) : IlDestination
+
+/**
+ * Tất cả chùa — danh bạ chùa có ô tìm kiếm và lọc theo miền. Vào từ Trang chủ (khối
+ * "Chùa Việt Nam" → "Xem tất cả"). Dùng transition mặc định (crossfade).
+ */
+@Serializable
+object TempleListRoute : IlDestination
+
+/**
+ * Tất cả bài viết Phật pháp — danh sách cuộn vô hạn (20 bài mỗi lượt). Vào từ Trang chủ
+ * (khối "Bài viết Phật pháp hay" → "Xem tất cả"). Dùng transition mặc định (crossfade).
+ */
+@Serializable
+object ArticleListRoute : IlDestination
+
+/**
+ * Kinh sách — danh mục toàn bộ bản kinh, có tìm không dấu + lọc chủ đề/tông phái/độ dài.
+ * Vào từ Thư viện (ô "Kinh sách" và "Kinh thường tụng → Kinh sách"). Dùng transition mặc định.
+ */
+@Serializable
+object SutraListRoute : IlDestination
+
+/**
+ * Sổ giỗ chạp — danh sách ngày giỗ người thân, kỳ giỗ gần nhất nổi bật. Vào từ Trang chủ
+ * (liên kết "Sổ giỗ" trên dải tuần). Dùng transition mặc định (crossfade).
+ *
+ * `GioViewModel` được gắn vào back stack entry của route này và dùng chung với [GioEditRoute].
+ */
+@Serializable
+object GioRoute : IlDestination
+
+/**
+ * Thêm/sửa ngày giỗ — form của một người thân. Chỉ mở từ [GioRoute] (màn đó đã nạp bản nháp
+ * vào `GioViewModel` dùng chung). Dùng transition mặc định (crossfade).
+ */
+@Serializable
+object GioEditRoute : IlDestination

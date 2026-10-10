@@ -22,9 +22,8 @@ import kotlinx.coroutines.launch
  * nên không có use case ở đây, logic thuần nằm trong `domain/model/Mala`. Việc lưu
  * chuỗi hạt xuống Room + đồng bộ là của `il-data-builder` (README "local-first").
  *
- * Âm thanh: mỗi lần lần hạt phát tiếng hạt gỗ ([MeditationSound.Bead]); khi niệm xong
- * hạt 108 (trọn một tràng) thì thỉnh chuông ([MeditationSound.Chuong]) — khớp chú thích
- * "chuông ở hạt 108" của prototype. Kế thừa [AndroidViewModel] để có `Application` làm
+ * Âm thanh: mỗi lần lần hạt phát tiếng hạt gỗ ([MeditationSound.Bead]); khi niệm tròn
+ * số biến đã chọn (21/54/108) thì thỉnh chuông ([MeditationSound.Chuong]). Kế thừa [AndroidViewModel] để có `Application` làm
  * context nạp file âm thanh từ `res/raw`.
  *
  * TODO(il-data-builder): lưu `beads`/`round` vào repository thực hành để giữ tràng
@@ -41,22 +40,15 @@ class MalaViewModel(application: Application) : AndroidViewModel(application) {
     /** Job tắt hiệu ứng "pop" sau 120ms (khớp `bumpBead` của prototype). */
     private var popJob: Job? = null
 
-    /** Một lần niệm (chạm/kéo hạt): +1, vòng lại 1 sau 108 và nháy hiệu ứng "pop". */
+    /** Một lần niệm (chạm/kéo hạt): +1, nháy "pop"; đủ [MalaUiState.target] biến thì hiện hộp thoại hồi hướng. */
     fun onBeadAdvance() {
         val state = _uiState.value
-        // Hạt 108 khép lại một tràng → thỉnh chuông; còn lại là tiếng lần hạt.
-        soundPlayer.play(
-            if (state.beads >= Mala.BEADS_PER_ROUND) MeditationSound.Chuong else MeditationSound.Bead,
-        )
-        _uiState.update { s ->
-            val next = Mala.advance(s.beads)
-            s.copy(
-                beads = next,
-                // Sang tràng mới chỉ khi vừa niệm xong hạt 108 (wrap), không phải lúc 0 → 1.
-                round = if (s.beads >= Mala.BEADS_PER_ROUND) s.round + 1 else s.round,
-                pop = true,
-            )
-        }
+        if (state.done) return
+        val next = state.beads + 1
+        val finished = next % state.target == 0
+        // Tròn một vòng → thỉnh chuông; còn lại là tiếng lần hạt.
+        soundPlayer.play(if (finished) MeditationSound.Chuong else MeditationSound.Bead)
+        _uiState.update { it.copy(beads = next, done = finished, pop = true) }
         popJob?.cancel()
         popJob = viewModelScope.launch {
             delay(120)
@@ -64,9 +56,20 @@ class MalaViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    /** "Bắt đầu lại": đặt hạt về 0, giữ nguyên tràng hiện tại. */
+    /** Chọn số biến một vòng — đặt hạt về 0 và đóng hộp thoại (prototype `mlTargets.pick`). */
+    fun onTargetSelect(target: Int) {
+        if (target !in Mala.TARGETS) return
+        _uiState.update { it.copy(target = target, beads = 0, done = false) }
+    }
+
+    /** "Niệm tiếp vòng mới": đóng hộp thoại, hạt về 0, sang vòng kế. */
+    fun onContinue() {
+        _uiState.update { it.copy(done = false, beads = 0, round = it.round + 1) }
+    }
+
+    /** "Bắt đầu lại": đặt hạt về 0, giữ nguyên vòng hiện tại. */
     fun onReset() {
-        _uiState.update { it.copy(beads = 0) }
+        _uiState.update { it.copy(beads = 0, done = false) }
     }
 
     override fun onCleared() {

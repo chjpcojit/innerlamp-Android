@@ -91,7 +91,7 @@ class EventsCallbacks(
  * Màn hình "Sự kiện & khóa học" — dựng lại từ prototype
  * `Docs/design_handoff_innerlamp/` (màn `events`).
  *
- * Bố cục (trên → dưới): header dán ("Sự kiện & khóa học" + "Đạo tràng Từ Quang") →
+ * Bố cục (trên → dưới): header dán ("Sự kiện & khóa học" + "Chùa Từ Quang") →
  * 3 tab lọc (Sắp diễn ra / Khóa học / Đã ghi danh) → thẻ hero sự kiện nổi bật
  * (luôn tối, nút "Ghi danh") → tiêu đề danh sách → danh sách sự kiện.
  *
@@ -192,7 +192,7 @@ private fun EventsHeader(
         ) {
             IlNavBar(
                 title = "Sự kiện & khóa học",
-                sub = "Đạo tràng Từ Quang",
+                sub = "Chùa Từ Quang",
                 showBack = true,
                 onBack = onBack,
             )

@@ -42,7 +42,7 @@ import com.example.innerlamp.ui.theme.InnerLampTheme
 import com.example.innerlamp.ui.theme.LocalIlColors
 
 /** Tab gốc của bottom nav (prop `active` của prototype). */
-enum class IlBottomTab { Home, Lib, Lamp, Sangha, Me }
+enum class IlBottomTab { Home, Lib, Lamp, Chua, Me }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Bottom nav (prototype IL-BottomNav): 4 tab + nút đèn nổi ở giữa. Icon là SVG
@@ -91,8 +91,8 @@ fun IlBottomNav(
                     LibTabIcon(c(IlBottomTab.Lib), f(IlBottomTab.Lib))
                 }
                 LampButton(dark = dark, onClick = { onNav(IlBottomTab.Lamp) })
-                TabItem("Đạo tràng", c(IlBottomTab.Sangha), onClick = { onNav(IlBottomTab.Sangha) }) {
-                    SanghaTabIcon(c(IlBottomTab.Sangha), f(IlBottomTab.Sangha))
+                TabItem("Chùa", c(IlBottomTab.Chua), onClick = { onNav(IlBottomTab.Chua) }) {
+                    ChuaTabIcon(c(IlBottomTab.Chua), f(IlBottomTab.Chua))
                 }
                 TabItem("Tôi", c(IlBottomTab.Me), onClick = { onNav(IlBottomTab.Me) }) {
                     MeTabIcon(c(IlBottomTab.Me), f(IlBottomTab.Me))
@@ -168,12 +168,12 @@ private const val HomeDoor = "M10 20v-4.5a2 2 0 0 1 4 0V20"
 private const val LibSpine = "M12 6.5v13"
 private const val LibBook = "M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5z"
 
-private const val SanghaCenterBody = "M6 20c0-3.5 2.7-6 6-6s6 2.5 6 6"
-private const val SanghaLeftHead = "M2.9 10a1.9 1.9 0 1 0 3.8 0a1.9 1.9 0 1 0-3.8 0"
-private const val SanghaRightHead = "M17.3 10a1.9 1.9 0 1 0 3.8 0a1.9 1.9 0 1 0-3.8 0"
-private const val SanghaLeftBody = "M2 18.5c0-2 1.2-3.6 3-4"
-private const val SanghaRightBody = "M22 18.5c0-2-1.2-3.6-3-4"
-private const val SanghaCenterHead = "M9 7.5a3 3 0 1 0 6 0a3 3 0 1 0-6 0"
+// Mái chùa cong + thân + cột + nền; cửa chính có fill khi active.
+private const val ChuaRoof = "M2.5 9.5c3.5-.4 6.6-2.4 9.5-6 2.9 3.6 6 5.6 9.5 6"
+private const val ChuaEave = "M5 9.5h14"
+private const val ChuaPillars = "M6.5 9.5V20M17.5 9.5V20"
+private const val ChuaBase = "M4 20h16"
+private const val ChuaDoor = "M10 20v-5.5h4V20"
 
 private const val MeBody = "M4.5 20.5c.8-4 3.8-6.5 7.5-6.5s6.7 2.5 7.5 6.5"
 private const val MeHead = "M8.4 8a3.6 3.6 0 1 0 7.2 0a3.6 3.6 0 1 0-7.2 0"
@@ -249,15 +249,9 @@ private fun LibTabIcon(color: Color, fill: Color?) {
 }
 
 @Composable
-private fun SanghaTabIcon(color: Color, fill: Color?) {
+private fun ChuaTabIcon(color: Color, fill: Color?) {
     val icon = remember(color, fill) {
-        tabIcon(
-            "Sangha",
-            color,
-            fill,
-            listOf(SanghaCenterBody, SanghaLeftHead, SanghaRightHead, SanghaLeftBody, SanghaRightBody),
-            listOf(SanghaCenterHead),
-        )
+        tabIcon("Chua", color, fill, listOf(ChuaRoof, ChuaEave, ChuaPillars, ChuaBase), listOf(ChuaDoor))
     }
     Image(imageVector = icon, contentDescription = null, modifier = Modifier.size(22.dp))
 }

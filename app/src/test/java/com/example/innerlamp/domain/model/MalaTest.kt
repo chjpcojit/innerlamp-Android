@@ -43,4 +43,15 @@ class MalaTest {
         assertTrue(Mala.isMotherBead(0))
         assertFalse(Mala.isMotherBead(-1))
     }
+
+    @Test
+    fun count_wrapsWithinTarget() {
+        assertEquals(0, Mala.count(0, 21))
+        assertEquals(5, Mala.count(5, 21))
+        assertEquals(21, Mala.count(21, 21))
+        assertEquals(1, Mala.count(22, 21))
+    }
+
+    @Test
+    fun targets_are21_54_108() = assertEquals(listOf(21, 54, 108), Mala.TARGETS)
 }

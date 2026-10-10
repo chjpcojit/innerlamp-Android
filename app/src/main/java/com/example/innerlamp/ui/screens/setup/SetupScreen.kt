@@ -13,9 +13,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -44,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.innerlamp.ui.components.IlBlurHeaderScaffold
 import com.example.innerlamp.ui.components.IlNavBar
 import com.example.innerlamp.ui.components.IlSettingKind
 import com.example.innerlamp.ui.components.IlSettingRow
@@ -107,104 +110,113 @@ internal fun SetupContent(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalIlColors.current
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            // linear-gradient(180deg, card2, sunk) — nền form/đọc kinh.
-            .background(Brush.verticalGradient(listOf(colors.card2, colors.sunk)))
-            .windowInsetsPadding(WindowInsets.safeDrawing),
-    ) {
-        // Header dán (nền card2 trùng đỉnh gradient, không cần background riêng).
-        IlNavBar(
-            title = "TRƯỚC KHI NGỒI",
-            showBack = false,
-            showClose = true,
-            onClose = onClose,
-            modifier = Modifier.padding(horizontal = 22.dp),
-        )
-
-        // Nội dung cuộn được (co giãn để CTA luôn ghim đáy).
+    val scroll = rememberScrollState()
+    IlBlurHeaderScaffold(
+        scrollOffset = { scroll.value },
+        header = {
+            IlNavBar(
+                title = "TRƯỚC KHI NGỒI",
+                showBack = false,
+                showClose = true,
+                onClose = onClose,
+                modifier = Modifier.padding(horizontal = 22.dp),
+            )
+        },
+        modifier = modifier,
+    ) { headerHeight ->
         Column(
             modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 22.dp),
+                .fillMaxSize()
+                // linear-gradient(180deg, card2, sunk) — nền form/đọc kinh.
+                .background(Brush.verticalGradient(listOf(colors.card2, colors.sunk)))
+                .windowInsetsPadding(
+                    WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
+                ),
         ) {
-            Text(
-                text = SetupTitle,
-                modifier = Modifier.padding(top = 22.dp),
-                style = TextStyle(
-                    fontFamily = Lora,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 30.sp,
-                    lineHeight = 37.sp,
-                    color = colors.ink,
-                ),
-            )
-            Text(
-                text = SetupSubtitle,
-                modifier = Modifier.padding(top = 8.dp),
-                style = TextStyle(
-                    fontFamily = BeVietnamPro,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 13.sp,
-                    color = colors.ink.copy(alpha = 0.5f),
-                ),
-            )
+            // Nội dung cuộn được (co giãn để CTA luôn ghim đáy).
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 22.dp),
+            ) {
+                Spacer(Modifier.height(headerHeight))
+                Text(
+                    text = SetupTitle,
+                    modifier = Modifier.padding(top = 22.dp),
+                    style = TextStyle(
+                        fontFamily = Lora,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 30.sp,
+                        lineHeight = 37.sp,
+                        color = colors.ink,
+                    ),
+                )
+                Text(
+                    text = SetupSubtitle,
+                    modifier = Modifier.padding(top = 8.dp),
+                    style = TextStyle(
+                        fontFamily = BeVietnamPro,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 13.sp,
+                        color = colors.ink.copy(alpha = 0.5f),
+                    ),
+                )
 
-            SectionLabel("THỜI LƯỢNG", modifier = Modifier.padding(top = 24.dp, bottom = 10.dp))
-            DurationSelector(
-                options = state.durationOptions,
-                selectedIndex = state.durationIndex,
-                onSelect = onDurationSelect,
-            )
-            Text(
-                text = "phút · bạn thường ngồi 20 phút vào buổi sáng",
-                modifier = Modifier.padding(top = 8.dp),
-                style = TextStyle(
-                    fontFamily = BeVietnamPro,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 11.sp,
-                    color = colors.ink.copy(alpha = 0.42f),
-                ),
-            )
+                SectionLabel("THỜI LƯỢNG", modifier = Modifier.padding(top = 24.dp, bottom = 10.dp))
+                DurationSelector(
+                    options = state.durationOptions,
+                    selectedIndex = state.durationIndex,
+                    onSelect = onDurationSelect,
+                )
+                Text(
+                    text = "phút · bạn thường ngồi 20 phút vào buổi sáng",
+                    modifier = Modifier.padding(top = 8.dp),
+                    style = TextStyle(
+                        fontFamily = BeVietnamPro,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 11.sp,
+                        color = colors.ink.copy(alpha = 0.42f),
+                    ),
+                )
 
-            SectionLabel("CHUÔNG", modifier = Modifier.padding(top = 22.dp, bottom = 10.dp))
-            BellCard()
+                SectionLabel("CHUÔNG", modifier = Modifier.padding(top = 22.dp, bottom = 10.dp))
+                BellCard()
 
-            TipBox(modifier = Modifier.padding(top = 16.dp))
-            Spacer(Modifier.height(20.dp))
-        }
+                TipBox(modifier = Modifier.padding(top = 16.dp))
+                Spacer(Modifier.height(20.dp))
+            }
 
-        // CTA ghim đáy màn.
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 22.dp, end = 22.dp, bottom = 30.dp),
-        ) {
-            StartButton(
-                label = "Bắt đầu · ${state.durationLabel}",
-                onClick = { onStart(state.durationMinutes) },
-            )
-            Text(
-                text = "Ngồi im lặng, không hướng dẫn",
+            // CTA ghim đáy màn.
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        role = Role.Button,
-                        onClick = { onStartSilent(state.durationMinutes) },
-                    )
-                    .padding(top = 14.dp),
-                textAlign = TextAlign.Center,
-                style = TextStyle(
-                    fontFamily = BeVietnamPro,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 12.5.sp,
-                    color = colors.ink.copy(alpha = 0.45f),
-                ),
-            )
+                    .padding(start = 22.dp, end = 22.dp, bottom = 30.dp),
+            ) {
+                StartButton(
+                    label = "Bắt đầu · ${state.durationLabel}",
+                    onClick = { onStart(state.durationMinutes) },
+                )
+                Text(
+                    text = "Ngồi im lặng, không hướng dẫn",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            role = Role.Button,
+                            onClick = { onStartSilent(state.durationMinutes) },
+                        )
+                        .padding(top = 14.dp),
+                    textAlign = TextAlign.Center,
+                    style = TextStyle(
+                        fontFamily = BeVietnamPro,
+                        fontWeight = FontWeight.Normal,
+                        fontSize = 12.5.sp,
+                        color = colors.ink.copy(alpha = 0.45f),
+                    ),
+                )
+            }
         }
     }
 }

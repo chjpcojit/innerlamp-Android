@@ -21,8 +21,8 @@ import kotlinx.coroutines.flow.update
  *
  * - Expose state qua `StateFlow`; screen dùng `collectAsStateWithLifecycle()`.
  * - Ngày đang chọn ở dải tuần quyết định thẻ âm lịch + câu kinh.
- * - Tràng hạt chạy local (0–108, vòng lại 1 sau 108) đúng như prototype; chưa lưu xuống
- *   Room vì chưa có repository thực hành.
+ * - Số hạt tràng hạt chỉ để hiển thị (dữ liệu mẫu); lần hạt nằm ở màn Niệm Phật, chưa có
+ *   repository thực hành để chia sẻ số hạt giữa hai màn.
  *
  * @param clock đồng hồ hệ thống — inject để test cố định "hôm nay".
  */
@@ -92,26 +92,13 @@ class HomeViewModel(
         }
     }
 
-    /** Một lần niệm: +1, chạm 108 thì vòng lại 1. */
-    fun onBeadTap() {
-        _uiState.update { state ->
-            val next = if (state.beads >= HomeUiState.BEADS_PER_ROUND) 1 else state.beads + 1
-            state.copy(beads = next)
-        }
-    }
-
-    /** "Bắt đầu lại" tràng hạt. */
-    fun onBeadReset() {
-        _uiState.update { it.copy(beads = 0) }
-    }
-
     private companion object {
         fun initialState(clock: Clock, getEventMonths: GetBuddhistEventMonthsUseCase, loading: Boolean): HomeUiState {
             val now = LocalDateTime.now(clock)
             return HomeUiState.create(
                 today = now.toLocalDate(),
                 hour = now.hour,
-                eventMonths = getEventMonths(now.toLocalDate()),
+                eventMonths = getEventMonths.forYear(now.year),
             ).let { state ->
                 if (loading) state.copy(isContentLoading = true, temples = emptyList(), buddhas = emptyList(), articles = emptyList()) else state
             }

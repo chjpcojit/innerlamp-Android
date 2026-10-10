@@ -16,10 +16,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -52,6 +54,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.innerlamp.domain.model.PhoneCountries
+import com.example.innerlamp.ui.components.IlBlurHeaderScaffold
 import com.example.innerlamp.ui.components.IlButton
 import com.example.innerlamp.ui.components.IlButtonVariant
 import com.example.innerlamp.ui.components.IlCountryPicker
@@ -110,112 +113,114 @@ fun LoginScreen(
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
     Box(modifier = modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(colors.card2, colors.sunk)))
-                .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(horizontal = 26.dp),
-        ) {
-            // Header dán: NavBar + hairline ink-06 (full-bleed trong prototype).
-            IlNavBar(title = "Đăng nhập", showBack = true, onBack = onBack)
-            Spacer(Modifier.height(10.dp))
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(1.dp)
-                    .background(colors.ink.copy(alpha = 0.06f)),
-            )
-
+        val scroll = rememberScrollState()
+        IlBlurHeaderScaffold(
+            scrollOffset = { scroll.value },
+            header = {
+                Box(Modifier.padding(horizontal = 26.dp)) {
+                    IlNavBar(title = "Đăng nhập", showBack = true, onBack = onBack)
+                }
+            },
+        ) { headerHeight ->
             Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState()),
+                    .fillMaxSize()
+                    .background(Brush.verticalGradient(listOf(colors.card2, colors.sunk)))
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
+                    )
+                    .padding(horizontal = 26.dp),
             ) {
-                Spacer(Modifier.height(22.dp))
-                LampBadge()
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    text = "Kính chào bạn",
-                    style = TextStyle(
-                        fontFamily = Lora,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 30.sp,
-                        lineHeight = 36.sp,
-                        color = colors.ink,
-                    ),
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    text = "Đăng nhập để lưu hành trình tu tập của bạn",
-                    style = TextStyle(
-                        fontFamily = BeVietnamPro,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 13.sp,
-                        color = colors.ink.copy(alpha = 0.52f),
-                    ),
-                )
-                Spacer(Modifier.height(20.dp))
-
-                IlPhoneField(
-                    value = uiState.phoneRaw,
-                    onValueChange = viewModel::onPhoneChange,
-                    country = PhoneCountries.byIso(uiState.selectedCountryIso),
-                    onCountryClick = { countryPickerOpen = true },
-                )
-                Spacer(Modifier.height(12.dp))
-                IlField(
-                    label = "Mật khẩu",
-                    value = uiState.password,
-                    onValueChange = viewModel::onPasswordChange,
-                    placeholder = "Mật khẩu",
-                    maskPassword = true,
-                    trailingAction = {
-                        IlFieldTextAction(label = "Quên?", onClick = onForgotPassword)
-                    },
-                )
-                Spacer(Modifier.height(20.dp))
-                IlButton(
-                    label = "Đăng nhập",
-                    // Khi loading vẫn giữ enabled để nút hiện spinner thay vì kiểu disabled.
-                    enabled = uiState.canSubmit || uiState.isLoading,
-                    loading = uiState.isLoading,
-                    loadingLabel = "Đang đăng nhập…",
-                    onClick = viewModel::onLoginClick,
-                )
-                Spacer(Modifier.height(10.dp))
-                IlButton(
-                    label = "Gửi mã một lần qua SMS",
-                    variant = IlButtonVariant.Ghost,
-                    enabled = uiState.canRequestOtp,
-                    onClick = onRequestOtp,
-                )
-                Spacer(Modifier.height(24.dp))
-            }
-
-            if (!imeVisible) {
                 Column(
-                    modifier = Modifier.padding(bottom = 34.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(scroll),
                 ) {
-                    OrDivider()
-                    Spacer(Modifier.height(14.dp))
-                    CreateAccountButton(onClick = onSignupClick)
+                    Spacer(Modifier.height(headerHeight + 22.dp))
+                    LampBadge()
+                    Spacer(Modifier.height(16.dp))
                     Text(
-                        text = "Vào xem trước, chưa đăng nhập",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 8.dp)
-                            .clickable(onClick = onPreviewClick)
-                            .padding(vertical = 6.dp),
-                        textAlign = TextAlign.Center,
+                        text = "Kính chào bạn",
+                        style = TextStyle(
+                            fontFamily = Lora,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 30.sp,
+                            lineHeight = 36.sp,
+                            color = colors.ink,
+                        ),
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Đăng nhập để lưu hành trình tu tập của bạn",
                         style = TextStyle(
                             fontFamily = BeVietnamPro,
                             fontWeight = FontWeight.Normal,
-                            fontSize = 12.5.sp,
-                            color = colors.ink.copy(alpha = 0.45f),
+                            fontSize = 13.sp,
+                            color = colors.ink.copy(alpha = 0.52f),
                         ),
                     )
+                    Spacer(Modifier.height(20.dp))
+
+                    IlPhoneField(
+                        value = uiState.phoneRaw,
+                        onValueChange = viewModel::onPhoneChange,
+                        country = PhoneCountries.byIso(uiState.selectedCountryIso),
+                        onCountryClick = { countryPickerOpen = true },
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    IlField(
+                        label = "Mật khẩu",
+                        value = uiState.password,
+                        onValueChange = viewModel::onPasswordChange,
+                        placeholder = "Mật khẩu",
+                        maskPassword = true,
+                        trailingAction = {
+                            IlFieldTextAction(label = "Quên?", onClick = onForgotPassword)
+                        },
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    IlButton(
+                        label = "Đăng nhập",
+                        // Khi loading vẫn giữ enabled để nút hiện spinner thay vì kiểu disabled.
+                        enabled = uiState.canSubmit || uiState.isLoading,
+                        loading = uiState.isLoading,
+                        loadingLabel = "Đang đăng nhập…",
+                        onClick = viewModel::onLoginClick,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    IlButton(
+                        label = "Gửi mã một lần qua SMS",
+                        variant = IlButtonVariant.Ghost,
+                        enabled = uiState.canRequestOtp,
+                        onClick = onRequestOtp,
+                    )
+                    Spacer(Modifier.height(24.dp))
+                }
+
+                if (!imeVisible) {
+                    Column(
+                        modifier = Modifier.padding(bottom = 34.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        OrDivider()
+                        Spacer(Modifier.height(14.dp))
+                        CreateAccountButton(onClick = onSignupClick)
+                        Text(
+                            text = "Vào xem trước, chưa đăng nhập",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp)
+                                .clickable(onClick = onPreviewClick)
+                                .padding(vertical = 6.dp),
+                            textAlign = TextAlign.Center,
+                            style = TextStyle(
+                                fontFamily = BeVietnamPro,
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 12.5.sp,
+                                color = colors.ink.copy(alpha = 0.45f),
+                            ),
+                        )
+                    }
                 }
             }
         }

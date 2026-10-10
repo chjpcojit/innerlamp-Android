@@ -3,6 +3,7 @@ package com.example.innerlamp.ui.screens.bell
 import com.example.innerlamp.domain.model.BellEveryOptions
 import com.example.innerlamp.domain.model.BellMode
 import com.example.innerlamp.domain.model.BellPresets
+import com.example.innerlamp.domain.model.BellRoll
 
 /**
  * State render cho màn hình Chuông mõ (bell).
@@ -36,6 +37,8 @@ data class BellUiState(
     val hitMo: Boolean = false,
     /** Đang nháy hiệu ứng thỉnh chuông. */
     val hitChuong: Boolean = false,
+    /** Thời lượng (ms) hoạt ảnh cú gõ mõ gần nhất — ngắn lại khi dồn mõ. */
+    val moStrikeMillis: Int = BellRoll.MoStrikeMaxMillis,
 ) {
     /** Phụ đề dưới tiêu đề: tên preset/mode + trạng thái giữ nhịp/dồn mõ. */
     val subtitle: String
@@ -56,11 +59,15 @@ data class BellUiState(
     val rateValue: String
         get() = if (mode == BellMode.Chuong) "$gapSeconds giây một tiếng" else "$bpm nhịp/phút"
 
-    /** Nhãn chữ trên tấm gõ (pad). */
+    /** Mặt hiển thị ở sân khấu: chuông khi chế độ Chuông, còn lại là mõ. */
+    val showsChuong: Boolean
+        get() = mode == BellMode.Chuong
+
+    /** Nhãn chữ dưới sân khấu (MÕ / CHUÔNG). */
     val padTag: String
         get() = if (mode == BellMode.Chuong) "CHUÔNG" else "MÕ"
 
-    /** Số lớn giữa tấm gõ. */
+    /** Số lớn dưới sân khấu. */
     val padNumber: Int
         get() = if (mode == BellMode.Chuong) chuongCount else moCount
 

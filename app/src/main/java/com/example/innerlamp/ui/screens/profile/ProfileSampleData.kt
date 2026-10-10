@@ -10,7 +10,7 @@ import com.example.innerlamp.domain.model.ProfileUser
  * Dữ liệu mẫu cho màn Hồ sơ, lấy từ prototype `Docs/design_handoff_innerlamp/`.
  *
  * TODO(il-data-builder): thay bằng repository/API người dùng (hồ sơ, thống kê,
- * dấu ấn, công đức). Giữ ở đây để UI dựng được độc lập, giống `SanghaSampleData`.
+ * dấu ấn, công đức). Giữ ở đây để UI dựng được độc lập, giống `ChuaSampleData`.
  */
 internal object ProfileSampleData {
 
@@ -45,5 +45,5 @@ internal object ProfileSampleData {
     const val JOURNAL_LOGGED_DAYS = 84
     const val JOURNAL_TOTAL_DAYS = 84
     const val REMINDER_SUMMARY = "05:30 · mỗi ngày"
-    const val SANGHA_NAME = "Từ Quang"
+    const val TEMPLE_NAME = "Từ Quang"
 }

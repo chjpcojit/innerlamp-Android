@@ -26,7 +26,7 @@ class ProfileViewModel : ViewModel() {
             badges = ProfileSampleData.badges,
             merit = ProfileSampleData.merit,
             reminderSummary = ProfileSampleData.REMINDER_SUMMARY,
-            sanghaName = ProfileSampleData.SANGHA_NAME,
+            templeName = ProfileSampleData.TEMPLE_NAME,
         ),
     )
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()

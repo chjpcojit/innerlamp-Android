@@ -11,7 +11,7 @@ import com.example.innerlamp.domain.model.FeaturedEvent
  *
  * TODO(il-data-builder): thay bằng repository/API sự kiện (danh sách theo tab,
  * trạng thái chỗ còn trống, sự kiện nổi bật). Giữ ở đây để UI dựng được độc lập,
- * giống `SanghaSampleData`.
+ * giống `ChuaSampleData`.
  */
 internal object EventsSampleData {
 

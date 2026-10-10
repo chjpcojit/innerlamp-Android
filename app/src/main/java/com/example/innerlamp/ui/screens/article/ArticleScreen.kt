@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -48,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.innerlamp.domain.model.ArticleDetail
 import com.example.innerlamp.domain.usecase.GetArticlesUseCase
+import com.example.innerlamp.ui.components.IlBlurHeaderScaffold
 import com.example.innerlamp.ui.components.IlNavBar
 import com.example.innerlamp.ui.theme.BeVietnamPro
 import com.example.innerlamp.ui.theme.IlGold
@@ -105,24 +105,26 @@ internal fun ArticleContent(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalIlColors.current
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(colors.canvas),
-    ) {
-        ArticleHeader(
-            category = state.article.category,
-            sub = state.article.readTime,
-            onBack = callbacks.onBack,
-        )
-
+    val scroll = rememberScrollState()
+    // Header đè lên nội dung, blur dần khi cuộn.
+    IlBlurHeaderScaffold(
+        scrollOffset = { scroll.value },
+        header = {
+            ArticleHeader(
+                category = state.article.category,
+                sub = state.article.readTime,
+                onBack = callbacks.onBack,
+            )
+        },
+        modifier = modifier,
+    ) { headerHeight ->
         Column(
             modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
+                .fillMaxSize()
+                .verticalScroll(scroll)
                 .padding(horizontal = 20.dp),
         ) {
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(headerHeight + 18.dp))
             ArticleHero()
 
             Spacer(Modifier.height(20.dp))
@@ -174,7 +176,7 @@ internal fun ArticleContent(
     }
 }
 
-/** Header dán: `IlNavBar` (danh mục + thời lượng đọc) + hairline `ink-06` ở đáy. */
+/** Header: `IlNavBar` (danh mục + thời lượng đọc). Blur + hairline do [IlBlurHeaderScaffold] lo. */
 @Composable
 private fun ArticleHeader(
     category: String,
@@ -182,17 +184,8 @@ private fun ArticleHeader(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = LocalIlColors.current
-    Column(modifier = modifier.fillMaxWidth().background(colors.canvas)) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp),
-        ) {
-            IlNavBar(title = category, sub = sub, showBack = true, onBack = onBack)
-        }
-        Box(Modifier.fillMaxWidth().height(1.dp).background(colors.ink.copy(alpha = 0.06f)))
+    Box(modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp)) {
+        IlNavBar(title = category, sub = sub, showBack = true, onBack = onBack)
     }
 }
 

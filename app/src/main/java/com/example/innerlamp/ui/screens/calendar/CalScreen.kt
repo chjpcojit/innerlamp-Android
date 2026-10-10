@@ -13,10 +13,12 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -59,6 +61,7 @@ import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.AP
 import com.example.innerlamp.domain.model.LunarDayCell
 import com.example.innerlamp.domain.model.LunarMonthPage
 import com.example.innerlamp.domain.usecase.GetLunarMonthPagesUseCase
+import com.example.innerlamp.ui.components.IlBlurHeaderScaffold
 import com.example.innerlamp.ui.components.IlNavBar
 import com.example.innerlamp.ui.components.IlRow
 import com.example.innerlamp.ui.components.IlRowGlyph
@@ -127,14 +130,11 @@ internal fun CalContent(
     val scope = rememberCoroutineScope()
     val page = state.months.getOrNull(pagerState.currentPage)
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(colors.canvas)
-            .windowInsetsPadding(WindowInsets.safeDrawing),
-    ) {
-        // Header dán: NavBar (✕ đóng) + hairline. Tiêu đề theo tháng đang xem.
-        Column(Modifier.fillMaxWidth().background(colors.canvas)) {
+    val scroll = rememberScrollState()
+    // Header (✕ đóng) đè lên nội dung, blur dần khi cuộn. Tiêu đề theo tháng đang xem.
+    IlBlurHeaderScaffold(
+        scrollOffset = { scroll.value },
+        header = {
             IlNavBar(
                 title = page?.title.orEmpty(),
                 sub = page?.let { "Âm lịch ${it.canChiYear} · ${it.lunarMonthName}" }.orEmpty(),
@@ -143,14 +143,18 @@ internal fun CalContent(
                 onClose = onClose,
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 10.dp),
             )
-            Box(Modifier.fillMaxWidth().height(1.dp).background(colors.ink.copy(alpha = 0.06f)))
-        }
-
+        },
+        modifier = modifier,
+    ) { headerHeight ->
         Column(
             modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState()),
+                .fillMaxSize()
+                .windowInsetsPadding(
+                    WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
+                )
+                .verticalScroll(scroll),
         ) {
+            Spacer(Modifier.height(headerHeight))
             MonthNavRow(
                 onPrev = {
                     scope.launch {

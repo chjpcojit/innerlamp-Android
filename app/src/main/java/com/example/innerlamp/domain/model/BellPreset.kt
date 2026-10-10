@@ -60,6 +60,31 @@ object BellLimits {
 }
 
 /**
+ * Nhịp "dồn mõ" kiểu tụng kinh (prototype `B_ROLL`): khoan thai → nhanh dần → dồn →
+ * chậm lại → hai tiếng ngắt, rồi kết bằng một tiếng chuông.
+ */
+object BellRoll {
+    /** Khoảng nghỉ (ms) sau mỗi tiếng mõ trong chuỗi dồn. */
+    val gapsMillis: List<Long> = buildList {
+        var x = 950.0
+        while (x > 170) { add(Math.round(x)); x *= 0.84 }
+        repeat(14) { add(160L) }
+        x = 180.0
+        while (x < 720) { add(Math.round(x)); x *= 1.28 }
+        add(950L)
+        add(1100L)
+    }
+
+    /** Thời lượng cú đập mõ tối đa (ms) và hệ số theo khoảng nghỉ, để búa kịp trở về. */
+    const val MoStrikeMaxMillis = 260
+    const val MoStrikeGapRatio = 0.85
+
+    /** Thời lượng hoạt ảnh cú gõ mõ trong chuỗi dồn ứng với khoảng nghỉ [gapMillis]. */
+    fun strikeMillis(gapMillis: Long): Int =
+        minOf(MoStrikeMaxMillis.toDouble(), gapMillis * MoStrikeGapRatio).toInt()
+}
+
+/**
  * Khoảng cách giữa hai nhịp, tính bằng millis. Chế độ Chuông dùng `gapSeconds`;
  * các chế độ còn lại dùng `bpm` (nhịp/phút).
  */

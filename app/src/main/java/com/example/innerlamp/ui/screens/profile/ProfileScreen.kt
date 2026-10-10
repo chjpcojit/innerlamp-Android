@@ -495,7 +495,7 @@ private fun PaywallCard(
     }
 }
 
-/** Nhóm cài đặt: chuông tỉnh thức / cài đặt / thông báo / đạo tràng của tôi. */
+/** Nhóm cài đặt: chuông tỉnh thức / cài đặt / thông báo / chùa của tôi. */
 @Composable
 private fun SettingsCard(
     state: ProfileUiState,
@@ -520,9 +520,9 @@ private fun SettingsCard(
         IlSettingRow(title = "Cài đặt", kind = IlSettingKind.Chevron, onClick = callbacks.onSettings)
         IlSettingRow(title = "Thông báo", kind = IlSettingKind.Chevron, onClick = callbacks.onNotifications)
         IlSettingRow(
-            title = "Đạo tràng của tôi",
+            title = "Chùa của tôi",
             kind = IlSettingKind.Value,
-            value = state.sanghaName,
+            value = state.templeName,
             last = true,
             onClick = callbacks.onTemple,
         )
@@ -592,5 +592,5 @@ private fun previewState(): ProfileUiState = ProfileUiState(
     badges = ProfileSampleData.badges,
     merit = ProfileSampleData.merit,
     reminderSummary = ProfileSampleData.REMINDER_SUMMARY,
-    sanghaName = ProfileSampleData.SANGHA_NAME,
+    templeName = ProfileSampleData.TEMPLE_NAME,
 )

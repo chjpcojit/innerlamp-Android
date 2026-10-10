@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Kotlin 2.2.10**, AGP 9.4.0
 - **Jetpack Compose** (BOM `2026.02.01`), Material3
 - **Namespace/App ID**: `com.example.innerlamp`
-- **SDK**: minSdk 29, targetSdk/compileSdk 37
+- **SDK**: minSdk 31, targetSdk/compileSdk 37
 - **Java**: VERSION_11 source/target compatibility
 - Single Gradle module: `:app`
 

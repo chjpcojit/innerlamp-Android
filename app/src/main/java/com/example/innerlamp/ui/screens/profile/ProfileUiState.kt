@@ -25,8 +25,8 @@ data class ProfileUiState(
     val merit: MeritSummary,
     /** Tóm tắt chuông tỉnh thức, vd "05:30 · mỗi ngày". */
     val reminderSummary: String,
-    /** Tên đạo tràng đang tham gia. */
-    val sanghaName: String,
+    /** Tên chùa tu tập. */
+    val templeName: String,
 ) {
     /** Nhãn "X / Y ngày ghi" cho khối nhật ký. */
     val journalLabel: String get() = "$journalLoggedDays / $journalTotalDays ngày ghi"

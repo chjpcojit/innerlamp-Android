@@ -37,7 +37,7 @@ class HomeViewModelTest {
         // 25/9/2026 = Rằm tháng Tám âm lịch (Trung thu).
         assertEquals(15, s.selectedLunar.day)
         assertEquals(8, s.selectedLunar.month)
-        assertEquals(6, s.eventMonths.size)
+        assertEquals(12, s.eventMonths.size)
     }
 
     @Test
@@ -69,26 +69,6 @@ class HomeViewModelTest {
         assertEquals(14, s.selectedLunar.day)
         assertEquals(8, s.selectedLunar.month)
         assertEquals(HomeUiState.verseFor(s.selectedLunar), s.verse)
-    }
-
-    @Test
-    fun bead_tap_increments_and_wraps_to_one_after_108() {
-        val vm = viewModel()
-        assertEquals(27, vm.uiState.value.beads)
-        vm.onBeadTap()
-        assertEquals(28, vm.uiState.value.beads)
-        repeat(108 - 28) { vm.onBeadTap() }
-        assertEquals(108, vm.uiState.value.beads)
-        vm.onBeadTap()
-        assertEquals(1, vm.uiState.value.beads)
-    }
-
-    @Test
-    fun bead_reset_returns_to_zero() {
-        val vm = viewModel()
-        vm.onBeadReset()
-        assertEquals(0, vm.uiState.value.beads)
-        assertEquals(0f, vm.uiState.value.beadProgress, 0f)
     }
 
     // ── Skeleton → dữ liệu / rỗng ──────────────────────────────────────────

@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -48,6 +47,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.innerlamp.domain.usecase.GetSutraReaderUseCase
 import com.example.innerlamp.ui.components.IlChip
+import com.example.innerlamp.ui.components.IlBlurHeaderScaffold
 import com.example.innerlamp.ui.components.IlNavBar
 import com.example.innerlamp.ui.theme.BeVietnamPro
 import com.example.innerlamp.ui.theme.IlGold
@@ -112,46 +112,48 @@ internal fun ReaderContent(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalIlColors.current
+    val scroll = rememberScrollState()
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(colors.card2),
     ) {
-        // Header dán trên cùng: nhường status bar + nền card2 (không có line dưới).
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(colors.card2)
-                .statusBarsPadding()
-                .padding(start = 22.dp, end = 22.dp, bottom = 10.dp),
-        ) {
-            IlNavBar(
-                title = state.reader.title,
-                sub = state.reader.subtitle,
-                right = "Aa",
-                showBack = true,
-                onBack = callbacks.onBack,
-                onAction = callbacks.onTextSettings,
-            )
-        }
+        // Header đè lên nội dung, blur dần khi cuộn (nền card2 phủ trong nội dung để giữ màu cũ).
+        IlBlurHeaderScaffold(
+            scrollOffset = { scroll.value },
+            header = {
+                Box(Modifier.fillMaxWidth().padding(start = 22.dp, end = 22.dp, bottom = 10.dp)) {
+                    IlNavBar(
+                        title = state.reader.title,
+                        sub = state.reader.subtitle,
+                        right = "Aa",
+                        showBack = true,
+                        onBack = callbacks.onBack,
+                        onAction = callbacks.onTextSettings,
+                    )
+                }
+            },
+            modifier = Modifier.weight(1f),
+        ) { headerHeight ->
+            // Phần cuộn: thanh tiến độ + khổ kinh (cuộn chui bên dưới header).
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(colors.card2)
+                    .verticalScroll(scroll)
+                    .padding(horizontal = 22.dp),
+            ) {
+                Spacer(Modifier.height(headerHeight + 16.dp))
+                ReaderProgress(state = state)
 
-        // Phần cuộn: thanh tiến độ + khổ kinh (header nằm ngoài nên cuộn chui bên dưới).
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 22.dp),
-        ) {
-            Spacer(Modifier.height(16.dp))
-            ReaderProgress(state = state)
+                Spacer(Modifier.height(24.dp))
+                VerseBlock(state = state, callbacks = callbacks)
 
-            Spacer(Modifier.height(24.dp))
-            VerseBlock(state = state, callbacks = callbacks)
+                Spacer(Modifier.height(26.dp))
+                NextVersePreview(text = state.reader.nextVersePreview)
 
-            Spacer(Modifier.height(26.dp))
-            NextVersePreview(text = state.reader.nextVersePreview)
-
-            Spacer(Modifier.height(26.dp))
+                Spacer(Modifier.height(26.dp))
+            }
         }
 
         PlayerBar(

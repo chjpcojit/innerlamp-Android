@@ -7,11 +7,12 @@ package com.example.innerlamp.domain.model
  * tầng `data` (sau này) sẽ map DTO/entity về đây, còn `ui` chỉ render.
  */
 
-/** Phân loại nội dung trong thư viện — dùng cho chip lọc và nhóm bài kinh. */
-enum class LibraryCategory(val label: String) {
-    Sutra("Kinh văn"),
-    Meditation("Thiền dẫn"),
-    Talk("Pháp thoại"),
+/** Bốn lối vào của lưới 2×2 ở đầu màn Thư viện (prototype: `libTiles`). */
+enum class LibraryHub(val label: String, val sub: String, val glyph: String) {
+    Sutras("Kinh sách", "Kinh văn · trì chú", "經"),
+    Meditation("Thiền định", "Thiền chuông · thiền dẫn", "禪"),
+    Talks("Pháp thoại", "Bài giảng của quý thầy", "法"),
+    Buddhas("Phật & Bồ Tát", "Tiểu sử · đại nguyện", "佛"),
 }
 
 /** Tông màu của bài kinh (ánh xạ sang `IlTone` ở tầng UI): vàng/xanh/hồng. */
@@ -25,7 +26,6 @@ data class Sutra(
     /** Thời lượng dạng chuỗi (vd "38 phút", "2g 10p") — trailing của hàng. */
     val time: String,
     val tone: SutraTone,
-    val category: LibraryCategory = LibraryCategory.Sutra,
 )
 
 /** Thẻ pháp thoại nổi bật (hero) ở đầu màn Thư viện. */
@@ -38,9 +38,9 @@ data class FeaturedTalk(
     val durationMinutes: Int,
 )
 
-/** Toàn bộ catalog của màn Thư viện: các mục lọc + thẻ nổi bật + danh sách kinh. */
+/** Toàn bộ catalog của màn Thư viện: lối vào + thẻ nổi bật + danh sách kinh. */
 data class LibraryCatalog(
-    val categories: List<LibraryCategory>,
+    val hubs: List<LibraryHub>,
     val featuredTalk: FeaturedTalk,
     val sutras: List<Sutra>,
 )

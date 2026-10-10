@@ -7,10 +7,10 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -39,20 +40,27 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.innerlamp.domain.model.BuddhaProfile
 import com.example.innerlamp.domain.model.FeaturedTalk
-import com.example.innerlamp.domain.model.LibraryCategory
+import com.example.innerlamp.domain.model.LibraryHub
 import com.example.innerlamp.domain.model.Sutra
 import com.example.innerlamp.domain.model.SutraTone
+import com.example.innerlamp.domain.usecase.GetBuddhaProfilesUseCase
 import com.example.innerlamp.domain.usecase.GetLibraryCatalogUseCase
 import com.example.innerlamp.ui.components.IlBottomNav
 import com.example.innerlamp.ui.components.IlBottomTab
-import com.example.innerlamp.ui.components.IlChip
+import com.example.innerlamp.ui.components.IlBlurHeaderScaffold
+import com.example.innerlamp.ui.components.IlNavBar
 import com.example.innerlamp.ui.components.IlRow
 import com.example.innerlamp.ui.components.IlRowGlyph
 import com.example.innerlamp.ui.components.IlTone
 import com.example.innerlamp.ui.theme.BeVietnamPro
 import com.example.innerlamp.ui.theme.IlGoldBright
+import com.example.innerlamp.ui.theme.IlGreen
+import com.example.innerlamp.ui.theme.IlGreenText
+import com.example.innerlamp.ui.theme.IlRose
 import com.example.innerlamp.ui.theme.IlRadius
+import com.example.innerlamp.ui.theme.IlRoseText
 import com.example.innerlamp.ui.theme.InnerLampTheme
 import com.example.innerlamp.ui.theme.LocalIlColors
 import com.example.innerlamp.ui.theme.Lora
@@ -73,15 +81,19 @@ class LibraryCallbacks(
     val onSearch: () -> Unit = {},
     val onFeaturedTalk: (talkId: String) -> Unit = {},
     val onSutra: (sutraId: String) -> Unit = {},
+    val onHub: (LibraryHub) -> Unit = {},
+    val onBuddha: (buddhaId: String) -> Unit = {},
+    val onBuddhaList: () -> Unit = {},
+    val onSutraList: () -> Unit = {},
     val onTab: (IlBottomTab) -> Unit = {},
 )
 
 /**
  * Màn hình Thư viện — dựng lại từ prototype `Docs/design_handoff_innerlamp/` (màn `lib`).
  *
- * Bố cục (trên → dưới): header dán ("Thư viện") → ô tìm kiếm → chip lọc
- * (Tất cả / Kinh văn / Thiền dẫn / Pháp thoại) → thẻ pháp thoại nổi bật →
- * danh sách "Kinh thường tụng" → bottom nav (tab Thư viện active).
+ * Bố cục (trên → dưới): header dán ("Thư viện") → ô tìm kiếm → lưới 4 lối vào 2×2
+ * (Kinh sách / Thiền định / Pháp thoại / Phật & Bồ Tát) → thẻ pháp thoại nổi bật →
+ * "Chư Phật & Bồ Tát" (cuộn ngang) → "Kinh thường tụng" → bottom nav (tab Thư viện active).
  */
 @Composable
 fun LibraryScreen(
@@ -93,7 +105,6 @@ fun LibraryScreen(
     LibraryContent(
         state = state,
         callbacks = callbacks,
-        onCategorySelected = viewModel::onCategorySelected,
         modifier = modifier,
     )
 }
@@ -103,77 +114,61 @@ fun LibraryScreen(
 internal fun LibraryContent(
     state: LibraryUiState,
     callbacks: LibraryCallbacks,
-    onCategorySelected: (LibraryCategory?) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalIlColors.current
+    val scroll = rememberScrollState()
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(colors.canvas),
     ) {
-        LibraryHeader()
+        // Header đè lên nội dung, blur dần khi cuộn.
+        IlBlurHeaderScaffold(
+            scrollOffset = { scroll.value },
+            header = { LibraryHeader() },
+            modifier = Modifier.weight(1f),
+        ) { headerHeight ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scroll)
+                    .padding(horizontal = 20.dp),
+            ) {
+                Spacer(Modifier.height(headerHeight + 14.dp))
+                SearchBar(onClick = callbacks.onSearch)
 
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp),
-        ) {
-            Spacer(Modifier.height(14.dp))
-            SearchBar(onClick = callbacks.onSearch)
+                Spacer(Modifier.height(14.dp))
+                HubGrid(hubs = state.hubs, onHub = callbacks.onHub)
 
-            Spacer(Modifier.height(14.dp))
-            CategoryChips(
-                categories = state.categories,
-                selected = state.selectedCategory,
-                onSelect = onCategorySelected,
-            )
-
-            Spacer(Modifier.height(20.dp))
-            FeaturedTalkCard(
-                talk = state.featuredTalk,
-                onClick = { callbacks.onFeaturedTalk(state.featuredTalk.id) },
-            )
-
-            Spacer(Modifier.height(22.dp))
-            SectionHeader("Kinh thường tụng")
-
-            Spacer(Modifier.height(12.dp))
-            if (state.filteredSutras.isEmpty()) {
-                EmptyHint()
-            } else {
-                SutraList(
-                    sutras = state.filteredSutras,
-                    onSutraClick = callbacks.onSutra,
+                Spacer(Modifier.height(20.dp))
+                FeaturedTalkCard(
+                    talk = state.featuredTalk,
+                    onClick = { callbacks.onFeaturedTalk(state.featuredTalk.id) },
                 )
+
+                Spacer(Modifier.height(22.dp))
+                SectionHeader("Chư Phật & Bồ Tát", "Xem tất cả", callbacks.onBuddhaList)
+                Spacer(Modifier.height(12.dp))
+                BuddhaStrip(buddhas = state.buddhas, onBuddha = callbacks.onBuddha)
+
+                Spacer(Modifier.height(22.dp))
+                SectionHeader("Kinh thường tụng", "Kinh sách", callbacks.onSutraList)
+                Spacer(Modifier.height(12.dp))
+                SutraList(sutras = state.sutras, onSutraClick = callbacks.onSutra)
+                Spacer(Modifier.height(20.dp))
             }
-            Spacer(Modifier.height(20.dp))
         }
 
         IlBottomNav(active = IlBottomTab.Lib, onNav = callbacks.onTab)
     }
 }
 
-/** Header dán: tiêu đề "Thư viện" + hairline `ink-06` ở đáy (như header tab gốc của prototype). */
+/** Header của tab gốc: `IlNavBar` "Thư viện" (không back). Blur + hairline do [IlBlurHeaderScaffold] lo. */
 @Composable
 private fun LibraryHeader(modifier: Modifier = Modifier) {
-    val colors = LocalIlColors.current
-    Column(modifier = modifier.fillMaxWidth().background(colors.canvas)) {
-        Text(
-            text = "Thư viện",
-            modifier = Modifier
-                .statusBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 12.dp),
-            style = TextStyle(
-                fontFamily = Lora,
-                fontWeight = FontWeight.Normal,
-                fontSize = 26.sp,
-                lineHeight = 31.sp,
-                color = colors.ink,
-            ),
-        )
-        Box(Modifier.fillMaxWidth().height(1.dp).background(colors.ink.copy(alpha = 0.06f)))
+    Box(modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 6.dp)) {
+        IlNavBar(title = "Thư viện", showBack = false)
     }
 }
 
@@ -207,31 +202,6 @@ private fun SearchBar(onClick: () -> Unit, modifier: Modifier = Modifier) {
                 color = colors.ink.copy(alpha = 0.42f),
             ),
         )
-    }
-}
-
-/** Dãy chip lọc: "Tất cả" + các mục [LibraryCategory]. "Tất cả" = `selected == null`. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun CategoryChips(
-    categories: List<LibraryCategory>,
-    selected: LibraryCategory?,
-    onSelect: (LibraryCategory?) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    FlowRow(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        IlChip(label = "Tất cả", selected = selected == null, onClick = { onSelect(null) })
-        categories.forEach { category ->
-            IlChip(
-                label = category.label,
-                selected = selected == category,
-                onClick = { onSelect(category) },
-            )
-        }
     }
 }
 
@@ -305,20 +275,157 @@ private fun FeaturedTalkCard(
     }
 }
 
-/** Tiêu đề khối "Kinh thường tụng" (500 · 13.5px). */
+/** Tiêu đề khối (500 · 13.5px) + link nhấn bên phải (400 · 12px). */
 @Composable
-private fun SectionHeader(title: String, modifier: Modifier = Modifier) {
+private fun SectionHeader(
+    title: String,
+    linkLabel: String,
+    onLinkClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val colors = LocalIlColors.current
-    Text(
-        text = title,
-        modifier = modifier,
-        style = TextStyle(
-            fontFamily = BeVietnamPro,
-            fontWeight = FontWeight.Medium,
-            fontSize = 13.5.sp,
-            color = colors.ink,
-        ),
-    )
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(
+            text = title,
+            style = TextStyle(
+                fontFamily = BeVietnamPro,
+                fontWeight = FontWeight.Medium,
+                fontSize = 13.5.sp,
+                color = colors.ink,
+            ),
+        )
+        Text(
+            text = linkLabel,
+            modifier = Modifier.ilTap(onClick = onLinkClick),
+            style = TextStyle(
+                fontFamily = BeVietnamPro,
+                fontWeight = FontWeight.Normal,
+                fontSize = 12.sp,
+                color = colors.link,
+            ),
+        )
+    }
+}
+
+/** Lưới 2×2 bốn lối vào: chấm glyph Hán + nhãn Lora + dòng phụ. */
+@Composable
+private fun HubGrid(
+    hubs: List<LibraryHub>,
+    onHub: (LibraryHub) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        hubs.chunked(2).forEach { pair ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                pair.forEach { hub ->
+                    HubTile(hub = hub, onClick = { onHub(hub) }, modifier = Modifier.weight(1f))
+                }
+                if (pair.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun HubTile(hub: LibraryHub, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val colors = LocalIlColors.current
+    val shape = RoundedCornerShape(IlRadius.Card)
+    val (badgeBg, badgeFg) = when (hub) {
+        LibraryHub.Sutras -> colors.featGlow to colors.link
+        LibraryHub.Meditation -> IlGreen.copy(alpha = 0.16f) to IlGreenText
+        LibraryHub.Talks -> IlRose.copy(alpha = 0.18f) to IlRoseText
+        LibraryHub.Buddhas -> colors.ink.copy(alpha = 0.07f) to colors.ink
+    }
+    Column(
+        modifier = modifier
+            .clip(shape)
+            .background(colors.card)
+            .border(1.dp, colors.ink.copy(alpha = 0.08f), shape)
+            .ilTap(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+    ) {
+        Box(
+            modifier = Modifier.size(30.dp).background(badgeBg, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = hub.glyph,
+                style = TextStyle(fontFamily = Lora, fontSize = 14.sp, color = badgeFg),
+            )
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(
+            text = hub.label,
+            style = TextStyle(fontFamily = Lora, fontSize = 16.sp, color = colors.ink),
+        )
+        Spacer(Modifier.height(3.dp))
+        Text(
+            text = hub.sub,
+            style = TextStyle(
+                fontFamily = BeVietnamPro,
+                fontSize = 11.sp,
+                color = colors.ink.copy(alpha = 0.50f),
+            ),
+        )
+    }
+}
+
+/** Dải thẻ Phật/Bồ Tát cuộn ngang, tràn mép màn (bù padding 20dp của cột cha). */
+@Composable
+private fun BuddhaStrip(
+    buddhas: List<BuddhaProfile>,
+    onBuddha: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalIlColors.current
+    Row(
+        modifier = modifier
+            .layout { measurable, constraints ->
+                // Nới chiều rộng thêm 40dp để dải tràn hai mép (-20dp mỗi bên) như prototype.
+                val extra = 40.dp.roundToPx()
+                val placeable = measurable.measure(constraints.copy(maxWidth = constraints.maxWidth + extra))
+                layout(constraints.maxWidth, placeable.height) { placeable.place(-extra / 2, 0) }
+            }
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        buddhas.forEach { b ->
+            Column(Modifier.width(118.dp).ilTap(onClick = { onBuddha(b.id) })) {
+                // TODO(il-data-builder): ảnh tôn tượng thật (prototype `image-slot`); hiện là nền gradient.
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                        .clip(RoundedCornerShape(IlRadius.Card))
+                        .background(Brush.verticalGradient(listOf(colors.sunk2, colors.tint))),
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = b.shortName,
+                    style = TextStyle(
+                        fontFamily = Lora,
+                        fontSize = 14.sp,
+                        lineHeight = 18.sp,
+                        color = colors.ink,
+                    ),
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = "Vía ${b.viaLabel} âm",
+                    style = TextStyle(
+                        fontFamily = BeVietnamPro,
+                        fontSize = 10.5.sp,
+                        color = colors.ink.copy(alpha = 0.45f),
+                    ),
+                )
+            }
+        }
+    }
 }
 
 /** Danh sách bài kinh — mỗi hàng là một [IlRow] glyph sách, cách nhau 10dp. */
@@ -340,23 +447,6 @@ private fun SutraList(
             )
         }
     }
-}
-
-/** Ghi chú khi chip lọc không có nội dung (dữ liệu mẫu chưa có mục này). */
-@Composable
-private fun EmptyHint(modifier: Modifier = Modifier) {
-    val colors = LocalIlColors.current
-    Text(
-        text = "Nội dung đang được bổ sung dần. Bạn có thể gửi yêu cầu để chúng tôi thỉnh bản dịch về.",
-        modifier = modifier.padding(vertical = 10.dp),
-        style = TextStyle(
-            fontFamily = BeVietnamPro,
-            fontWeight = FontWeight.Normal,
-            fontSize = 13.sp,
-            lineHeight = 22.sp,
-            color = colors.ink.copy(alpha = 0.55f),
-        ),
-    )
 }
 
 /** Ánh xạ tông màu domain sang tông màu component (giữ domain không phụ thuộc UI). */
@@ -381,7 +471,6 @@ private fun LibraryPreview() {
         LibraryContent(
             state = previewState(),
             callbacks = LibraryCallbacks(),
-            onCategorySelected = {},
         )
     }
 }
@@ -393,10 +482,9 @@ private fun LibraryPreviewDark() {
         LibraryContent(
             state = previewState(),
             callbacks = LibraryCallbacks(),
-            onCategorySelected = {},
         )
     }
 }
 
 private fun previewState(): LibraryUiState =
-    LibraryUiState.from(GetLibraryCatalogUseCase()())
+    LibraryUiState.from(GetLibraryCatalogUseCase()(), GetBuddhaProfilesUseCase()())

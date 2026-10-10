@@ -36,6 +36,7 @@ import com.example.innerlamp.di.DatabaseModule
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import com.example.innerlamp.domain.calendar.LunarCalendar
 import com.example.innerlamp.domain.usecase.GetBuddhistEventMonthsUseCase
+import com.example.innerlamp.ui.components.IlBlurHeaderScaffold
 import com.example.innerlamp.ui.components.IlBottomNav
 import com.example.innerlamp.ui.components.IlBottomTab
 import com.example.innerlamp.ui.theme.BeVietnamPro
@@ -55,10 +56,11 @@ class HomeCallbacks(
     val onProfile: () -> Unit = {},
     val onCalendar: () -> Unit = {},
     val onGio: () -> Unit = {},
+    val onLunarDetail: (LocalDate) -> Unit = {},
     val onEvents: () -> Unit = {},
     val onPhotos: () -> Unit = {},
     val onTemple: (templeId: String) -> Unit = {},
-    val onFindTemple: () -> Unit = {},
+    val onAllTemples: () -> Unit = {},
     val onBuddha: (buddhaId: String) -> Unit = {},
     val onBuddhaLibrary: () -> Unit = {},
     val onJournal: () -> Unit = {},
@@ -69,17 +71,18 @@ class HomeCallbacks(
     val onReader: () -> Unit = {},
     val onOffer: () -> Unit = {},
     val onArticle: (articleId: String) -> Unit = {},
+    val onAllArticles: () -> Unit = {},
     val onLibrary: () -> Unit = {},
     val onTab: (IlBottomTab) -> Unit = {},
 )
 
 /**
- * Màn hình Trang chủ — dựng lại từ prototype `Docs/design_handoff_innerlamp/` (màn `home`).
+ * Màn hình Trang chủ — dựng lại từ prototype `Docs/innerlamp-project/` (màn `home`).
  *
  * Bố cục (trên → dưới): header dán (lời chào, thông báo, avatar) → dải tuần cuộn ngang
  * (kèm chú thích hoàng đạo/hắc đạo/Rằm-Mùng Một) → thẻ âm lịch + câu kinh → Sự kiện Phật
  * giáo (carousel theo tháng) → Ảnh chùa đẹp → Chùa Việt Nam (carousel) → Thư viện Phật &
- * Bồ Tát (carousel) → thời khóa hôm nay + chuỗi ngày → tràng hạt → chuông mõ →
+ * Bồ Tát (carousel) → thời khóa hôm nay + chuỗi ngày → tràng hạt (thẻ lối tắt vào Niệm Phật) → chuông mõ →
  * thời khóa gợi ý → bài viết Phật pháp → bottom nav. Ba khối chùa/Phật/bài viết hiện skeleton
  * khi đang tải, rồi nội dung; tải xong mà không có dữ liệu thì hiện thẻ rỗng (nét đứt + "Thử lại").
  *
@@ -105,8 +108,6 @@ fun HomeScreen(
         state = state,
         callbacks = callbacks,
         onDateSelected = viewModel::onDateSelected,
-        onBeadTap = viewModel::onBeadTap,
-        onBeadReset = viewModel::onBeadReset,
         onReload = viewModel::onReload,
         modifier = modifier,
     )
@@ -118,8 +119,6 @@ internal fun HomeContent(
     state: HomeUiState,
     callbacks: HomeCallbacks,
     onDateSelected: (LocalDate) -> Unit,
-    onBeadTap: () -> Unit,
-    onBeadReset: () -> Unit,
     onReload: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -129,14 +128,16 @@ internal fun HomeContent(
             .fillMaxSize()
             .background(colors.canvas),
     ) {
-        HomeHeader(state = state, callbacks = callbacks)
-
+        val scroll = rememberScrollState()
+        IlBlurHeaderScaffold(
+            scrollOffset = { scroll.value },
+            header = { HomeHeader(state = state, callbacks = callbacks) },
+            modifier = Modifier.weight(1f),
+        ) { headerHeight ->
         Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState()),
+            modifier = Modifier.verticalScroll(scroll),
         ) {
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(headerHeight + 20.dp))
             WeekStrip(
                 pages = state.weekPages,
                 today = state.today,
@@ -151,11 +152,16 @@ internal fun HomeContent(
                 date = state.selectedDate,
                 lunar = state.selectedLunar,
                 verse = state.verse,
+                onClick = { callbacks.onLunarDetail(state.selectedDate) },
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
 
             Spacer(Modifier.height(24.dp))
-            EventsSection(months = state.eventMonths, onAllClick = callbacks.onEvents)
+            EventsSection(
+                months = state.eventMonths,
+                initialMonth = state.today.monthValue,
+                onAllClick = callbacks.onEvents,
+            )
 
             Spacer(Modifier.height(24.dp))
             PhotosSection(
@@ -168,7 +174,7 @@ internal fun HomeContent(
                 temples = state.temples,
                 isLoading = state.isContentLoading,
                 onTempleClick = callbacks.onTemple,
-                onFindClick = callbacks.onFindTemple,
+                onAllClick = callbacks.onAllTemples,
             )
 
             Spacer(Modifier.height(24.dp))
@@ -191,8 +197,7 @@ internal fun HomeContent(
             MalaSection(
                 beads = state.beads,
                 progress = state.beadProgress,
-                onBeadTap = onBeadTap,
-                onReset = onBeadReset,
+                onKeepClick = callbacks.onMala,
                 onFullScreenClick = callbacks.onMala,
             )
 
@@ -214,10 +219,11 @@ internal fun HomeContent(
                 articles = state.articles,
                 isLoading = state.isContentLoading,
                 onArticleClick = callbacks.onArticle,
-                onLibraryClick = callbacks.onLibrary,
+                onAllClick = callbacks.onAllArticles,
                 onReload = onReload,
             )
             Spacer(Modifier.height(20.dp))
+        }
         }
 
         IlBottomNav(active = IlBottomTab.Home, onNav = callbacks.onTab)
@@ -232,11 +238,10 @@ private fun HomeHeader(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalIlColors.current
-    Column(modifier = modifier.fillMaxWidth().background(colors.canvas)) {
+    Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .statusBarsPadding()
                 .padding(start = 20.dp, end = 20.dp, top = 10.dp, bottom = 12.dp),
             verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -287,7 +292,6 @@ private fun HomeHeader(
                 }
             }
         }
-        Box(Modifier.fillMaxWidth().height(1.dp).background(colors.ink.copy(alpha = 0.06f)))
     }
 }
 
@@ -344,8 +348,6 @@ private fun HomePreview() {
             state = previewState(),
             callbacks = HomeCallbacks(),
             onDateSelected = {},
-            onBeadTap = {},
-            onBeadReset = {},
             onReload = {},
         )
     }
@@ -359,8 +361,6 @@ private fun HomePreviewDark() {
             state = previewState(),
             callbacks = HomeCallbacks(),
             onDateSelected = {},
-            onBeadTap = {},
-            onBeadReset = {},
             onReload = {},
         )
     }
@@ -371,7 +371,7 @@ private fun previewState(): HomeUiState {
     return HomeUiState.create(
         today = today,
         hour = 9,
-        eventMonths = GetBuddhistEventMonthsUseCase()(today),
+        eventMonths = GetBuddhistEventMonthsUseCase().forYear(today.year),
         displayName = "Diệu Tâm",
     )
 }

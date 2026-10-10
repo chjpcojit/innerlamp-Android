@@ -2,7 +2,6 @@ package com.example.innerlamp.ui.screens.home
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -10,7 +9,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -56,12 +54,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathOperation
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.Role
@@ -413,12 +408,15 @@ private fun WeekDayCell(
 
 // ── Thẻ âm lịch + câu kinh ───────────────────────────────────────────────────
 
+private val LunarHeroHeight = 440.dp
+
 /** Thẻ hero tối (luôn tối ở cả hai theme): ngày âm lớn + câu kinh của ngày. */
 @Composable
 internal fun LunarHeroCard(
     date: LocalDate,
     lunar: LunarDate,
     verse: Verse,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val shape = RoundedCornerShape(IlRadius.CardLarge)
@@ -426,6 +424,7 @@ internal fun LunarHeroCard(
         modifier = modifier
             .fillMaxWidth()
             .clip(shape)
+            .tappable(onClickLabel = "Xem chi tiết ngày âm", onClick = onClick)
             // Thẻ luôn tối: nền tối cố định (không đi qua token) để light mode không sáng lên.
             .background(Brush.verticalGradient(listOf(IlDarkBgTop, IlDarkBgBottom))),
     ) {
@@ -444,7 +443,9 @@ internal fun LunarHeroCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 400.dp)
+                // Chiều cao cố định: câu kinh đổi theo ngày (số dòng xuống hàng khác nhau)
+                // không được làm thẻ co giãn và đẩy các khối phía dưới nhảy theo.
+                .height(LunarHeroHeight)
                 .padding(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 26.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -522,11 +523,15 @@ private fun MoonPhaseIcon(modifier: Modifier = Modifier) {
 @Composable
 internal fun EventsSection(
     months: List<EventMonth>,
+    /** Tháng (1–12) hiển thị lần đầu — thường là tháng hiện tại. */
+    initialMonth: Int,
     onAllClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalIlColors.current
-    val listState = rememberLazyListState()
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = months.indexOfFirst { it.month == initialMonth }.coerceAtLeast(0),
+    )
     val scope = rememberCoroutineScope()
     val page by remember { derivedStateOf { listState.firstVisibleItemIndex.coerceIn(0, months.lastIndex) } }
 
@@ -732,12 +737,12 @@ internal fun TemplesSection(
     temples: List<Temple>,
     isLoading: Boolean,
     onTempleClick: (String) -> Unit,
-    onFindClick: () -> Unit,
+    onAllClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
     Column(modifier) {
-        SectionHeader("Chùa Việt Nam", "Tìm chùa", onFindClick)
+        SectionHeader("Chùa Việt Nam", "Xem tất cả", onAllClick)
         if (isLoading) {
             TemplesSkeleton()
             return@Column
@@ -746,8 +751,8 @@ internal fun TemplesSection(
             HomeEmptyCard(
                 title = "Chưa có chùa nào",
                 body = "Danh sách chùa đang được cập nhật. Bạn có thể tìm chùa gần mình hoặc thử lại sau.",
-                actionLabel = "Tìm chùa",
-                onAction = onFindClick,
+                actionLabel = "Xem tất cả",
+                onAction = onAllClick,
             )
             return@Column
         }
@@ -973,12 +978,15 @@ internal fun PracticeStatsRow(
 
 // ── Tràng hạt ────────────────────────────────────────────────────────────────
 
+/**
+ * Thẻ tràng hạt: cả thẻ là một lối tắt vào màn Niệm Phật (giữ nguyên số hạt), không còn lần hạt
+ * hay "Bắt đầu lại" ngay trên Trang chủ — khớp prototype `goMalaKeep`.
+ */
 @Composable
 internal fun MalaSection(
     beads: Int,
     progress: Float,
-    onBeadTap: () -> Unit,
-    onReset: () -> Unit,
+    onKeepClick: () -> Unit,
     onFullScreenClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -993,56 +1001,39 @@ internal fun MalaSection(
                 .clip(shape)
                 .background(colors.card)
                 .border(1.dp, colors.ink.copy(alpha = 0.08f), shape)
+                .tappable(onClickLabel = "Mở màn Niệm Phật", onClick = onKeepClick)
                 .padding(20.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            BeadRing(beads = beads, progress = progress, onTap = onBeadTap)
+            BeadRing(beads = beads, progress = progress)
             Column(Modifier.weight(1f)) {
                 Text("Nam mô A Di Đà Phật", style = serif(17f, colors.ink, lineHeight = 23.8f.sp))
                 Text(
-                    text = "Chạm vào vòng hạt mỗi lần niệm.",
+                    text = "Chạm để vào lần chuỗi niệm Phật.",
                     modifier = Modifier.padding(top = 6.dp),
                     style = sans(12f, colors.ink.copy(alpha = 0.50f), lineHeight = 18.sp),
                 )
-                Text(
-                    text = "Bắt đầu lại",
-                    modifier = Modifier
-                        .padding(top = 12.dp)
-                        .clip(CircleShape)
-                        .border(1.dp, colors.ink.copy(alpha = 0.18f), CircleShape)
-                        .tappable(onClick = onReset)
-                        .padding(horizontal = 14.dp, vertical = 7.dp),
-                    style = sans(11.5f, colors.ink, FontWeight.Medium),
-                )
             }
+            Text("›", style = sans(18f, colors.ink.copy(alpha = 0.35f)))
         }
     }
 }
 
-/** Vòng 92dp: cung vàng chạy theo tiến độ (conic-gradient của prototype); chạm → +1, thụt nhẹ 0.93. */
+/** Vòng 92dp chỉ để hiển thị: cung vàng chạy theo tiến độ (conic-gradient của prototype). */
 @Composable
 private fun BeadRing(
     beads: Int,
     progress: Float,
-    onTap: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalIlColors.current
-    val haptic = LocalHapticFeedback.current
-    val interaction = remember { MutableInteractionSource() }
-    val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed) 0.93f else 1f, tween(120), label = "beadScale")
     val track = colors.ink.copy(alpha = 0.10f)
 
     Box(
         modifier = modifier
             .size(92.dp)
             .semantics { contentDescription = "Đã niệm $beads trên 108" }
-            .clickable(interactionSource = interaction, indication = null, role = Role.Button) {
-                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                onTap()
-            }
             .drawBehind {
                 drawCircle(track)
                 drawArc(
@@ -1057,7 +1048,6 @@ private fun BeadRing(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .graphicsLayer { scaleX = scale; scaleY = scale }
                 .background(colors.canvas, CircleShape),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
@@ -1166,12 +1156,12 @@ internal fun ArticlesSection(
     articles: List<Article>,
     isLoading: Boolean,
     onArticleClick: (String) -> Unit,
-    onLibraryClick: () -> Unit,
+    onAllClick: () -> Unit,
     onReload: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier) {
-        SectionHeader("Bài viết Phật pháp hay", "Thư viện", onLibraryClick)
+        SectionHeader("Bài viết Phật pháp hay", "Xem tất cả", onAllClick)
         if (isLoading) {
             ArticlesSkeleton()
             return@Column
@@ -1196,8 +1186,9 @@ internal fun ArticlesSection(
     }
 }
 
+/** Thẻ bài viết (ảnh 84dp + chuyên mục, tiêu đề, tác giả) — dùng chung cho Trang chủ và "Tất cả bài viết". */
 @Composable
-private fun ArticleCard(article: Article, onClick: () -> Unit, modifier: Modifier = Modifier) {
+internal fun ArticleCard(article: Article, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = LocalIlColors.current
     val shape = RoundedCornerShape(IlRadius.Card)
     Row(

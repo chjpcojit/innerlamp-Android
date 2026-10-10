@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.innerlamp.domain.model.ProfileUser
+import com.example.innerlamp.ui.components.IlBlurHeaderScaffold
 import com.example.innerlamp.ui.components.IlNavBar
 import com.example.innerlamp.ui.components.IlSettingKind
 import com.example.innerlamp.ui.components.IlSettingRow
@@ -119,19 +119,18 @@ internal fun SettingsContent(
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalIlColors.current
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(colors.canvas),
-    ) {
-        SettingsHeader(onBack = callbacks.onBack)
-
+    val scroll = rememberScrollState()
+    IlBlurHeaderScaffold(
+        scrollOffset = { scroll.value },
+        header = { SettingsHeader(onBack = callbacks.onBack) },
+        modifier = modifier.background(colors.canvas),
+    ) { headerHeight ->
         Column(
             modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState()),
+                .fillMaxSize()
+                .verticalScroll(scroll),
         ) {
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(headerHeight + 20.dp))
             AccountCard(
                 user = state.user,
                 sub = state.accountSub,
@@ -230,23 +229,14 @@ internal fun SettingsContent(
     }
 }
 
-/** Header dán: `IlNavBar` "Cài đặt" + hairline `ink-06` ở đáy. */
+/** Header: `IlNavBar` "Cài đặt". Blur + hairline do [IlBlurHeaderScaffold] lo. */
 @Composable
 private fun SettingsHeader(
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val colors = LocalIlColors.current
-    Column(modifier = modifier.fillMaxWidth().background(colors.canvas)) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp),
-        ) {
-            IlNavBar(title = "Cài đặt", showBack = true, onBack = onBack)
-        }
-        Box(Modifier.fillMaxWidth().height(1.dp).background(colors.ink.copy(alpha = 0.06f)))
+    Box(modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 8.dp)) {
+        IlNavBar(title = "Cài đặt", showBack = true, onBack = onBack)
     }
 }
 

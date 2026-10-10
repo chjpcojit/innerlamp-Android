@@ -39,4 +39,18 @@ class BellPresetTest {
             }
         }
     }
+
+    @Test
+    fun roll_startsSlowSpeedsUpThenSlowsToTwoLongBeats() {
+        val gaps = BellRoll.gapsMillis
+        assertEquals(950L, gaps.first())
+        assertEquals(listOf(950L, 1100L), gaps.takeLast(2))
+        assertEquals(14, gaps.count { it == 160L })
+    }
+
+    @Test
+    fun rollStrike_isCappedAndScaledByGap() {
+        assertEquals(260, BellRoll.strikeMillis(950))
+        assertEquals(136, BellRoll.strikeMillis(160))
+    }
 }

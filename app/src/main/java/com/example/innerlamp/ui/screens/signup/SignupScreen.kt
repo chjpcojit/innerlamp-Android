@@ -14,9 +14,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
@@ -44,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.innerlamp.ui.components.IlBlurHeaderScaffold
 import com.example.innerlamp.ui.components.IlButton
 import com.example.innerlamp.ui.components.IlButtonVariant
 import com.example.innerlamp.domain.model.PhoneCountries
@@ -85,28 +88,31 @@ fun SignupScreen(
     var countryPickerOpen by remember { mutableStateOf(false) }
 
     Box(modifier = modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(colors.card2, colors.sunk)))
-                .windowInsetsPadding(WindowInsets.safeDrawing),
-        ) {
-            IlNavBar(
-                title = "Tạo tài khoản",
-                showBack = true,
-                onBack = onBack,
-                modifier = Modifier.padding(horizontal = 20.dp),
-            )
-
+        val scroll = rememberScrollState()
+        IlBlurHeaderScaffold(
+            scrollOffset = { scroll.value },
+            header = {
+                IlNavBar(
+                    title = "Tạo tài khoản",
+                    showBack = true,
+                    onBack = onBack,
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                )
+            },
+        ) { headerHeight ->
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                    .background(Brush.verticalGradient(listOf(colors.card2, colors.sunk)))
+                    .windowInsetsPadding(
+                        WindowInsets.safeDrawing.only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom),
+                    )
+                    .verticalScroll(scroll)
                     .padding(horizontal = 26.dp)
                     .padding(bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(headerHeight + 8.dp))
 
                 // ── Header nội dung: "Kết duyên cùng InnerLamp" ──────────────
                 Column(

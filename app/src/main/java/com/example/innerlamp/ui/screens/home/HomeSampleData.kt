@@ -4,6 +4,7 @@ import com.example.innerlamp.domain.model.Article
 import com.example.innerlamp.domain.model.BuddhaFigure
 import com.example.innerlamp.domain.model.Temple
 import com.example.innerlamp.domain.model.Verse
+import com.example.innerlamp.domain.usecase.GetTemplesUseCase
 import kotlinx.coroutines.delay
 
 /**
@@ -49,16 +50,7 @@ internal object HomeSampleData {
         ),
     )
 
-    val temples = listOf(
-        Temple("tp-motcot", "Chùa Một Cột", "Ba Đình, Hà Nội", "Miền Bắc", "Dựng năm 1049 · thời Lý"),
-        Temple("tp-tranquoc", "Chùa Trấn Quốc", "Hồ Tây, Hà Nội", "Miền Bắc", "Ngôi chùa cổ nhất Thăng Long"),
-        Temple("tp-huong", "Chùa Hương", "Mỹ Đức, Hà Nội", "Miền Bắc", "Lễ hội tháng Giêng – tháng Ba"),
-        Temple("tp-baidinh", "Chùa Bái Đính", "Gia Viễn, Ninh Bình", "Miền Bắc", "Quần thể chùa lớn nhất cả nước"),
-        Temple("tp-thienmu", "Chùa Thiên Mụ", "Bờ sông Hương, Huế", "Miền Trung", "Tháp Phước Duyên 7 tầng"),
-        Temple("tp-linhung", "Chùa Linh Ứng", "Sơn Trà, Đà Nẵng", "Miền Trung", "Tượng Quán Âm cao 67m"),
-        Temple("tp-truclam", "Thiền viện Trúc Lâm", "Hồ Tuyền Lâm, Đà Lạt", "Tây Nguyên", "Thiền phái Trúc Lâm Yên Tử"),
-        Temple("tp-vinhnghiem", "Chùa Vĩnh Nghiêm", "Quận 3, TP. Hồ Chí Minh", "Miền Nam", "Kiến trúc Bắc Bộ giữa Sài Gòn"),
-    )
+    val temples = GetTemplesUseCase()()
 
     val articles = listOf(
         Article("art-1", "Giáo lý căn bản", "Tứ Diệu Đế: bốn sự thật cho người mới bắt đầu", "Thầy Minh Đạo", "6 phút đọc"),

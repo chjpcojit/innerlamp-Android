@@ -98,6 +98,9 @@ object LunarCalendar {
 
     // ── Julian day ─────────────────────────────────────────────────────────
 
+    /** Số ngày Julian của [date] — nền tảng tính can chi ngày, giờ hoàng đạo, hướng xuất hành. */
+    fun julianDay(date: LocalDate): Int = jdFromDate(date.dayOfMonth, date.monthValue, date.year)
+
     private fun jdFromDate(dd: Int, mm: Int, yy: Int): Int {
         val a = (14 - mm) / 12
         val y = yy + 4800 - a

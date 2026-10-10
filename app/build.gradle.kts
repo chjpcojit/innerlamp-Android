@@ -15,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.innerlamp"
-        minSdk = 29
+        minSdk = 31
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
@@ -24,6 +24,17 @@ android {
     }
 
     buildTypes {
+        // Build "profile" (như Flutter): chạy như release (không debuggable, nhẹ hơn nhiều với
+        // Compose) nhưng ký bằng khóa debug để cài thẳng lên máy ảo/thiết bị.
+        create("profile") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += "release"
+            // Bật R8 (shrink + optimize) để nhẹ hơn nữa; `release` thật vẫn để tắt.
+            optimization {
+                enable = true
+            }
+        }
         release {
             optimization {
                 enable = false
@@ -99,6 +110,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
+    implementation(libs.haze)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
@@ -109,6 +121,14 @@ dependencies {
     implementation(libs.retrofit.kotlinx.serialization)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging.interceptor)
+
+    // Từ docs/innerlamp-project: trình phát audio, ảnh, chuông nhắc, splash
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.session)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.core.splashscreen)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

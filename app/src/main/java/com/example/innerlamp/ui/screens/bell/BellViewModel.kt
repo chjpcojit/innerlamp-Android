@@ -10,6 +10,7 @@ import com.example.innerlamp.domain.model.BellEveryOptions
 import com.example.innerlamp.domain.model.BellLimits
 import com.example.innerlamp.domain.model.BellMode
 import com.example.innerlamp.domain.model.BellPresets
+import com.example.innerlamp.domain.model.BellRoll
 import com.example.innerlamp.domain.model.intervalMillis
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -114,14 +115,20 @@ class BellViewModel(application: Application) : AndroidViewModel(application) {
 
     // ── Nội bộ ──────────────────────────────────────────────────────────
 
-    /** Gõ một tiếng mõ; nếu chế độ Mõ + chuông và đủ mốc thì thỉnh chuông sau 180ms. */
-    private fun strikeMo() {
+    /**
+     * Gõ một tiếng mõ; nếu chế độ Mõ + chuông và đủ mốc thì thỉnh chuông sau 180ms.
+     * [auto] = false khi nằm trong chuỗi dồn mõ (không tự thỉnh chuông giữa chừng);
+     * [strikeMillis] là thời lượng hoạt ảnh cú gõ.
+     */
+    private fun strikeMo(auto: Boolean = true, strikeMillis: Int = BellRoll.MoStrikeMaxMillis) {
         playMo()
         flashMo()
-        val newCount = _uiState.updateAndGet { it.copy(moCount = it.moCount + 1) }.moCount
+        val newCount = _uiState.updateAndGet {
+            it.copy(moCount = it.moCount + 1, moStrikeMillis = strikeMillis)
+        }.moCount
         val state = _uiState.value
         val every = BellEveryOptions.all[state.everyIndex]
-        if (state.mode == BellMode.MoVaChuong && every > 0 && newCount % every == 0) {
+        if (auto && state.mode == BellMode.MoVaChuong && every > 0 && newCount % every == 0) {
             viewModelScope.launch {
                 delay(180)
                 strikeChuong()
@@ -136,17 +143,20 @@ class BellViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(chuongCount = it.chuongCount + 1) }
     }
 
-    /** Bắt đầu vòng lặp giữ nhịp tự động (tính lại khoảng cách ở mỗi nhịp). */
+    /**
+     * Bắt đầu vòng lặp giữ nhịp tự động: gõ ngay tiếng đầu rồi mới chờ khoảng cách
+     * (khớp `_bTick` của prototype); khoảng cách tính lại ở mỗi nhịp.
+     */
     private fun start() {
         stop()
         _uiState.update { it.copy(running = true) }
         tickJob = viewModelScope.launch {
             while (isActive) {
-                val state = _uiState.value
-                delay(state.mode.intervalMillis(state.bpm, state.gapSeconds))
                 val current = _uiState.value
                 if (!current.running) break
                 if (current.mode == BellMode.Chuong) strikeChuong() else strikeMo()
+                val state = _uiState.value
+                delay(state.mode.intervalMillis(state.bpm, state.gapSeconds))
             }
         }
     }
@@ -158,22 +168,19 @@ class BellViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(running = false) }
     }
 
-    /** Dồn mõ: 16 tiếng mõ nhanh dần (440ms → giảm ×0.8, tối thiểu 70ms) rồi kết một tiếng chuông. */
+    /** Dồn mõ kiểu tụng kinh theo [BellRoll.gapsMillis], kết bằng một tiếng chuông. */
     private fun roll() {
         if (_uiState.value.rolling) return
         stop()
         _uiState.update { it.copy(rolling = true) }
         rollJob?.cancel()
         rollJob = viewModelScope.launch {
-            var gap = 440.0
-            repeat(16) {
-                strikeMo()
-                delay(gap.toLong())
-                gap = maxOf(70.0, gap * 0.8)
+            BellRoll.gapsMillis.forEach { gap ->
+                strikeMo(auto = false, strikeMillis = BellRoll.strikeMillis(gap))
+                delay(gap)
             }
-            delay(260)
             strikeChuong()
-            _uiState.update { it.copy(rolling = false) }
+            _uiState.update { it.copy(rolling = false, moStrikeMillis = BellRoll.MoStrikeMaxMillis) }
         }
     }
 

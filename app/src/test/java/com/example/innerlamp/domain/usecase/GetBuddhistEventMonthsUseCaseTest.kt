@@ -22,6 +22,12 @@ class GetBuddhistEventMonthsUseCaseTest {
     }
 
     @Test
+    fun for_year_returns_january_to_december() {
+        val months = useCase.forYear(2026)
+        assertEquals((1..12).map { 2026 to it }, months.map { it.year to it.month })
+    }
+
+    @Test
     fun default_is_six_months() {
         assertEquals(6, useCase(LocalDate.of(2026, 9, 25)).size)
     }

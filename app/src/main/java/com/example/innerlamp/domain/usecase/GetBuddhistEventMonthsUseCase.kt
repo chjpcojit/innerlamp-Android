@@ -12,6 +12,9 @@ import java.time.LocalDate
  */
 class GetBuddhistEventMonthsUseCase {
 
+    /** Đủ 12 tháng (1 → 12) của năm dương lịch [year]. */
+    fun forYear(year: Int): List<EventMonth> = invoke(LocalDate.of(year, 1, 1), months = 12)
+
     operator fun invoke(from: LocalDate, months: Int = DEFAULT_MONTHS): List<EventMonth> =
         List(months) { offset ->
             val first = from.withDayOfMonth(1).plusMonths(offset.toLong())

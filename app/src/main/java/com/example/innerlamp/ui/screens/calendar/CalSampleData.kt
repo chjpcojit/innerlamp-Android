@@ -17,5 +17,5 @@ internal object CalSampleData {
     const val FAST_REMINDER_TITLE = "Ngày trai · ăn chay"
     const val FAST_REMINDER_SUB = "18 âm · nhắc lúc 06:00"
     const val REPENTANCE_TITLE = "Sám hối cuối tháng"
-    const val REPENTANCE_SUB = "30 âm · Đạo tràng Từ Quang 19:00"
+    const val REPENTANCE_SUB = "30 âm · Chùa Từ Quang 19:00"
 }

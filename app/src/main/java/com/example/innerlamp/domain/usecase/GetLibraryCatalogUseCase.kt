@@ -2,12 +2,12 @@ package com.example.innerlamp.domain.usecase
 
 import com.example.innerlamp.domain.model.FeaturedTalk
 import com.example.innerlamp.domain.model.LibraryCatalog
-import com.example.innerlamp.domain.model.LibraryCategory
+import com.example.innerlamp.domain.model.LibraryHub
 import com.example.innerlamp.domain.model.Sutra
 import com.example.innerlamp.domain.model.SutraTone
 
 /**
- * Trả về catalog của màn Thư viện: các mục lọc, thẻ pháp thoại nổi bật và
+ * Trả về catalog của màn Thư viện: bốn lối vào, thẻ pháp thoại nổi bật và
  * danh sách "Kinh thường tụng".
  *
  * Hiện dữ liệu là mẫu lấy từ prototype (`Docs/design_handoff_innerlamp/`, màn `lib`).
@@ -20,11 +20,7 @@ import com.example.innerlamp.domain.model.SutraTone
 class GetLibraryCatalogUseCase {
 
     operator fun invoke(): LibraryCatalog = LibraryCatalog(
-        categories = listOf(
-            LibraryCategory.Sutra,
-            LibraryCategory.Meditation,
-            LibraryCategory.Talk,
-        ),
+        hubs = LibraryHub.entries,
         featuredTalk = FeaturedTalk(
             id = "tl-hieu-la-dao",
             kicker = "PHÁP THOẠI MÙA VU LAN",
@@ -35,23 +31,30 @@ class GetLibraryCatalogUseCase {
             Sutra(
                 id = "k-kinh-phap-cu",
                 name = "Kinh Pháp Cú",
-                sub = "423 kệ · song ngữ",
+                sub = "Dhammapada · Pāli",
                 time = "2g 10p",
                 tone = SutraTone.Gold,
             ),
             Sutra(
                 id = "k-vu-lan",
-                name = "Kinh Vu Lan",
-                sub = "Tụng rằm tháng Bảy",
+                name = "Kinh Vu Lan Báo Hiếu",
+                sub = "佛說盂蘭盆經 · Ullambana Sūtra",
                 time = "38 phút",
                 tone = SutraTone.Rose,
             ),
             Sutra(
                 id = "k-a-di-da",
                 name = "Kinh A Di Đà",
-                sub = "Có phiên âm",
-                time = "26 phút",
+                sub = "佛說阿彌陀經 · Sukhāvatīvyūha",
+                time = "22 phút",
                 tone = SutraTone.Green,
+            ),
+            Sutra(
+                id = "k-dai-bi",
+                name = "Chú Đại Bi",
+                sub = "大悲咒 · Nīlakaṇṭha Dhāraṇī",
+                time = "8 phút",
+                tone = SutraTone.Gold,
             ),
         ),
     )
