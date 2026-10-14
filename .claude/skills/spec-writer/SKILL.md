@@ -46,7 +46,7 @@ files.
    `ba-writer`. Legacy features with no product spec may be updated with
    `Product spec: none yet (legacy)`. See `references/upstream_product_spec.md`.
 2. **`Docs/*_assumptions.md` holds Android-only assumptions, never product rules.** Those files
-   (e.g. `Docs/gio_assumptions.md`) record build-time choices (in-memory seed data, a Material3
+   (e.g. `Docs/home_assumptions.md`) record build-time choices (in-memory seed data, a Material3
    stand-in for a prototype control). A business rule found there (a date rule, an anniversary
    count) is a product question: cite the BR if the product spec has it, otherwise
    `⚠️ Not confirmed (product)` and hand it to `ba-writer` — never copy it into this spec as fact.

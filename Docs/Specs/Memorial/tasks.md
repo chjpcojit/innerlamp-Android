@@ -1,6 +1,6 @@
 # Tasks — Memorial
 
-Version: 2.0
+Version: 2.1
 Last updated: 2026-10-14
 Status: in-progress — UI và tính kỳ giỗ có trên dữ liệu in-memory; tích hợp backend, bản offline, push FCM, múi giờ tài khoản, tháng nhuận, khoảng năm, xác nhận xoá và vector còn `[ ]`
 
@@ -143,8 +143,8 @@ Paths are relative to `app/src/main/java/com/example/innerlamp/`.
 ## Phase 6 — Documentation
 
 - [ ] Báo trạng thái cột Android của product §4.2 cho `ba-writer` (skill này không sửa repo backend)
-- [ ] Xoá `Docs/gio_assumptions.md` (đã bị product spec thay thế); chuyển hai "Ghi chú build" của nó
-      (task `testDevDebugUnitTest`, lỗi lint sẵn có) sang `AGENTS.md`/`CLAUDE.md` trước khi xoá
+- [x] Xoá `Docs/gio_assumptions.md` (đã bị product spec thay thế); hai "Ghi chú build" đã chuyển sang
+      `AGENTS.md`/`CLAUDE.md` (2026-10-14)
 - [ ] OKF concept qua `il-okf-writer` khi feature đã kiểm chứng end-to-end
 
 ## Deferred (not blocking Memorial)

@@ -1,6 +1,6 @@
 # Requirements — Memorial
 
-Version: 2.0
+Version: 2.1
 Last updated: 2026-10-14
 Status: in-progress — UI (`ui/screens/gio/`) và tính kỳ giỗ (`domain/calendar/MemorialSchedule.kt`) đã có, nhưng sổ chỉ giữ trong bộ nhớ ViewModel (seed 3 người mẫu), chưa đăng nhập, chưa gọi backend, chưa lưu offline, chưa có push (FCM); còn hiện công tắc "Thêm vào Lời nhắc" (FR-MEM-009 đã bỏ) và hàng "Lấy từ gia phả"; lệch product ở tháng nhuận, khoảng năm, xác nhận xoá
 Feature folder: `app/src/main/java/com/example/innerlamp/ui/screens/gio/` (tên cũ `gio`, product §1.5)
@@ -18,7 +18,7 @@ spec và **không** nhắc lại ở đây; file này chỉ nói app Android hi�
 thế nào. FR-MEM-009 đã **Removed** ở product v2.0 — Android bỏ công tắc "Thêm vào Lời nhắc" (AC31).
 BR-MEM-13 và NFR-MEM-04 chỉ áp dụng cho Backend.
 
-`Docs/gio_assumptions.md` đã bị thay thế bởi product spec — xem "Open questions (resolved)".
+`Docs/gio_assumptions.md` (đã xoá 2026-10-14) bị thay thế bởi product spec — xem "Open questions (resolved)".
 
 ## Ràng buộc từ product spec
 
@@ -150,9 +150,9 @@ Android, thấy kỳ giỗ tới của từng người và được nhắc trư�
 21. WHEN một mục đọc từ server có số ngày hoặc giờ nhắc ngoài các lựa chọn của BR-MEM-11 (tạo trước
     v2.0), THE SYSTEM SHALL hiện lựa chọn gần nhất và giữ nguyên giá trị đã lưu tới khi người dùng
     lưu mục đó (lúc lưu thì gửi lựa chọn đang hiện). (FR-MEM-007)
-    > ⚠️ Not confirmed (product): giá trị cách đều hai lựa chọn (vd. 2 hoặc 5 ngày; 09:30, 15:30) thì
-    > "gần nhất" là lựa chọn nào — đề xuất mặc định: lựa chọn nhỏ hơn — chặn task Phase 1
-    > "Nearest choice"; hand back to ba-writer in innerlamp-be.
+    "Gần nhất" theo product FR-MEM-007 @ v2.1: số ngày gần nhất, cách đều thì chọn nhắc sớm hơn
+    (2 → 3 ngày, 5 → 7 ngày); giờ gần nhất, cách đều thì chọn giờ sớm hơn (09:30 → 07:00, 15:30 →
+    12:00); trước 06:00 → 06:00, sau 19:00 → 19:00. Dòng tóm tắt nhắc trong sổ hiện cùng lựa chọn đó.
 22. WHEN người dùng bật nhắc hoặc lưu một mục có nhắc bật trên Android 13+ (API 33) mà app chưa từng
     xin quyền `POST_NOTIFICATIONS`, THE SYSTEM SHALL xin quyền; kết quả không chặn việc lưu. (platform,
     FR-MEM-008)
@@ -178,9 +178,7 @@ Android, thấy kỳ giỗ tới của từng người và được nhắc trư�
 27. WHEN người dùng bấm một push nhắc giỗ, THE SYSTEM SHALL mở app tại mục đó (`GioRoute` → tải sổ →
     form của mục); khi chưa đăng nhập thì xử lý như AC2; khi không tải được thì mở mục từ bản offline
     (AC32). (FR-MEM-008)
-    > ⚠️ Not confirmed (product): mở một nhắc (push hoặc trong danh sách Thông báo) của mục đã bị xoá
-    > thì người dùng thấy gì — đề xuất mặc định: mở sổ và báo "Mục này không còn trong sổ giỗ." —
-    > chặn task Phase 2 "Mở mục từ nhắc"; hand back to ba-writer in innerlamp-be.
+    Mục đã bị xoá (product FR-MEM-008 @ v2.1): mở sổ và báo "Mục này không còn trong sổ giỗ.".
 28. WHEN người dùng chọn một nhắc giỗ trong danh sách Thông báo (feature dùng chung, ADR-0001), THE
     SYSTEM SHALL mở mục đó như AC27. (FR-MEM-008)
 29. WHEN người dùng đăng nhập thành công, và WHEN app vào foreground mà múi giờ của máy khác múi giờ đã

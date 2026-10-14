@@ -78,6 +78,11 @@ Always use the wrapper (`./gradlew`), never a global `gradle`.
 - Single method: `./gradlew testDebugUnitTest --tests "com.example.innerlamp.ExampleUnitTest.addition_isCorrect"`
 - Instrumented tests (`app/src/androidTest/`, needs a device/emulator): `./gradlew connectedDebugAndroidTest`
 - Lint: `./gradlew lint` → `app/build/reports/lint-results-debug.html`
+
+> **Build notes (from the retired `Docs/gio_assumptions.md`):** the project has product flavors
+> (`dev`/`staging`/`prod`), so the unit-test task is `testDevDebugUnitTest` (not `testDebugUnitTest`)
+> and lint is `lintDevDebug`; `lintDevDebug` has 8 pre-existing `ViewModelConstructorInComposable`
+> errors in Login/Onboarding/Signup/Splash.
 - Unit test report: `app/build/reports/tests/testDebugUnitTest/index.html`
 
 ## Build/toolchain quirks
