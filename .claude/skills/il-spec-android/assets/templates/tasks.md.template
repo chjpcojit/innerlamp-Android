@@ -1,0 +1,55 @@
+# Tasks — {{Feature}}
+
+Version: 1.0
+Last updated: {{date}}
+Status: <!-- mirror requirements.md -->
+
+> See `changelog.md` in this folder for the version history of this spec.
+
+<!--
+Every item traces to a row of design.md's Layers & components table or a Step-by-step Flow step.
+`[x]` only when verified in the code on the date of this version.
+Paths are relative to `app/src/main/java/com/example/innerlamp/`.
+-->
+
+## Phase 1 — Domain
+
+- [ ] `domain/model/<!-- X -->.kt`
+- [ ] `domain/repository/{{Feature}}Repository.kt` (interface)
+- [ ] `domain/usecase/<!-- Verb -->{{Feature}}UseCase.kt`
+- [ ] <!-- only if a BR the app computes has vectors --> Implement BR-XXX-NN per its vector file
+
+## Phase 2 — UI (`il-ui-builder`)
+
+- [ ] `ui/screens/{{feature}}/{{Feature}}Screen.kt` + `{{Feature}}UiState.kt` + `{{Feature}}ViewModel.kt`
+- [ ] Route in `ui/navigation/Routes.kt` + wiring in `AppNavHost.kt`
+- [ ] Fake repository until Phase 3 lands (record it in design.md "Deliberately stubbed")
+
+## Phase 3 — Data (`il-data-builder`, contract-gated)
+
+- [ ] Confirm each operation exists in innerlamp-be `docs/specs/api/openapi.yaml` (else hand off to
+      the backend) — cite it, never copy the schema
+- [ ] `data/remote/api/{{Feature}}ApiService.kt` + DTOs in `data/remote/dto/`
+- [ ] `data/mapper/{{Feature}}Mapper.kt`
+- [ ] `data/repository/{{Feature}}RepositoryImpl.kt` via `NetworkClient.safeCall`; map `AppError` to
+      the Error → UI table
+- [ ] <!-- if persisted --> Room entity/DAO + migration, or `core/storage` prefs/secure
+- [ ] `di/{{Feature}}Module.kt`; replace the fake repository
+
+## Phase 4 — Tests
+
+- [ ] ViewModel + use case unit tests (`kotlinx-coroutines-test`, Turbine, MockK)
+- [ ] Repository tests for success and each Error → UI row
+- [ ] <!-- vectors --> Run every case of innerlamp-be `docs/product/<!-- slug -->/rules/<rule>.json` (BR-XXX-NN)
+- [ ] Unit test task: `./gradlew testDevDebugUnitTest` (the user runs it — see `AGENTS.md`)
+
+## Phase 5 — Documentation
+
+- [ ] Report the Android column status for `docs/product/<!-- slug -->/product.md` §4.2 to
+      `ba-writer` (this skill does not edit the backend repo)
+- [ ] Move any product rule left in `Docs/<!-- x -->_assumptions.md` to a hand-off
+- [ ] OKF concept via `il-okf-writer` once the feature is verified end-to-end
+
+## Deferred (not blocking {{Feature}})
+
+-
