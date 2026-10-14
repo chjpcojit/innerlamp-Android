@@ -26,6 +26,11 @@ Always use the Gradle wrapper (`./gradlew`, or `gradlew.bat` on Windows), not a 
 - **Single class**: `./gradlew testDebugUnitTest --tests "com.example.innerlamp.ExampleUnitTest"`
 - **Single method**: `./gradlew testDebugUnitTest --tests "com.example.innerlamp.ExampleUnitTest.addition_isCorrect"`
 
+> **Build notes (from the retired `Docs/gio_assumptions.md`):** the project has product flavors
+> (`dev`/`staging`/`prod`), so the unit-test task is `testDevDebugUnitTest` (not `testDebugUnitTest`)
+> and lint is `lintDevDebug`; `lintDevDebug` has 8 pre-existing `ViewModelConstructorInComposable`
+> errors in Login/Onboarding/Signup/Splash.
+
 ### Instrumented/UI Tests (`app/src/androidTest/`, requires emulator/device)
 - **Full suite**: `./gradlew connectedDebugAndroidTest`
 

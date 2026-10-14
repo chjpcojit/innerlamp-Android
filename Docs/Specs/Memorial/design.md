@@ -1,6 +1,6 @@
 # Design — Memorial
 
-Version: 2.0
+Version: 2.1
 Last updated: 2026-10-14
 Status: in-progress — UI (`ui/screens/gio/`) và tính kỳ giỗ đã có trên dữ liệu in-memory; repository, data layer (API + Room), push FCM, báo múi giờ và phiên đăng nhập chưa có
 

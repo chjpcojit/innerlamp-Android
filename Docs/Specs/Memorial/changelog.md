@@ -3,6 +3,11 @@
 Tracks version history for `requirements.md`, `design.md`, and `tasks.md` in this folder. All three
 files share one changelog since they change together as one spec unit. Newest version first.
 
+## v2.1 (2026-10-14)
+
+- Bước 4 của đợt viết lại tài liệu: xoá `Docs/gio_assumptions.md` (product spec v2.1 đã thay thế); hai ghi chú build chuyển sang `AGENTS.md` và `CLAUDE.md`. `tasks.md` Phase 6: tick mục này.
+- `requirements.md` AC21 và AC27: hai `⚠️ Not confirmed (product)` đã có câu trả lời ở product v2.1 (FR-MEM-007 quy tắc "gần nhất": cách đều thì chọn nhắc sớm hơn, khác đề xuất cũ "lựa chọn nhỏ hơn"; FR-MEM-008 mục đã xoá → mở sổ và báo "Mục này không còn trong sổ giỗ."). `design.md`/`tasks.md` không đổi ngoài version.
+
 ## v2.0 (2026-10-14)
 
 - `requirements.md`: header lên product spec @ v2.1 (= v2.0 trên innerlamp-be `main` @ bf23f8b + câu
