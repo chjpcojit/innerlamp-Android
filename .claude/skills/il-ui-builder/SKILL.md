@@ -65,7 +65,7 @@ components, 45 screens) and on any `Docs/Specs/<Feature>/` that already exists. 
 6. **Design tokens come from the prototype, not from defaults.** The current `Color.kt` is the
    template purple; the first real UI task must replace it with the `--il-*` palette from
    `references/design_system.md`. Do not ship new screens on the template colors.
-7. **Never mark a `tasks.md` checkbox `[x]` in this skill.** You write code; `il-spec-writer` owns
+7. **Never mark a `tasks.md` checkbox `[x]` in this skill.** You write code; `il-spec-android` owns
    the spec lifecycle. If a task is now implemented, say so in your reply — leave the checkbox edit
    to the spec workflow.
 

@@ -67,7 +67,7 @@ existing `domain/` files. Read those first.
 6. **DI is manual** (`di/XxxModule.kt` with `object`/provider functions). Do not add Hilt or Koin —
    the specs explicitly rejected a DI framework.
 7. **Every generated comment is Vietnamese**, matching AGENTS.md and the existing `domain/` files.
-8. **Never mark a `tasks.md` checkbox `[x]` in this skill.** You write code; `il-spec-writer` owns the
+8. **Never mark a `tasks.md` checkbox `[x]` in this skill.** You write code; `il-spec-android` owns the
    spec lifecycle.
 
 ## Reference map

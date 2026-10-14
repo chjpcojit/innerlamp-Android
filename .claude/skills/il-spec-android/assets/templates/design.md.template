@@ -1,0 +1,68 @@
+# Design — {{Feature}}
+
+Version: 1.0
+Last updated: {{date}}
+Status: <!-- mirror requirements.md -->
+
+> See `changelog.md` in this folder for the version history of this spec.
+
+## Overview
+
+<!--
+2–4 câu: màn nào, dữ liệu đi đường nào (Screen → ViewModel → UseCase → domain repository →
+`data/repository` → `NetworkClient.safeCall` / Room / `core/storage`), online hay offline-first,
+và feature nào đã có làm mẫu gần nhất. Kiến trúc: `ui → domain ← data → core/{network,storage}`.
+-->
+
+## Layers & components
+
+<!-- tasks.md is broken down from this table. Mark anything not built as "chưa tạo" / "cần sửa". -->
+
+Paths are relative to `app/src/main/java/com/example/innerlamp/`.
+
+| Layer | File | Responsibility | Trạng thái |
+|---|---|---|---|
+| UI / Screen | `ui/screens/{{feature}}/{{Feature}}Screen.kt` | Composable, `modifier: Modifier = Modifier`, preview in `InnerLampTheme` | <!-- có / chưa tạo --> |
+| UI / State | `ui/screens/{{feature}}/{{Feature}}UiState.kt` | UI-only state (loading, field errors, display values) | |
+| UI / ViewModel | `ui/screens/{{feature}}/{{Feature}}ViewModel.kt` | Calls use cases, exposes `StateFlow<UiState>` | |
+| UI / Navigation | `ui/navigation/Routes.kt`, `AppNavHost.kt` | `@Serializable` route + destination wiring | |
+| Domain / Model | `domain/model/<!-- X -->.kt` | Pure Kotlin business fields | |
+| Domain / UseCase | `domain/usecase/<!-- Verb -->{{Feature}}UseCase.kt` | `operator fun invoke` → `Result`/`Flow`; dispatcher via `DispatcherProvider` | |
+| Domain / Repository | `domain/repository/{{Feature}}Repository.kt` | Interface owned by domain | |
+| Data / Remote | `data/remote/api/{{Feature}}ApiService.kt`, `data/remote/dto/` | Retrofit service + `@Serializable` DTOs (only once the contract is confirmed) | |
+| Data / Mapper | `data/mapper/{{Feature}}Mapper.kt` | DTO/entity ↔ domain | |
+| Data / Local | `core/database/…` / `core/storage/…` | Room entity/DAO, prefs or secure storage — delete row if none | |
+| Data / Repository | `data/repository/{{Feature}}RepositoryImpl.kt` | Implements the interface via `safeCall`; maps `NetworkResult` → `Result` | |
+| DI | `di/{{Feature}}Module.kt` | Manual wiring (no Hilt/Koin) | |
+| Tests | `app/src/test/java/com/example/innerlamp/…` | ViewModel, use case, repository, vectors | |
+
+## Navigation flow
+
+```
+<!-- ParentRoute -->
+  └─ {{Feature}}Route
+       (<!-- action -->) ──▶ <!-- effect --> ──▶ <!-- NextRoute -->
+       (back) ──▶ <!-- … -->
+```
+
+## Step-by-step Flow — <!-- name -->
+
+<!-- Mandatory for 2+ sequential backend calls or side effects. See references/step_by_step_flow.md. -->
+
+```
+Step 1 — <!-- name --> (this feature)
+- Trigger:
+- Pre-condition:
+- Where: <!-- {{Feature}}ViewModel → XxxUseCase → XxxRepositoryImpl -->
+- API: <!-- METHOD /v1/... --> (cite openapi; key fields only)
+    - Success →
+    - Failure (<!-- case -->) →
+```
+
+## Local storage
+
+<!-- Delete if nothing is persisted. What goes to Room / prefs / secure storage, and why (AGENTS.md rules). -->
+
+## Deliberately stubbed for now
+
+<!-- Fake/in-memory repository, unconfirmed operation, open ⚠️; point to the tasks.md Phase. Delete if none. -->

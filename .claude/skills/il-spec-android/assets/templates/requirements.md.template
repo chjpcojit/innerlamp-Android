@@ -1,0 +1,62 @@
+# Requirements — {{Feature}}
+
+Version: 1.0
+Last updated: {{date}}
+Status: <!-- e.g. "in-progress — UI done with fake repository, data layer pending" or "not started" -->
+Feature folder: `app/src/main/java/com/example/innerlamp/ui/screens/{{feature}}/`
+Product spec: innerlamp-be `docs/product/<!-- slug -->/product.md` @ v<!-- MAJOR.MINOR --> <!-- or: none yet (legacy) -->
+Contract: innerlamp-be `docs/specs/api/openapi.yaml` @ <!-- commit sha or info.version; "n/a" if no backend call -->
+Implements: <!-- BR-XXX-01, FR-XXX-001..004 — the IDs whose Android column is in scope -->
+
+> See `changelog.md` in this folder for the version history of this spec.
+
+<!-- Retroactive: "Spec này được viết retroactively từ code đang chạy." -->
+
+## User Story
+
+<!-- Một câu, tiếng Việt: Là <ai>, tôi muốn <làm gì>, để <mục tiêu>. Lấy từ product spec, không viết lại nghĩa. -->
+
+## Acceptance Criteria (EARS notation)
+
+<!--
+WHEN <trigger>, THE SYSTEM SHALL <behavior>. (<FR-XXX-001 / BR-XXX-01 / platform>)
+Cite the product ID; do not restate a business rule's outcome — say how the app applies it.
+Hidden steps (a token save, a refresh, a local cache write, a scheduled notification) are named here;
+the *how* goes in design.md's Step-by-step Flow. See references/ears_notation.md.
+-->
+
+- WHEN <!-- trigger -->, THE SYSTEM SHALL <!-- behavior -->. (<!-- FR-XXX-001 -->)
+
+## Dữ liệu & API
+
+<!-- Cite operations; never paste schemas or DTO fields. Bearer gắn qua `@Authenticated` nếu cần. -->
+
+| Thao tác | Operation (openapi) | Auth | Lưu cục bộ | Ghi chú |
+|---|---|---|---|---|
+| <!-- Đăng nhập --> | <!-- `POST /v1/auth/login` --> | <!-- public / Bearer --> | <!-- secure: token / Room / không --> | <!-- … --> |
+
+## Error → UI mapping
+
+| Operation | Failure case | User sees | Hiện trạng code |
+|---|---|---|---|
+| <!-- `POST /v1/...` --> | <!-- 401 INVALID_CREDENTIALS / AppError.NoConnection --> | <!-- thông báo / trạng thái IL-State --> | <!-- ✓ / lệch / chưa có --> |
+
+## Out of scope
+
+-
+
+## Pending (not yet implemented)
+
+<!-- Required for completion, tracked in tasks.md (name the Phase). -->
+
+-
+
+## Open questions (resolved)
+
+- ~~<!-- question -->~~ → <!-- resolution -->. Resolved {{date}}.
+
+<!--
+Still open → inline where it bites:
+> ⚠️ Not confirmed: <question> — <what it blocks>.
+> ⚠️ Not confirmed (product): <question> — blocks <…>; hand back to ba-writer in innerlamp-be.
+-->
