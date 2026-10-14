@@ -3,6 +3,61 @@
 Tracks version history for `requirements.md`, `design.md`, and `tasks.md` in this folder. All three
 files share one changelog since they change together as one spec unit. Newest version first.
 
+## v2.0 (2026-10-14)
+
+- `requirements.md`: header lên product spec @ v2.1 (= v2.0 trên innerlamp-be `main` @ bf23f8b + câu
+  trả lời Appendix A của product owner ngày 2026-10-14, sẽ ghi ở v2.1 FR-MEM-008) và contract @ bf23f8b
+  (phần Memorials không đổi so với 5f4ca56). AC viết lại và đánh số lại (33 → 39):
+  - Bỏ nhắc local (AC22–AC25 cũ: lập lịch, tới giờ, khởi động lại, huỷ khi đăng xuất) — ADR-0002;
+    thêm AC30 "không đặt nhắc local nào".
+  - FR-MEM-009 Removed: AC31 (bỏ công tắc "Thêm vào Lời nhắc"); AC15 không gửi `add_to_os_reminder`
+    và múi giờ theo mục.
+  - Push FCM (ADR-0001): xin `POST_NOTIFICATIONS` (AC22), gợi ý "Mở Cài đặt" và "Có nhắc" vẫn hiện
+    (AC5, AC23), đăng ký token sau đăng nhập / khi token mới (AC24), xoá token + bản offline khi đăng
+    xuất (AC25), nội dung push chỉ quan hệ (AC26), mở mục từ push (AC27) và từ danh sách Thông báo
+    (AC28, feature dùng chung, phụ thuộc).
+  - Múi giờ máy làm múi giờ tài khoản (AC29, BR-MEM-11).
+  - Lựa chọn gần nhất cho giá trị nhắc cũ (AC21, FR-MEM-007).
+  - Sổ trống ẩn "Lấy từ gia phả" (AC6); 404 khi sửa/xoá → bỏ mục + "Mục này không còn trong sổ giỗ."
+    (AC16, AC19); 5xx khi tải → bản offline + câu báo (AC32); bản offline gắn tài khoản, không bao giờ
+    hiện bản của tài khoản khác (AC35); câu chữ lấy từ product §3.1.1 (trích theo tên dòng).
+  - Giữ AC36 (không log body/ push payload, kể cả log HTTP debug) và AC37 (DB offline ngoài cloud
+    backup) cùng task.
+  - Bảng hiện trạng, Dữ liệu & API (thêm dòng push token / múi giờ / payload / danh sách Thông báo,
+    đều ⚠️ contract), Error → UI, Out of scope, Pending, Open questions (resolved) cập nhật.
+- `design.md`: bỏ `MemorialReminderPlanner`, port `MemorialReminderScheduler`, `core/notification`
+  (AlarmManager, receivers, `RECEIVE_BOOT_COMPLETED`, exact alarm ⚠️) và Step-by-step Flow "Nhắc tới
+  giờ"; thêm `core/push` (`FirebaseMessagingService`, kênh, permission checker), use case/repository
+  push token và múi giờ, `MemorialReminderChoices`, `GioRoute(openId)` + deep link, `accountId` trong
+  Room, hook đăng nhập/đăng xuất, Firebase build; hai Step-by-step Flow mới ("Đăng nhập / đăng xuất:
+  token FCM và múi giờ", "Nhận và mở push"); flow "Mở sổ" bỏ bước lập nhắc và đọc offline cả khi 5xx.
+- `tasks.md`: Phase 4 đổi từ "Nhắc local" sang "Push FCM và múi giờ tài khoản"; Phase 2 thêm ẩn gia
+  phả, gợi ý quyền, mở mục từ nhắc, lựa chọn gần nhất; Phase 5 không chạy `reminder-moment.json`
+  (product §4.3 — backend), kiểm `product_spec_version` theo `SOURCE`; `[x]` kiểm lại trong code ngày
+  2026-10-14 (giá trị khởi đầu không còn `[x]` vì còn `syncReminders`; thêm `[x]` AC30).
+- Product spec / contract: product v2.0 → v2.1 (MAJOR từ v1.0). IDs ảnh hưởng: FR-MEM-001, 002, 004,
+  005, 007, 008, 009 (Removed), 010; BR-MEM-05…07, 10, 11 (giờ áp cả Backend), BR-MEM-13 và NFR-MEM-04
+  (mới, chỉ Backend — Android `n/a`). Contract @ bf23f8b.
+- Hand-offs:
+  - `ba-writer`: (1) "lựa chọn gần nhất" khi giá trị cách đều hai lựa chọn (2/5 ngày, 09:30) — AC21;
+    (2) mở một nhắc (push / danh sách) của mục đã bị xoá thì thấy gì — AC27; (3) ghi câu trả lời
+    công tắc tài khoản vào product v2.1 (đã quyết, chỉ cần ghi); (4) cột Android §4.2 giữ `drift` cho
+    FR-MEM-002 (hàng gia phả) và FR-MEM-009 (công tắc) tới khi code sửa.
+  - Backend (contract): đăng ký / xoá push token (Appendix B mục 8); báo múi giờ tài khoản (mục 3);
+    payload push nhắc giỗ — loại message, khoá id mục, channel Android (mục 7, 8); danh sách Thông báo
+    (mục 7); bỏ `reminder.timezone` / `add_to_os_reminder` và thu hẹp lựa chọn nhắc (mục 2, 3, 6) —
+    Android đã không gửi các field đó.
+  - Feature Login (Android, chưa có spec): phiên, account id, hook đăng nhập/đăng xuất.
+  - Feature Thông báo (Android, chưa có spec): danh sách, công tắc tài khoản, mở mục (AC28).
+  - Hạ tầng: Firebase project + `google-services.json` theo flavor (product owner, ADR-0001).
+- Resolved: mọi `⚠️ Not confirmed (product)` của v1.0 (câu chữ lỗi, nội dung/màn hình khoá, từ chối
+  quyền, thời điểm đã qua, đăng xuất, 404 khi xoá, `add_to_os_reminder`, hàng gia phả, 5xx) và
+  ⚠️ exact alarm (không còn áp dụng); công tắc thông báo tài khoản (chỉ tắt push — product owner
+  2026-10-14). Còn mở (Android): cách mời khách đăng nhập (⚠️ AC2).
+- Reason: product spec memorial v2.0 (nhắc do server gửi, ADR-0001/0002 Accepted) yêu cầu các client
+  spec đang mở chuyển sang v2.0 (product `changelog.md` v2.0, "Platforms to follow up"); câu trả lời
+  của product owner cho mục mở Appendix A (v2.1).
+
 ## v1.0 (initial) (2026-10-14)
 
 - `requirements.md`: spec đầu tiên, viết retroactively từ code đang chạy (`ui/screens/gio/`,
