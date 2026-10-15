@@ -33,8 +33,8 @@ Then:
   for Android).
 - Stubs (in-memory seed data, a no-op button, a fake repository, a switch that only stores a flag)
   go under Pending with their tasks.md Phase.
-- `tasks.md`: `[x]` only for what you read and verified; record the date ("`[x]` chỉ khi đã kiểm tra
-  tồn tại trong code ngày …").
+- `tasks.md`: `[x]` only for what you read and verified; record the date ("`[x]` only when verified to
+  exist in the code on …").
 - `changelog.md`: `v1.0 (initial)` saying it was written retroactively.
 
 ## Mixed

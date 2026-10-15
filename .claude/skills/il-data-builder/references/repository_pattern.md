@@ -1,10 +1,13 @@
 # Repository pattern (worked example)
 
-Khuôn mẫu chuẩn cho data layer của một feature. Đây là ví dụ đầy đủ cho feature **session history**
-(đã có `domain/repository/SessionRepository` + `domain/model/Session`), dùng chung Room + network.
-Mọi feature khác theo đúng hình dạng này.
+The canonical shape of a feature's data layer. This is a complete example for the **session history**
+feature (which already has `domain/repository/SessionRepository` + `domain/model/Session`), using both
+Room and the network. Every other feature follows exactly this shape.
 
-## Cấu trúc file
+Code comments follow the repo's language policy (`CLAUDE.md`): bilingual, English first, then
+Vietnamese.
+
+## File layout
 
 ```
 data/local/entity/SessionEntity.kt
@@ -25,7 +28,10 @@ package com.example.innerlamp.data.local.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-/** Bản ghi Room cho một buổi thiền. Không phải model domain. */
+/**
+ * Room record for one meditation session. Not a domain model.
+ * Bản ghi Room cho một buổi thiền. Không phải model domain.
+ */
 @Entity(tableName = "sessions")
 data class SessionEntity(
     @PrimaryKey val id: String,
@@ -34,7 +40,7 @@ data class SessionEntity(
     val durationSeconds: Int,
     val completedCycles: Int,
     val completed: Boolean,
-    val synced: Boolean, // cờ "đã đẩy lên backend" cho offline-first
+    val synced: Boolean, // "pushed to backend" flag for offline-first / cờ "đã đẩy lên backend" cho offline-first
 )
 ```
 
@@ -123,8 +129,8 @@ interface SessionApiService {
 }
 ```
 
-> `ApiResponse<T>` là envelope chung của backend (`success/data/error/details`). Đọc
-> `Docs/Specs/Networking/design.md` trước khi dùng.
+> `ApiResponse<T>` is the backend's shared envelope (`success/data/error/details`). Read
+> `Docs/Specs/Networking/design.md` before using it.
 
 ## 6. Mapper
 
@@ -195,6 +201,7 @@ class SessionRepositoryImpl(
     }
 
     override suspend fun getPatterns(): Result<List<BreathingPattern>> =
+        // Offline-first: bundled catalog fallback first, backend updates later.
         // Offline-first: catalog bundled fallback trước, backend cập nhật sau.
         Result.success(bundledPatterns())
 
@@ -216,15 +223,15 @@ class SessionRepositoryImpl(
 }
 ```
 
-Điểm cần giữ đúng:
+Points to get right:
 
-- `observeHistory()` trả `Flow` **trực tiếp từ DAO**, map sang domain model — không qua network.
-- `recordSession()` ghi local trước (`synced = false`), không chờ mạng.
-- `syncPendingSessions()` chỉ đẩy các bản ghi chưa sync; lỗi mạng → `Result.failure(NetworkException(...))`.
-- `domain` chỉ thấy `Session`/`Result`; `NetworkException`/`NetworkResult` chỉ xuất hiện trong `data`.
-- Mọi I/O chạy trên `dispatchers.io` qua `withContext`, không gọi `Dispatchers.IO` trực tiếp.
+- `observeHistory()` returns a `Flow` **straight from the DAO**, mapped to the domain model — no network.
+- `recordSession()` writes locally first (`synced = false`) and does not wait for the network.
+- `syncPendingSessions()` pushes only unsynced records; a network error → `Result.failure(NetworkException(...))`.
+- `domain` only sees `Session`/`Result`; `NetworkException`/`NetworkResult` appear only in `data`.
+- All I/O runs on `dispatchers.io` via `withContext`; never call `Dispatchers.IO` directly.
 
-## 8. DI wiring (thủ công)
+## 8. DI wiring (manual)
 
 ```kotlin
 package com.example.innerlamp.di
@@ -254,5 +261,5 @@ object SessionModule {
 }
 ```
 
-> `NetworkClient`/`Json`/`OkHttpClient`/`Retrofit` được cấp bởi `di/NetworkModule.kt` (dùng chung) —
-> đừng dựng lại ở module feature. `api` được tạo qua `networkClient.createService(SessionApiService::class.java)`.
+> `NetworkClient`/`Json`/`OkHttpClient`/`Retrofit` are provided by the shared `di/NetworkModule.kt` —
+> do not rebuild them in a feature module. `api` is created via `networkClient.createService(SessionApiService::class.java)`.

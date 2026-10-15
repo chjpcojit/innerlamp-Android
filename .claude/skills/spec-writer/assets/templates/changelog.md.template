@@ -6,8 +6,8 @@ files share one changelog since they change together as one spec unit. Newest ve
 ## v1.0 (initial)
 
 <!--
-Prospective: "Spec đầu tiên, viết trước khi implement, theo product spec innerlamp-be
+Prospective: "First spec, written before implementation, from the innerlamp-be product spec
 `docs/product/<slug>/product.md` vX.Y (implements FR-…)."
-Retroactive: "Spec viết retroactively từ code đang chạy (ghi rõ phần đã có / còn stub), đối chiếu
-với product spec vX.Y."
+Retroactive: "Spec written retroactively from the running code (state what exists / what is still
+stubbed), checked against product spec vX.Y."
 -->

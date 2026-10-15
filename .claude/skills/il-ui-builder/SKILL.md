@@ -1,6 +1,6 @@
 ---
 name: il-ui-builder
-description: Builds Android Jetpack Compose UI for InnerLamp — screens, shared components, ViewModels, UI state, and navigation — wiring the UI layer up to (but never past) the domain use cases. Use this skill whenever the user wants to implement a screen or component from the InnerLamp design handoff prototype (Docs/design_handoff_innerlamp/), build the Compose theme/design tokens, create a screen + ViewModel for a feature, wire navigation, or turn the UI-layer tasks of a Docs/Specs/<Feature>/ spec into working Kotlin. It reads the HTML prototype + design-token README + the feature spec, then produces Kotlin under com.example.innerlamp (ui/theme, ui/components, ui/screens, ui/navigation) following the project's MVVM + clean-architecture conventions, with Vietnamese code comments. It stops at the domain boundary: it may create the domain model/use case it calls, but never writes the data layer (Room/Retrofit/DataStore/repository impl/DI) — that is il-data-builder's job.
+description: Builds Android Jetpack Compose UI for InnerLamp — screens, shared components, ViewModels, UI state, and navigation — wiring the UI layer up to (but never past) the domain use cases. Use this skill whenever the user wants to implement a screen or component from the InnerLamp design handoff prototype (Docs/design_handoff_innerlamp/), build the Compose theme/design tokens, create a screen + ViewModel for a feature, wire navigation, or turn the UI-layer tasks of a Docs/Specs/<Feature>/ spec into working Kotlin. It reads the HTML prototype + design-token README + the feature spec, then produces Kotlin under com.example.innerlamp (ui/theme, ui/components, ui/screens, ui/navigation) following the project's MVVM + clean-architecture conventions, with bilingual code comments (English first, then Vietnamese). It stops at the domain boundary: it may create the domain model/use case it calls, but never writes the data layer (Room/Retrofit/DataStore/repository impl/DI) — that is il-data-builder's job.
 ---
 
 # InnerLamp UI Builder
@@ -28,7 +28,8 @@ The seam this skill stops at is the **domain layer** (`domain/model`, `domain/us
 **This skill never writes the data layer.** Implementing a repository interface, mapping DTOs,
 building Room/Retrofit/DataStore, or wiring `di/` is `il-data-builder`'s job. If a screen you are
 building needs data that isn't wired yet, use a fake/in-memory repository for now and leave a
-Vietnamese `TODO` comment pointing at `il-data-builder` — do not stub the data layer inside the UI.
+bilingual `TODO` comment (English first, then Vietnamese) pointing at `il-data-builder`, e.g.
+`// TODO(il-data-builder): bind to the API … / Nối API …` — do not stub the data layer inside the UI.
 
 This skill is modeled on `Docs/design_handoff_innerlamp/README.md` (the design tokens, 9
 components, 45 screens) and on any `Docs/Specs/<Feature>/` that already exists. Read those first.
@@ -54,8 +55,9 @@ components, 45 screens) and on any `Docs/Specs/<Feature>/` that already exists. 
 2. **If a domain type or use case you need is missing, create it as pure Kotlin under `domain/`** —
    but only the *shape* (data class / interface / `operator fun invoke`). Do not write its data
    implementation, and do not invent data classes that belong to the data layer (DTOs, entities).
-3. **Every generated comment is Vietnamese**, matching AGENTS.md and the existing `domain/` files.
-   Identifiers stay English; KDoc/`//` comments are Vietnamese.
+3. **Every generated comment is bilingual: English first, then Vietnamese**, per the Language policy
+   in `CLAUDE.md` (and AGENTS.md). Identifiers stay English; KDoc/`//` comments (and `TODO`s) give the
+   English line first, then the Vietnamese one. User-facing strings stay Vietnamese (see step 4).
 4. **Every top-level composable takes a trailing `modifier: Modifier = Modifier`**, and every
    `@Preview` is wrapped in `InnerLampTheme { ... }` (see `ui/theme/Theme.kt`).
 5. **Do not call `Dispatchers.IO`/`Main` anywhere in the UI layer.** ViewModels use `viewModelScope`
@@ -97,7 +99,7 @@ Translate the `--il-*` token table in `references/design_system.md` into:
 - `Color.kt` — a `val` per token (light + dark where they differ), named close to the token
   (`IlCanvas`, `IlCard`, `IlInk`, `IlGold`, …). Keep the "always-dark" screens' palette as separate
   constants so they don't flip in light mode.
-- `Type.kt` — `Typography` with `Lora` (serif, display/kinh văn) and `Be Vietnam Pro` (body/UI).
+- `Type.kt` — `Typography` with `Lora` (serif, display/scripture text) and `Be Vietnam Pro` (body/UI).
   Google Fonts, subset `vietnamese`.
 - `Theme.kt` — `InnerLampTheme` with 3 modes: light / dark / system (read the `theme` preference),
   `dynamicColor = false` (the brand palette must not be overridden by Material You).
@@ -145,9 +147,9 @@ it is a root tab (Home, Library, Lamp→setup, Sangha, Me). Match the prototype'
   `InnerLampTheme`.
 - No `ui/` file imports `data.*`, `core/network.*`, `core/storage.*`, Room, Retrofit, or OkHttp.
 - ViewModels call use cases only; screens call ViewModels only.
-- Comments are Vietnamese.
+- Comments are bilingual (English first, then Vietnamese).
 - Any domain type you had to create is pure Kotlin with no Android import.
-- Any not-yet-wired data need is a Vietnamese `TODO` pointing at `il-data-builder`, not a
-  half-written repository.
+- Any not-yet-wired data need is a bilingual `TODO` (English first, then Vietnamese) pointing at
+  `il-data-builder`, not a half-written repository.
 - `./gradlew assembleDebug` compiles (or note clearly if a dependency you expect from
   `il-data-builder` is still missing).

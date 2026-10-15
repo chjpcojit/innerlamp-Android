@@ -2,7 +2,7 @@
 
 ## Why
 
-A one-line story ("người dùng đăng nhập") hides steps — the app calls login, saves tokens to secure
+A one-line story ("the user logs in") hides steps — the app calls login, saves tokens to secure
 storage, updates the in-memory token provider, navigates; later a 401 triggers a refresh and a retry.
 Unnamed steps get implemented wrong. The Step-by-step Flow writes each backend call and side effect
 out with its trigger, precondition and every branch.
@@ -30,20 +30,20 @@ Steps owned by another feature say so and link that feature's design instead of 
 ## Illustrative example (shape only — Android has no Login spec yet; verify against `ui/screens/login/` and openapi before reusing)
 
 ```
-Step 1 — Đăng nhập (this feature)
-- Trigger: bấm "Đăng nhập", phone hợp lệ + password không rỗng
-- Pre-condition: ViewModel đã validate phone/password
+Step 1 — Log in (this feature)
+- Trigger: tap "Đăng nhập" (Log in) with a valid phone and a non-empty password
+- Pre-condition: the ViewModel has validated phone/password
 - Where: LoginViewModel → LoginUseCase → AuthRepositoryImpl (safeCall)
 - API: POST /v1/auth/login (phone_number, password, device{platform:"android"})
-    - Success → lưu access/refresh token vào secure storage, cập nhật AuthTokenProvider, điều hướng Home
-    - Failure (INVALID_CREDENTIALS 401) → ở lại Login, một thông báo chung
-    - Failure (AppError.NoConnection) → thông báo mất mạng, giữ dữ liệu đã nhập
+    - Success → save access/refresh tokens to secure storage, update AuthTokenProvider, navigate to Home
+    - Failure (INVALID_CREDENTIALS 401) → stay on Login, one generic message
+    - Failure (AppError.NoConnection) → offline message, keep what the user typed
 
-Step 2 — Làm mới phiên (core/network, out of scope)
-- Trigger: một request `@Authenticated` nhận 401
+Step 2 — Refresh the session (core/network, out of scope)
+- Trigger: an `@Authenticated` request gets a 401
 - API: POST /v1/auth/refresh ({refresh_token})
-    - Success → lưu token mới, gửi lại request
-    - Failure (4xx) → xoá token, về Login
+    - Success → save the new tokens, resend the request
+    - Failure (4xx) → clear the tokens, go to Login
 ```
 
 ## Unconfirmed steps

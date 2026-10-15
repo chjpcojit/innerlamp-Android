@@ -1,6 +1,6 @@
 ---
 name: il-data-builder
-description: Builds the Android data layer for InnerLamp — Room entities/DAOs/database, Retrofit API services + DTOs, mappers, repository implementations, and manual DI wiring — implementing the domain repository interfaces and wiring them up to the use cases. Use this skill whenever the user wants to implement data access (local storage, server/network calls, offline-first), create or complete a repository implementation, map DTOs/entities to domain models, wire dependencies in di/, build core/network or core/storage, or turn the data-layer tasks of a Docs/Specs/<Feature>/ spec into working Kotlin. It follows the project's clean-architecture rules (domain is pure Kotlin and owns the repository interfaces; data implements them via core/network's NetworkClient.safeCall and core/storage, with DispatcherProvider injected instead of Dispatchers.IO), with Vietnamese code comments. It stops at the domain boundary in the other direction: it may create the domain repository interface/model it implements, but never writes UI/Compose/ViewModels/navigation — that is il-ui-builder's job.
+description: Builds the Android data layer for InnerLamp — Room entities/DAOs/database, Retrofit API services + DTOs, mappers, repository implementations, and manual DI wiring — implementing the domain repository interfaces and wiring them up to the use cases. Use this skill whenever the user wants to implement data access (local storage, server/network calls, offline-first), create or complete a repository implementation, map DTOs/entities to domain models, wire dependencies in di/, build core/network or core/storage, or turn the data-layer tasks of a Docs/Specs/<Feature>/ spec into working Kotlin. It follows the project's clean-architecture rules (domain is pure Kotlin and owns the repository interfaces; data implements them via core/network's NetworkClient.safeCall and core/storage, with DispatcherProvider injected instead of Dispatchers.IO), with bilingual code comments (English first, then Vietnamese). It stops at the domain boundary in the other direction: it may create the domain repository interface/model it implements, but never writes UI/Compose/ViewModels/navigation — that is il-ui-builder's job.
 ---
 
 # InnerLamp Data Builder
@@ -66,7 +66,9 @@ existing `domain/` files. Read those first.
    prefs.
 6. **DI is manual** (`di/XxxModule.kt` with `object`/provider functions). Do not add Hilt or Koin —
    the specs explicitly rejected a DI framework.
-7. **Every generated comment is Vietnamese**, matching AGENTS.md and the existing `domain/` files.
+7. **Every generated comment is bilingual: English first, then Vietnamese**, per the Language policy
+   in `CLAUDE.md` (and AGENTS.md) — KDoc, `//` comments and `TODO`s alike, e.g.
+   `// TODO(il-data-builder): bind to the API … / Nối API …`.
 8. **Never mark a `tasks.md` checkbox `[x]` in this skill.** You write code; `il-spec-android` owns the
    spec lifecycle.
 
@@ -86,7 +88,8 @@ spec already decided. Also read `Docs/Specs/Networking/design.md` before any net
 `Docs/Specs/Storage/design.md` before any storage work.
 
 If the repository interface or model you need does not exist yet, create it under `domain/` first —
-pure Kotlin, `Flow`/`suspend`/`Result` signatures, Vietnamese KDoc. Keep it to the contract only.
+pure Kotlin, `Flow`/`suspend`/`Result` signatures, bilingual KDoc (English first, then Vietnamese).
+Keep it to the contract only.
 
 ### 2. Build the data sources
 
@@ -130,5 +133,5 @@ needed. Follow the existing `di/` layout once `NetworkModule`/`StorageModule` ex
   files you wrote — there should be none).
 - Durations use `ElapsedClock`, not wall clock.
 - Room schema exports and `./gradlew assembleDebug` compiles (KSP runs Room).
-- Comments are Vietnamese.
+- Comments are bilingual (English first, then Vietnamese).
 - Any token/secret uses `core/storage` secure, not plain prefs.

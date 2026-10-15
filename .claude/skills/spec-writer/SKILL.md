@@ -20,8 +20,9 @@ infrastructure specs such as `Networking`, `Storage`, `Navigation` keep their ow
   numbered Phases with checkboxes (`[ ]` pending / `[x]` verified in code).
 - `changelog.md` — one shared version history for the three files above.
 
-`Docs/Specs/Networking/` and `Docs/Specs/Storage/` are the worked examples for tone and shape
-(English headings, Vietnamese prose, layer tables with full paths). Read one before writing.
+`Docs/Specs/Networking/` and `Docs/Specs/Storage/` are the worked examples for shape (English
+headings, layer tables with full paths). Read one before writing; their prose may still be
+Vietnamese — new and edited specs are English (see Language below).
 
 These files are **layer 2** of InnerLamp's documentation stack. Above them sit the cross-platform
 product spec in the backend repo, innerlamp-be `docs/product/<feature>/product.md` (layer 0, owned
@@ -30,9 +31,13 @@ by `ba-writer`, which exists only in that repo), and the API contract innerlamp-
 have their own layer-2 spec skills (`il-spec-be`, `il-spec-web`, `il-spec-ios`) citing the same
 documents. Read `references/upstream_product_spec.md` once — it is the shared rulebook.
 
-**Language.** Headings, EARS keywords (`WHEN` / `THE SYSTEM SHALL`), table headers and version
-headers stay in English as templated; prose, user story and notes are Vietnamese, like the existing
-files.
+**Language.** Language follows the repo's Language policy in CLAUDE.md, which overrides this skill.
+Everything written into the spec files is English: headings, EARS keywords (`WHEN` /
+`THE SYSTEM SHALL`), table headers, version headers, prose, user story and notes. User-facing copy
+quoted in a spec keeps its own language (Vietnamese first) with an English gloss, e.g.
+"Đăng nhập" (Log in). Questions and reports to the user in chat are Vietnamese ("anh"/"em",
+technical terms in English). Editing an existing Vietnamese spec rewrites the file in English in the
+same change.
 
 **This skill never writes code** and never touches `app/`, `Docs/Knowledge/` or the backend repo.
 
@@ -119,7 +124,7 @@ fill them:
 
 | Template | Key sections |
 |---|---|
-| `requirements.md.template` | Header (product spec / contract / implements), User Story, EARS criteria with tags, Dữ liệu & API (operations cited), Error → UI mapping, Out of scope, Pending, Open questions |
+| `requirements.md.template` | Header (product spec / contract / implements), User Story, EARS criteria with tags, Data & API (operations cited), Error → UI mapping, Out of scope, Pending, Open questions |
 | `design.md.template` | Overview, Layers & components (with status column), Navigation flow, Step-by-step Flow, Local storage, Deliberately stubbed |
 | `tasks.md.template` | Phases from the Layers table: domain → UI (`il-ui-builder`) → data (`il-data-builder`, contract-gated) → tests → docs |
 | `changelog.md.template` | `v1.0 (initial)` |

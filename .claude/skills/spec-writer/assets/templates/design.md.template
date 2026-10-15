@@ -9,20 +9,21 @@ Status: <!-- mirror requirements.md -->
 ## Overview
 
 <!--
-2–4 câu: màn nào, dữ liệu đi đường nào (Screen → ViewModel → UseCase → domain repository →
-`data/repository` → `NetworkClient.safeCall` / Room / `core/storage`), online hay offline-first,
-và feature nào đã có làm mẫu gần nhất. Kiến trúc: `ui → domain ← data → core/{network,storage}`.
+2–4 sentences: which screen, which path the data takes (Screen → ViewModel → UseCase → domain
+repository → `data/repository` → `NetworkClient.safeCall` / Room / `core/storage`), online or
+offline-first, and which existing feature is the closest model. Architecture:
+`ui → domain ← data → core/{network,storage}`.
 -->
 
 ## Layers & components
 
-<!-- tasks.md is broken down from this table. Mark anything not built as "chưa tạo" / "cần sửa". -->
+<!-- tasks.md is broken down from this table. Mark anything not built as "not created" / "needs change". -->
 
 Paths are relative to `app/src/main/java/com/example/innerlamp/`.
 
-| Layer | File | Responsibility | Trạng thái |
+| Layer | File | Responsibility | Status |
 |---|---|---|---|
-| UI / Screen | `ui/screens/{{feature}}/{{Feature}}Screen.kt` | Composable, `modifier: Modifier = Modifier`, preview in `InnerLampTheme` | <!-- có / chưa tạo --> |
+| UI / Screen | `ui/screens/{{feature}}/{{Feature}}Screen.kt` | Composable, `modifier: Modifier = Modifier`, preview in `InnerLampTheme` | <!-- exists / not created --> |
 | UI / State | `ui/screens/{{feature}}/{{Feature}}UiState.kt` | UI-only state (loading, field errors, display values) | |
 | UI / ViewModel | `ui/screens/{{feature}}/{{Feature}}ViewModel.kt` | Calls use cases, exposes `StateFlow<UiState>` | |
 | UI / Navigation | `ui/navigation/Routes.kt`, `AppNavHost.kt` | `@Serializable` route + destination wiring | |
