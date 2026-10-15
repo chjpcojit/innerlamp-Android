@@ -1,6 +1,6 @@
 # Tasks — Gallery
 
-Version: 1.0
+Version: 1.0.1
 Last updated: 2026-10-15
 Status: planned (drift) — only the route, the Home → gallery navigation, the chip labels and the absence of removed actions already match the spec; everything else is `[ ]`
 
@@ -123,9 +123,9 @@ Paths are relative to `app/src/main/java/com/example/innerlamp/`.
 
 - [ ] Report the Android column of innerlamp-be `docs/product/gallery/product.md` §4.2 to `ba-writer`
       (this spec does not edit the backend repo), plus the §3.6 FR-GAL-007 Android variance (AC24)
-- [ ] `Docs/home_assumptions.md` row 1: drop the "Ảnh chùa đẹp" photo tiles from its scope with a
-      pointer to this spec (the Buddha and article image parts stay with `../Deity/` and the article
-      feature)
+- [x] `Docs/home_assumptions.md` row 1: checked 2026-10-15 — it covers the Buddha-statue placeholder and
+      points temple and article photos to their own specs; it says nothing about the gallery tiles, so
+      no edit is needed (the Home gallery block is specified here, AC on the Home block)
 - [ ] OKF concept through `il-okf-writer` once the feature has been checked end-to-end
 
 ## Deferred (not blocking Gallery)
