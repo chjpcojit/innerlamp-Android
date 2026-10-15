@@ -1,167 +1,177 @@
 # Design — Deity
 
-Version: 1.0
+Version: 1.1
 Last updated: 2026-10-15
-Status: planned (drift) — UI bốn điểm (khối Trang chủ, khối Thư viện, danh mục, trang một vị) có trên 9 hồ sơ mẫu; domain theo contract, repository, data layer, phân trang, Hình tượng, chia sẻ, truyền câu niệm chưa có; trang 12 / `date` / `next_via` / `via_events` chờ backend deity v3.0 vào `openapi.yaml`
+Status: planned (drift) — UI for the four entry points (Home block, Library block, catalogue, a deity's page) exists on 9 sample profiles; the contract-based domain, repository, data layer, pagination, Hình tượng (iconography), sharing and passing the recitation phrase do not exist yet; page size 12 / `date` / `next_via` / `via_events` wait for backend deity v3.0 to land in `openapi.yaml`
 
 > See `changelog.md` in this folder for the version history of this spec.
 
 ## Overview
 
-Bốn điểm vào một danh mục công khai, chỉ đọc: khối "Thư viện Phật & Bồ Tát" ở Trang chủ
-(`HomeViewModel`), khối "Chư Phật & Bồ Tát" ở Thư viện (`LibraryViewModel`), màn danh mục
-(`BuddhaListScreen`) và trang một vị (`BuddhaDetailScreen`). Dữ liệu đi
+Four entry points into one public, read-only catalogue: the "Thư viện Phật & Bồ Tát" (Buddha &
+Bodhisattva library) block on Home (`HomeViewModel`), the "Chư Phật & Bồ Tát" (Buddhas &
+Bodhisattvas) block on Library (`LibraryViewModel`), the catalogue screen (`BuddhaListScreen`) and a
+deity's page (`BuddhaDetailScreen`). Data goes
 `ViewModel → use case → DeityRepository (domain) → DeityRepositoryImpl (data) → NetworkClient.safeCall →
-DeityApiService`; không Bearer. Kiểu **online-only**: mỗi lần mở là một lần gọi, không Room, không bản
-offline (product §3.6 chỉ "may" — chọn không làm ở v1.0, giống `../Temple/`). Thứ tự, lọc, trang, ngày vía
-và lần vía kế tiếp đều do server làm; app chỉ: gửi `date` = ngày máy, đổi `next_via.solar_date` thành
-đếm ngược qua `domain/calendar/CalendarCountdown` (của `../Calendar/`, BR-CAL-13), và định dạng ngày âm
-server trả.
+DeityApiService`; no Bearer. **Online-only**: every open is one call, no Room, no offline copy (product
+§3.6 only says "may" — chosen not to do it in v1.0, like `../Temple/`). Order, filtering, paging, the
+ngày vía (a deity's commemoration day; "via" below) and the next via occurrence are all done by the
+server; the app only: sends `date` = the device date, turns `next_via.solar_date` into a countdown
+through `domain/calendar/CalendarCountdown` (of `../Calendar/`, BR-CAL-13), and formats the lunar date
+the server returns.
 
-Hiện trạng (đọc ngày 2026-10-15): `GetBuddhaProfilesUseCase` giữ 9 `BuddhaProfile` mẫu (prototype
-`BUDDHAS`), `GetBuddhaDetailUseCase` quét `LunarCalendar` 400 ngày để tìm lần vía kế tiếp; Trang chủ dùng
-`BuddhaFigure` mẫu trong `HomeSampleData`; `LibraryViewModel` đọc đồng bộ. Mẫu gần nhất cho data layer:
-`TempleApiService` + `TempleOptionRepositoryImpl` + `di/TempleModule.kt`; cho danh mục có trang:
-`../Temple/design.md` (danh bạ chùa, cùng hình dạng `items/page/page_size/total/total_pages`). Coil 3 đã
-khai báo trong `app/build.gradle.kts` (dùng chung kế hoạch với `../Temple/`).
+Current state (read on 2026-10-15): `GetBuddhaProfilesUseCase` holds 9 sample `BuddhaProfile`
+(prototype `BUDDHAS`), `GetBuddhaDetailUseCase` scans `LunarCalendar` for 400 days to find the next via
+occurrence; Home uses sample `BuddhaFigure` in `HomeSampleData`; `LibraryViewModel` reads synchronously.
+The closest model for the data layer: `TempleApiService` + `TempleOptionRepositoryImpl` +
+`di/TempleModule.kt`; for a paged catalogue: `../Temple/design.md` (the temple directory, same
+`items/page/page_size/total/total_pages` shape). Coil 3 is already declared in `app/build.gradle.kts`
+(shared plan with `../Temple/`).
 
-Tên code giữ thư mục `ui/screens/buddha/` và route `BuddhaListRoute`/`BuddhaRoute` (product §1.5); model
-domain mới đặt tên `Deity*` theo product và contract, thay `BuddhaProfile`/`BuddhaFigure`.
+Code names keep the `ui/screens/buddha/` folder and the `BuddhaListRoute`/`BuddhaRoute` routes (product
+§1.5); the new domain models are named `Deity*` per the product and contract, replacing
+`BuddhaProfile`/`BuddhaFigure`.
 
-Kiến trúc giữ nguyên `ui → domain ← data → core/{network,storage}`, DI thủ công trong `di/`, đổi thread
-qua `DispatcherProvider`, "hôm nay" qua `java.time.Clock` được inject.
+The architecture stays `ui → domain ← data → core/{network,storage}`, manual DI in `di/`, thread
+switching through `DispatcherProvider`, "today" through an injected `java.time.Clock`.
 
 ## Layers & components
 
-Paths are relative to `app/src/main/java/com/example/innerlamp/`. Trạng thái đọc ngày 2026-10-15.
+Paths are relative to `app/src/main/java/com/example/innerlamp/`. Status read on 2026-10-15.
 
-| Layer | File | Responsibility | Trạng thái |
+| Layer | File | Responsibility | Status |
 |---|---|---|---|
-| UI / Home block | `ui/screens/home/HomeSections.kt` (`BuddhasSection`, `BuddhaCard`), `HomeSkeletons.kt` | Thẻ: ảnh `thumbnailUrl` (Coil `AsyncImage`, giữ chỗ khi `null`/lỗi), nhãn loại, `nameVi`, "Vía dd/MM âm lịch" từ `nextVia` (AC1, AC5); thẻ rỗng + "Thử lại" (AC4) | có — cần sửa |
-| UI / Home state | `ui/screens/home/HomeUiState.kt`, `HomeViewModel.kt`, `HomeSampleData.kt` | Khối Phật có trạng thái riêng (đang tải / có / trống-lỗi) đọc từ `GetFeaturedDeitiesUseCase`, "Thử lại" chỉ tải lại khối này; bỏ `buddhas` khỏi `HomeSampleData` (cùng hướng `../Temple/` làm với khối chùa) | có — cần sửa |
-| UI / Library block | `ui/screens/library/LibraryScreen.kt` (`BuddhaStrip`), `LibraryUiState.kt`, `LibraryViewModel.kt` | Dải thẻ từ `GetFeaturedDeitiesUseCase` (async), trạng thái đang tải / có / trống-lỗi + "Thử lại" (AC2, AC4 ⚠️ câu) | có — cần sửa |
-| UI / Catalogue screen | `ui/screens/buddha/BuddhaListScreen.kt` | Header (phụ đề N từ `total`), ba chip cố định (AC9), lưới 2 cột bằng `LazyVerticalGrid` (thay `chunked(2)` trong `verticalScroll`) nạp trang kế khi còn ~4 ô cuối (AC8); trạng thái `buddhasEmpty` (AC10, AC11); "Thử lại" cuối danh sách (AC12); thẻ có `coreVirtue` (AC5) | có — cần sửa |
-| UI / Catalogue state | `ui/screens/buddha/BuddhaListUiState.kt` | `type: DeityType?`, `items`, `total`, `page`, `totalPages`, `loadState` (đầu / thêm / trống-lỗi đầu / lỗi thêm / xong); **bỏ** `filtered` (lọc trên máy) và phụ đề đếm cả mẫu | có — viết lại |
-| UI / Catalogue VM | `ui/screens/buddha/BuddhaListViewModel.kt` | `SavedStateHandle` giữ `type` (AC13); `typeFlow.collectLatest` (huỷ request cũ, AC9); nạp trang kế một lúc một request (AC8) | có — viết lại |
-| UI / Detail screen | `ui/screens/buddha/BuddhaDetailScreen.kt` (+ tách `BuddhaDetailSections.kt` nếu dài) | Các phần theo FR-DTY-005 (AC15); tiểu sử thu gọn khi tràn 6 dòng — dùng `onTextLayout.hasVisualOverflow` để quyết định hiện "Đọc thêm" (AC16); thẻ vía + danh sách ngày vía (AC17, AC18); đại nguyện (AC19); **Hình tượng** (AC20, mới); ba thẻ thần chú + **một** hàng nút (AC21, AC22); kinh liên quan (AC25, AC26); chân trang không "Báo thông tin sai" (AC27); trạng thái tải / lỗi / không tìm thấy (AC14); `LifecycleResumeEffect` báo ViewModel kiểm ngày (AC29) | có — cần sửa nhiều |
-| UI / Detail state | `ui/screens/buddha/BuddhaDetailUiState.kt` | `loadState` (đang tải / có / không tìm thấy / lỗi), `detail: DeityDetail?`, `sutras: List<RelatedSutra>` (rỗng = ẩn), `today: LocalDate` (ngày đã gửi), `countdown` qua `CalendarCountdown.of(today, nextVia.solarDate)`, `bioExpanded`, `vowsExpanded`; **bỏ** `vowNoun`/`vowUnit`, `extraVia`, `nextViaLabel` tự tính | có — viết lại |
-| UI / Detail VM | `ui/screens/buddha/BuddhaDetailViewModel.kt` | `buddhaId` từ `SavedStateHandle`; gọi song song `GetDeityDetailUseCase(id, today)` và `GetRelatedSutrasUseCase(id)` (Step-by-step Flow); `onResume()` tải lại khi `LocalDate.now(clock) != today` (AC29); ViewModel tạo qua factory của `di/DeityModule` | có — viết lại |
-| UI / Format | `ui/screens/buddha/DeityFormat.kt` | Chuỗi hiển thị: nhãn loại BR-DTY-01 (`DeityType.Unknown` → không nhãn, AC6), "Vía dd/MM âm lịch" (⚠️ tháng nhuận, AC5), "THÁNG GIÊNG/n/CHẠP", ngày dương kèm thứ (dùng lại `weekdayFull()` của `ui/screens/home/`), nhãn đếm ngược "Hôm nay / Ngày mai / Còn n ngày" từ `CalendarCountdown`, "Xem đủ N đại nguyện" / "Thu gọn", văn bản chia sẻ (AC24) | chưa tạo (logic đang rải trong `BuddhaDetailUiState`, `BuddhaProfile.viaLabel`) |
-| UI / Share | `ui/screens/buddha/DeityShare.kt` | `Intent(ACTION_SEND)` `text/plain` + `Intent.createChooser`; bắt `ActivityNotFoundException` (AC24) | chưa tạo |
-| UI / Navigation | `ui/navigation/Routes.kt` (`BuddhaListRoute`, `BuddhaRoute(buddhaId)`, `MalaRoute`), wiring trong `MainActivity.kt` | Giữ hai route deity; `MalaRoute` đổi thành `data class MalaRoute(val mantra: String? = null)` (đăng ký `composable<MalaRoute>`; lối vào cũ từ Trang chủ truyền `null`); `onChant` truyền chú ngắn (AC23); `onShare` gọi `DeityShare` (AC24); `onSutra(id)` → `SutraRoute(id)` (AC25) | có — cần sửa |
-| UI / Mala (feature khác, chỉ điểm nhận) | `ui/screens/mala/MalaViewModel.kt`, `MalaUiState.kt` | Đọc `mantra` từ `SavedStateHandle`: có → `MalaUiState.mantra = mantra`, `beads = 0`; `null` → giữ `DefaultMantra` như hiện tại (AC23) | có — cần sửa (nhỏ) |
-| Domain / Model | `domain/model/Deity.kt` | `DeityType { Buddha, Bodhisattva, Deva, Unknown }`; `DeitySummary` (`id`, `type`, `nameVi`, `nameSanskrit?`, `nameChinese?`, `titleHonorific?`, `thumbnailUrl?`, `imageUrl?`, `coreVirtue?`, `pureLand?`, `nextVia: DeityVia?`); `DeityVia` (`eventCode`, `name`, `solarDate: LocalDate`, `lunar: LunarDay`); `DeityViaEvent` (`eventCode`, `name`, `next: DeityVia?`); `DeityIconography` (`posture?`, `mountOrThrone?`, `sacredArtifacts`, `symbolicMeaning?`, `isEmpty`); `DeityMantras` (`shortSinoVietnamese?`, `shortSanskrit?`, `dharaniName?`, `dharaniSnippet?`); `DeityDetail` (`summary`, `canonicalSource?`, `biography?`, `greatVows`, `iconography`, `mantras`, `viaEvents`); `DeityPage` (`items`, `page`, `pageSize`, `total`, `totalPages`, `hasMore`); `RelatedSutra` (`id`, `title`, `collection?`). Chuỗi rỗng của contract → `null` (BR-DTY-04). `LunarDay(day, month, year, isLeapMonth)` dùng chung với `../Calendar/` (`domain/model/CalendarEvent.kt`; feature nào làm trước thì tạo) | chưa tạo |
-| Domain / Xoá | `domain/model/BuddhaProfile.kt` (`BuddhaCategory`, `BuddhaMantra`, `BuddhaSutraRef`, `BuddhaProfile`, `BuddhaDetail`), `BuddhaFigure` trong `domain/model/HomeContent.kt`, `domain/usecase/GetBuddhaProfilesUseCase.kt` (9 hồ sơ mẫu), `GetBuddhaDetailUseCase.kt` (quét âm lịch 400 ngày) | Dữ liệu mẫu và tính vía trên máy — **drift BR-DTY-05**; xoá khi Phase 2/3 chạy. `domain/calendar/LunarCalendar.kt` giữ (feature khác còn dùng) | có — xoá |
-| Domain / Repository | `domain/repository/DeityRepository.kt` | `getFeatured(today: LocalDate): Result<List<DeitySummary>>`, `getPage(page: Int, type: DeityType?, today: LocalDate): Result<DeityPage>`, `getDetail(id: String, today: LocalDate): Result<DeityDetail>`, `getRelatedSutras(id: String): Result<List<RelatedSutra>>` (gộp mọi trang); 404 → `DeityNotFoundException` | chưa tạo |
-| Domain / UseCase | `domain/usecase/GetFeaturedDeitiesUseCase.kt`, `GetDeityPageUseCase.kt`, `GetDeityDetailUseCase.kt`, `GetRelatedSutrasUseCase.kt` | `operator fun invoke` → `Result`; dispatcher qua `DispatcherProvider`; `today` lấy từ `Clock` được inject (AC28) và trả kèm kết quả để UI đếm ngược đúng ngày đã gửi | chưa tạo |
-| Domain / Rules | `domain/calendar/CalendarCountdown.kt` | BR-CAL-13 — **của `../Calendar/`** (Phase 1 ở đó); spec này chỉ dùng | chưa tạo (ngoài spec này) |
-| Data / Remote | `data/remote/api/DeityApiService.kt` | `getTop(date)`, `getList(page, type: String?, date)`, `getDetail(id, date)`, `getSutras(id, page)` — trả `ApiResponse<…>`, không `@Authenticated` | chưa tạo |
-| Data / Remote | `data/remote/dto/DeityDto.kt` | `@Serializable` DTO theo `openapi.yaml` + backend deity `requirements.md` v3.0 (bảng "Hình dạng") — phần v3.0 khai báo nullable/default để parse được cả bản contract cũ (`JsonProvider` đã `ignoreUnknownKeys`); **không** khai báo `lunar_memorial_days`. DTO kinh liên quan: chỉ các trường mapper cần của `SutraByDeityItem` | chưa tạo |
-| Data / Mapper | `data/mapper/DeityMapper.kt` | DTO → domain: `type` → `DeityType` (lạ → `Unknown`, không bỏ mục — contract "enum mở"); `""` → `null`; `solar_date` `YYYY-MM-DD` → `LocalDate` (không đọc được → coi `next_via`/`next_occurrence` là `null`); `DeityType` → tham số `type` (`Unknown` không bao giờ gửi) | chưa tạo |
-| Data / Repository | `data/repository/DeityRepositoryImpl.kt` | Gọi API qua `NetworkClient.safeCall`; `date` = `today.toString()`; `AppError.ApiError(code = DEITY_NOT_FOUND)` → `DeityNotFoundException`; còn lại `NetworkException(AppError)`; `getRelatedSutras` gọi lần lượt trang 1…`total_pages`; không cache | chưa tạo |
-| DI | `di/DeityModule.kt` | `provideDeityRepository()`, bốn use case, factory cho `BuddhaListViewModel`, `BuddhaDetailViewModel` và nguồn khối Phật của `HomeViewModel`/`LibraryViewModel` | chưa tạo |
-| Tests | `app/src/test/java/com/example/innerlamp/…` | Mapper; repository; ViewModel (phân trang, đổi chip huỷ request cũ, trống/lỗi, chi tiết song song, đổi ngày khi resume); `DeityFormat`; Mala nhận câu niệm; `GetBuddhaDetailUseCaseTest` (có — test quét âm lịch, sẽ bỏ) | có một phần (sẽ bỏ) |
+| UI / Home block | `ui/screens/home/HomeSections.kt` (`BuddhasSection`, `BuddhaCard`), `HomeSkeletons.kt` | Card: `thumbnailUrl` image (Coil `AsyncImage`, placeholder when `null`/error), type label, `nameVi`, "Vía dd/MM âm lịch" (Via dd/MM lunar) from `nextVia` (AC1, AC5); empty card + "Thử lại" (Retry) (AC4) | exists — needs change |
+| UI / Home state | `ui/screens/home/HomeUiState.kt`, `HomeViewModel.kt`, `HomeSampleData.kt` | The Buddha block has its own state (loading / loaded / empty-error) read from `GetFeaturedDeitiesUseCase`, "Thử lại" reloads only this block; remove `buddhas` from `HomeSampleData` (same direction `../Temple/` takes with the temple block) | exists — needs change |
+| UI / Library block | `ui/screens/library/LibraryScreen.kt` (`BuddhaStrip`), `LibraryUiState.kt`, `LibraryViewModel.kt` | Card strip from `GetFeaturedDeitiesUseCase` (async), loading / loaded / empty-error state + "Thử lại" (AC2, AC4 ⚠️ copy) | exists — needs change |
+| UI / Catalogue screen | `ui/screens/buddha/BuddhaListScreen.kt` | Header (subtitle N from `total`), three fixed chips (AC9), 2-column grid with `LazyVerticalGrid` (replacing `chunked(2)` inside `verticalScroll`) that loads the next page when ~4 cells remain (AC8); `buddhasEmpty` state (AC10, AC11); "Thử lại" at the end of the list (AC12); card with `coreVirtue` (AC5) | exists — needs change |
+| UI / Catalogue state | `ui/screens/buddha/BuddhaListUiState.kt` | `type: DeityType?`, `items`, `total`, `page`, `totalPages`, `loadState` (initial / more / initial empty-error / more error / done); **remove** `filtered` (on-device filtering) and the subtitle that counts all samples | exists — rewrite |
+| UI / Catalogue VM | `ui/screens/buddha/BuddhaListViewModel.kt` | `SavedStateHandle` keeps `type` (AC13); `typeFlow.collectLatest` (cancels the old request, AC9); loads the next page one request at a time (AC8) | exists — rewrite |
+| UI / Detail screen | `ui/screens/buddha/BuddhaDetailScreen.kt` (+ split out `BuddhaDetailSections.kt` if long) | The sections per FR-DTY-005 (AC15); the biography collapses when it overflows 6 lines — use `onTextLayout.hasVisualOverflow` to decide whether to show "Đọc thêm" (Read more) (AC16); via card + via day list (AC17, AC18); great vows (AC19); **Hình tượng** (AC20, new); three mantra cards + **one** button row (AC21, AC22); related sutras (AC25, AC26); footer without "Báo thông tin sai" (Report wrong information) (AC27); loading / error / not-found states (AC14); `LifecycleResumeEffect` tells the ViewModel to check the date (AC29) | exists — needs major change |
+| UI / Detail state | `ui/screens/buddha/BuddhaDetailUiState.kt` | `loadState` (loading / loaded / not found / error), `detail: DeityDetail?`, `sutras: List<RelatedSutra>` (empty = hidden), `today: LocalDate` (the date sent), `countdown` through `CalendarCountdown.of(today, nextVia.solarDate)`, `bioExpanded`, `vowsExpanded`; **remove** `vowNoun`/`vowUnit`, `extraVia`, the self-computed `nextViaLabel` | exists — rewrite |
+| UI / Detail VM | `ui/screens/buddha/BuddhaDetailViewModel.kt` | `buddhaId` from `SavedStateHandle`; calls `GetDeityDetailUseCase(id, today)` and `GetRelatedSutrasUseCase(id)` in parallel (Step-by-step Flow); `onResume()` reloads when `LocalDate.now(clock) != today` (AC29); the ViewModel is created through the `di/DeityModule` factory | exists — rewrite |
+| UI / Format | `ui/screens/buddha/DeityFormat.kt` | Display strings: the BR-DTY-01 type label (`DeityType.Unknown` → no label, AC6), "Vía dd/MM âm lịch" (⚠️ leap month, AC5), "THÁNG GIÊNG/n/CHẠP" (first / n-th / twelfth lunar month), the solar date with weekday (reuse `weekdayFull()` of `ui/screens/home/`), the countdown label "Hôm nay / Ngày mai / Còn n ngày" (Today / Tomorrow / n days left) from `CalendarCountdown`, "Xem đủ N đại nguyện" (See all N great vows) / "Thu gọn" (Collapse), the share text (AC24) | not created (logic currently spread across `BuddhaDetailUiState`, `BuddhaProfile.viaLabel`) |
+| UI / Share | `ui/screens/buddha/DeityShare.kt` | `Intent(ACTION_SEND)` `text/plain` + `Intent.createChooser`; catches `ActivityNotFoundException` (AC24) | not created |
+| UI / Navigation | `ui/navigation/Routes.kt` (`BuddhaListRoute`, `BuddhaRoute(buddhaId)`, `MalaRoute`), wiring in `MainActivity.kt` | Keep the two deity routes; `MalaRoute` becomes `data class MalaRoute(val mantra: String? = null)` (register `composable<MalaRoute>`; the old entry from Home passes `null`); `onChant` passes the short mantra (AC23); `onShare` calls `DeityShare` (AC24); `onSutra(id)` → `SutraRoute(id)` (AC25) | exists — needs change |
+| UI / Mala (another feature, receiving point only) | `ui/screens/mala/MalaViewModel.kt`, `MalaUiState.kt` | Reads `mantra` from `SavedStateHandle`: present → `MalaUiState.mantra = mantra`, `beads = 0`; `null` → keep `DefaultMantra` as today (AC23) | exists — needs change (small) |
+| Domain / Model | `domain/model/Deity.kt` | `DeityType { Buddha, Bodhisattva, Deva, Unknown }`; `DeitySummary` (`id`, `type`, `nameVi`, `nameSanskrit?`, `nameChinese?`, `titleHonorific?`, `thumbnailUrl?`, `imageUrl?`, `coreVirtue?`, `pureLand?`, `nextVia: DeityVia?`); `DeityVia` (`eventCode`, `name`, `solarDate: LocalDate`, `lunar: LunarDay`); `DeityViaEvent` (`eventCode`, `name`, `next: DeityVia?`); `DeityIconography` (`posture?`, `mountOrThrone?`, `sacredArtifacts`, `symbolicMeaning?`, `isEmpty`); `DeityMantras` (`shortSinoVietnamese?`, `shortSanskrit?`, `dharaniName?`, `dharaniSnippet?`); `DeityDetail` (`summary`, `canonicalSource?`, `biography?`, `greatVows`, `iconography`, `mantras`, `viaEvents`); `DeityPage` (`items`, `page`, `pageSize`, `total`, `totalPages`, `hasMore`); `RelatedSutra` (`id`, `title`, `collection?`). The contract's empty string → `null` (BR-DTY-04). `LunarDay(day, month, year, isLeapMonth)` shared with `../Calendar/` (`domain/model/CalendarEvent.kt`; whichever feature comes first creates it) | not created |
+| Domain / Delete | `domain/model/BuddhaProfile.kt` (`BuddhaCategory`, `BuddhaMantra`, `BuddhaSutraRef`, `BuddhaProfile`, `BuddhaDetail`), `BuddhaFigure` in `domain/model/HomeContent.kt`, `domain/usecase/GetBuddhaProfilesUseCase.kt` (9 sample profiles), `GetBuddhaDetailUseCase.kt` (400-day lunar scan) | Sample data and on-device via computation — **drift BR-DTY-05**; delete once Phase 2/3 run. `domain/calendar/LunarCalendar.kt` stays (other features still use it) | exists — delete |
+| Domain / Repository | `domain/repository/DeityRepository.kt` | `getFeatured(today: LocalDate): Result<List<DeitySummary>>`, `getPage(page: Int, type: DeityType?, today: LocalDate): Result<DeityPage>`, `getDetail(id: String, today: LocalDate): Result<DeityDetail>`, `getRelatedSutras(id: String): Result<List<RelatedSutra>>` (merges all pages); 404 → `DeityNotFoundException` | not created |
+| Domain / UseCase | `domain/usecase/GetFeaturedDeitiesUseCase.kt`, `GetDeityPageUseCase.kt`, `GetDeityDetailUseCase.kt`, `GetRelatedSutrasUseCase.kt` | `operator fun invoke` → `Result`; dispatcher through `DispatcherProvider`; `today` taken from the injected `Clock` (AC28) and returned with the result so the UI counts down from the same date that was sent | not created |
+| Domain / Rules | `domain/calendar/CalendarCountdown.kt` | BR-CAL-13 — **owned by `../Calendar/`** (Phase 1 there); this spec only uses it | not created (outside this spec) |
+| Data / Remote | `data/remote/api/DeityApiService.kt` | `getTop(date)`, `getList(page, type: String?, date)`, `getDetail(id, date)`, `getSutras(id, page)` — return `ApiResponse<…>`, no `@Authenticated` | not created |
+| Data / Remote | `data/remote/dto/DeityDto.kt` | `@Serializable` DTOs per `openapi.yaml` + backend deity `requirements.md` v3.0 (the "Hình dạng" (Shape) table) — the v3.0 part is declared nullable/default so the old contract still parses (`JsonProvider` already has `ignoreUnknownKeys`); `lunar_memorial_days` is **not** declared. Related-sutra DTO: only the `SutraByDeityItem` fields the mapper needs | not created |
+| Data / Mapper | `data/mapper/DeityMapper.kt` | DTO → domain: `type` → `DeityType` (unknown → `Unknown`, the item is not dropped — contract "open enum"); `""` → `null`; `solar_date` `YYYY-MM-DD` → `LocalDate` (unparseable → treat `next_via`/`next_occurrence` as `null`); `DeityType` → the `type` parameter (`Unknown` is never sent) | not created |
+| Data / Repository | `data/repository/DeityRepositoryImpl.kt` | Calls the API through `NetworkClient.safeCall`; `date` = `today.toString()`; `AppError.ApiError(code = DEITY_NOT_FOUND)` → `DeityNotFoundException`; the rest `NetworkException(AppError)`; `getRelatedSutras` calls pages 1…`total_pages` in turn; no cache | not created |
+| DI | `di/DeityModule.kt` | `provideDeityRepository()`, the four use cases, factories for `BuddhaListViewModel`, `BuddhaDetailViewModel` and the Buddha block source of `HomeViewModel`/`LibraryViewModel` | not created |
+| Tests | `app/src/test/java/com/example/innerlamp/…` | Mapper; repository; ViewModel (pagination, chip change cancels the old request, empty/error, parallel detail, date change on resume); `DeityFormat`; Mala receives the recitation phrase; `GetBuddhaDetailUseCaseTest` (exists — tests the lunar scan, to be removed) | partly exists (to be removed) |
 
 ## Navigation flow
 
 ```
-HomeRoute (khối "Thư viện Phật & Bồ Tát" ← GET /v1/deities/top)
-  ├─ (bấm thẻ) ──▶ BuddhaRoute(buddhaId)
+HomeRoute ("Thư viện Phật & Bồ Tát" block ← GET /v1/deities/top)
+  ├─ (tap card) ──▶ BuddhaRoute(buddhaId)
   └─ (Xem tất cả) ──▶ BuddhaListRoute
-LibraryRoute (khối "Chư Phật & Bồ Tát" ← GET /v1/deities/top; ô hub "Phật & Bồ Tát")
-  ├─ (bấm thẻ) ──▶ BuddhaRoute(buddhaId)
-  └─ (Xem tất cả | ô hub) ──▶ BuddhaListRoute
-BuddhaListRoute (GET /v1/deities, trang 1…n; type)
-  ├─ (bấm thẻ) ──▶ BuddhaRoute(buddhaId)
-  ├─ (trạng thái trống: Xem lịch lễ vía) ──▶ FestivalsRoute
-  └─ (back) ──▶ màn trước
+LibraryRoute ("Chư Phật & Bồ Tát" block ← GET /v1/deities/top; hub tile "Phật & Bồ Tát")
+  ├─ (tap card) ──▶ BuddhaRoute(buddhaId)
+  └─ (Xem tất cả | hub tile) ──▶ BuddhaListRoute
+BuddhaListRoute (GET /v1/deities, pages 1…n; type)
+  ├─ (tap card) ──▶ BuddhaRoute(buddhaId)
+  ├─ (empty state: Xem lịch lễ vía) ──▶ FestivalsRoute
+  └─ (back) ──▶ previous screen
 BuddhaRoute(buddhaId) (GET /v1/deities/{id} ‖ GET /v1/deities/{id}/sutras)
   ├─ (Lịch lễ) ──▶ FestivalsRoute
-  ├─ (Trì niệm với tràng hạt) ──▶ MalaRoute(mantra = chú ngắn Hán Việt)
-  ├─ (Chia sẻ) ──▶ bảng chia sẻ hệ thống (ACTION_SEND)
-  ├─ (bấm kinh) ──▶ SutraRoute(sutraId)
-  └─ (back, hoặc "quay lại" ở trạng thái không tìm thấy) ──▶ màn trước
+  ├─ (Trì niệm với tràng hạt) ──▶ MalaRoute(mantra = Sino-Vietnamese short mantra)
+  ├─ (Chia sẻ) ──▶ system share sheet (ACTION_SEND)
+  ├─ (tap sutra) ──▶ SutraRoute(sutraId)
+  └─ (back, or "back" in the not-found state) ──▶ previous screen
 ```
 
-Transition mặc định (crossfade) như hiện tại. `BuddhaListViewModel` gắn vào entry của `BuddhaListRoute`
-nên back từ `BuddhaRoute` giữ vị trí cuộn và các trang đã tải (AC3).
+"Xem tất cả" = See all; "Xem lịch lễ vía" = See the via festival calendar; "Lịch lễ" = Festival
+calendar; "Trì niệm với tràng hạt" = Recite with the mala; "Chia sẻ" = Share.
 
-## Step-by-step Flow — Danh mục: trang đầu, đổi chip, trang kế
+Default transition (crossfade) as today. `BuddhaListViewModel` is attached to the `BuddhaListRoute`
+entry so back from `BuddhaRoute` keeps the scroll position and the pages already loaded (AC3).
+
+## Step-by-step Flow — Catalogue: first page, chip change, next page
 
 ```
-Step 1 — Trang đầu (this feature)
-- Trigger: mở BuddhaListRoute; hoặc đổi chip; hoặc "Thử lại" ở trạng thái trống
-- Pre-condition: type đọc từ SavedStateHandle (null = "Tất cả"); today = LocalDate.now(clock)
-- Where: BuddhaListViewModel (collectLatest — request trước bị huỷ) → GetDeityPageUseCase → DeityRepositoryImpl (safeCall)
+Step 1 — First page (this feature)
+- Trigger: open BuddhaListRoute; or change chip; or "Thử lại" in the empty state
+- Pre-condition: type read from SavedStateHandle (null = "Tất cả" (All)); today = LocalDate.now(clock)
+- Where: BuddhaListViewModel (collectLatest — the previous request is cancelled) → GetDeityPageUseCase → DeityRepositoryImpl (safeCall)
 - API: GET /v1/deities?page=1[&type=BUDDHA|BODHISATTVA]&date=<today>
-  ⚠️ Not confirmed: contract pending — `date`, trang 12 và `next_via` theo backend deity requirements.md
-  v3.0 (contract not yet in openapi.yaml); tới khi server có, thẻ không có dòng vía (next_via = null) và
-  trang là 20 — app vẫn đọc page_size từ response.
-    - Success, total > 0 → thay items, total, page = 1, totalPages; phụ đề "{total} vị · …"
-    - Success, total = 0 → trạng thái trống AC10 ("Tất cả": ẩn chip) / AC11 (chip loại: giữ chip)
-    - Failure (mọi AppError, kể cả 400 INVALID_PAGE / INVALID_DEITY_TYPE / INVALID_DATE) → trạng thái trống AC10 + "Thử lại"
+  ⚠️ Not confirmed: contract pending — `date`, page size 12 and `next_via` per backend deity requirements.md
+  v3.0 (contract not yet in openapi.yaml); until the server has them, cards have no via line (next_via = null) and
+  the page size is 20 — the app still reads page_size from the response.
+    - Success, total > 0 → replace items, total, page = 1, totalPages; subtitle "{total} vị · …" ({total} deities · …)
+    - Success, total = 0 → empty state AC10 ("Tất cả": hide chips) / AC11 (type chip: keep chips)
+    - Failure (any AppError, including 400 INVALID_PAGE / INVALID_DEITY_TYPE / INVALID_DATE) → empty state AC10 + "Thử lại"
 
-Step 2 — Trang kế tiếp (this feature)
-- Trigger: ô cuối hiển thị cách cuối danh sách ≤ 4; hoặc "Thử lại" ở cuối danh sách
-- Pre-condition: không đang tải; page < totalPages; type không đổi từ Step 1 (đổi → về Step 1, huỷ Step 2); dùng cùng today của Step 1
+Step 2 — Next page (this feature)
+- Trigger: the last visible cell is ≤ 4 from the end of the list; or "Thử lại" at the end of the list
+- Pre-condition: not loading; page < totalPages; type unchanged since Step 1 (changed → back to Step 1, cancel Step 2); use the same today as Step 1
 - Where: BuddhaListViewModel → GetDeityPageUseCase → DeityRepositoryImpl
-- API: GET /v1/deities?page=N+1 (cùng type, date)
-    - Success → nối items, page = N+1; items rỗng → coi như hết (AC8)
-    - Failure (mọi lỗi) → giữ items, "Thử lại" ở cuối (AC12)
+- API: GET /v1/deities?page=N+1 (same type, date)
+    - Success → append items, page = N+1; empty items → treat as the end (AC8)
+    - Failure (any error) → keep items, "Thử lại" at the end (AC12)
 ```
 
-## Step-by-step Flow — Trang một vị: chi tiết, kinh liên quan, đổi ngày
+## Step-by-step Flow — A deity's page: detail, related sutras, date change
 
 ```
-Step 1 — Tải chi tiết (this feature)
-- Trigger: mở BuddhaRoute(buddhaId); "Thử lại"; hoặc Step 4
-- Pre-condition: buddhaId từ SavedStateHandle; today = LocalDate.now(clock), lưu vào UiState
+Step 1 — Load the detail (this feature)
+- Trigger: open BuddhaRoute(buddhaId); "Thử lại"; or Step 4
+- Pre-condition: buddhaId from SavedStateHandle; today = LocalDate.now(clock), stored in the UiState
 - Where: BuddhaDetailViewModel → GetDeityDetailUseCase → DeityRepositoryImpl (safeCall)
 - API: GET /v1/deities/{id}?date=<today>
-  ⚠️ Not confirmed: contract pending — `next_via`, `via_events`, `date` theo backend deity requirements.md
-  v3.0 AC 8, 24–29 (contract not yet in openapi.yaml); tới khi có, thẻ vía ẩn (BR-DTY-04) — app không
-  rơi về `lunar_memorial_days` và không tự tính.
-    - Success → loadState = có; countdown = CalendarCountdown.of(today, nextVia.solarDate) nếu có nextVia
-    - Failure (404 DEITY_NOT_FOUND) → "không tìm thấy" + quay lại (AC14; ⚠️ câu)
-    - Failure (khác) → lỗi + "Thử lại" (AC14; ⚠️ câu); Step 2 dù thành công cũng không hiện
+  ⚠️ Not confirmed: contract pending — `next_via`, `via_events`, `date` per backend deity requirements.md
+  v3.0 AC 8, 24–29 (contract not yet in openapi.yaml); until then, the via card is hidden (BR-DTY-04) — the app does not
+  fall back to `lunar_memorial_days` and does not compute it itself.
+    - Success → loadState = loaded; countdown = CalendarCountdown.of(today, nextVia.solarDate) if nextVia is present
+    - Failure (404 DEITY_NOT_FOUND) → "not found" + back (AC14; ⚠️ copy)
+    - Failure (other) → error + "Thử lại" (AC14; ⚠️ copy); Step 2 is not shown even if it succeeds
 
-Step 2 — Kinh liên quan (this feature, chạy song song với Step 1)
-- Trigger: cùng lúc Step 1 (async trong viewModelScope); không chạy lại ở Step 4
+Step 2 — Related sutras (this feature, runs in parallel with Step 1)
+- Trigger: at the same time as Step 1 (async in viewModelScope); not re-run in Step 4
 - Where: BuddhaDetailViewModel → GetRelatedSutrasUseCase → DeityRepositoryImpl
-- API: GET /v1/deities/{id}/sutras?page=1, rồi page=2…total_pages tuần tự (không role)
-    - Success → sutras = mọi items theo thứ tự nhận được (rỗng → ẩn phần, AC25)
-    - Failure (bất kỳ trang nào, mọi lỗi, kể cả 404) → sutras = rỗng, ẩn phần (AC26; ⚠️ product)
+- API: GET /v1/deities/{id}/sutras?page=1, then page=2…total_pages sequentially (no role)
+    - Success → sutras = all items in the order received (empty → hide the section, AC25)
+    - Failure (any page, any error, including 404) → sutras = empty, hide the section (AC26; ⚠️ product)
 
-Step 3 — Hành động (this feature, không gọi backend)
-- Trì niệm: callback onChant(mantra) → MainActivity navigate(MalaRoute(mantra)) → MalaViewModel đọc SavedStateHandle, beads = 0 (AC23)
-- Chia sẻ: DeityFormat.shareText(detail) → DeityShare.open(context, text) (AC24)
+Step 3 — Actions (this feature, no backend call)
+- Recite: callback onChant(mantra) → MainActivity navigate(MalaRoute(mantra)) → MalaViewModel reads SavedStateHandle, beads = 0 (AC23)
+- Share: DeityFormat.shareText(detail) → DeityShare.open(context, text) (AC24)
 
-Step 4 — Đổi ngày khi quay lại (this feature)
+Step 4 — Date change on return (this feature)
 - Trigger: ON_RESUME (LifecycleResumeEffect → BuddhaDetailViewModel.onResume())
-- Pre-condition: loadState = có; LocalDate.now(clock) != UiState.today
-- Where: như Step 1 với today mới (giữ nội dung cũ trên màn trong lúc tải; lỗi → giữ nội dung cũ, không đổi sang trạng thái lỗi)
+- Pre-condition: loadState = loaded; LocalDate.now(clock) != UiState.today
+- Where: as Step 1 with the new today (keep the old content on screen while loading; error → keep the old content, do not switch to the error state)
 ```
 
 ## Local storage
 
-- Không Room, không prefs, không bản offline (online-only, xem Overview). Ảnh: cache mặc định của Coil.
-- Chip đang chọn của danh mục: `SavedStateHandle` (AC13), không phải prefs.
-- Câu niệm sang Niệm Phật: route arg `MalaRoute.mantra` (lưu trong back stack, sống qua process death).
+- No Room, no prefs, no offline copy (online-only, see Overview). Images: Coil's default cache.
+- The catalogue's selected chip: `SavedStateHandle` (AC13), not prefs.
+- The recitation phrase passed to Niệm Phật (Buddha-name recitation): route arg `MalaRoute.mantra`
+  (stored in the back stack, survives process death).
 
 ## Deliberately stubbed for now
 
-- **Phần v3.0 của contract** (⚠️ contract pending — backend deity requirements.md v3.0, backend
-  `tasks.md` Phase 8–10; openapi update là Phase 9): DTO khai báo `next_via`, `via_events` nullable /
-  mặc định rỗng và repository luôn gửi `date` (server hiện tại bỏ qua tham số lạ — chưa đối chiếu handler,
-  xác nhận khi backend ship). Trong lúc chờ: không dòng vía trên thẻ, không thẻ vía trên trang, trang 20.
-  **Không** có fallback tính vía trên máy hay đọc `lunar_memorial_days` (BR-DTY-05). Khi contract vào
-  `openapi.yaml`: cập nhật dòng `Contract:` của `requirements.md`, bỏ marker.
-- **Câu chữ còn chờ product**: trạng thái trống khối Thư viện, không tìm thấy / lỗi trang một vị, tháng
-  nhuận, ngày vía không có lần diễn ra, chia sẻ khi không có chú ngắn, link trong văn bản chia sẻ, dòng phụ
-  của kinh — `DeityFormat` giữ giá trị mặc định đề xuất ở `requirements.md`, ghi rõ là tạm.
-- **Mở bài kinh**: `SutraRoute(id)` với id backend sẽ không khớp danh mục kinh mẫu của màn kinh tới khi
-  feature kinh có data layer (ngoài spec này).
-- **UI và data layer**: phần hồ sơ, `type`, `page` và kinh liên quan đã có trong contract nên Phase 3
-  không bị chặn cho chúng — làm cùng đợt với Phase 2, không thêm dữ liệu mẫu mới vào `main`.
-  `FakeDeityRepository` chỉ nằm trong `app/src/test/…`; `@Preview` dựng `UiState` trực tiếp cho phần
-  stateless (`BuddhaListContent`, `BuddhaDetailContent`).
+- **The v3.0 part of the contract** (⚠️ contract pending — backend deity requirements.md v3.0, backend
+  `tasks.md` Phase 8–10; the openapi update is Phase 9): the DTOs declare `next_via`, `via_events`
+  nullable / default empty and the repository always sends `date` (the current server ignores unknown
+  parameters — not yet checked against the handler, confirm when the backend ships). While waiting: no
+  via line on cards, no via card on the page, page size 20. There is **no** fallback that computes the
+  via on the device or reads `lunar_memorial_days` (BR-DTY-05). When the contract lands in
+  `openapi.yaml`: update the `Contract:` line of `requirements.md`, remove the marker.
+- **Copy still waiting on product**: the Library block empty state, not found / error on a deity's page,
+  leap month, a via day with no occurrence, sharing when there is no short mantra, a link in the share
+  text, the sutra secondary line — `DeityFormat` keeps the proposed defaults from `requirements.md`,
+  clearly marked as temporary.
+- **Opening a sutra**: `SutraRoute(id)` with a backend id will not match the sutra screen's sample sutra
+  catalogue until the sutra feature has a data layer (outside this spec).
+- **UI and data layer**: the profile part, `type`, `page` and related sutras are already in the contract,
+  so Phase 3 is not blocked for them — do it in the same batch as Phase 2, no new sample data added to
+  `main`. `FakeDeityRepository` lives only in `app/src/test/…`; `@Preview` builds the `UiState` directly
+  for the stateless parts (`BuddhaListContent`, `BuddhaDetailContent`).

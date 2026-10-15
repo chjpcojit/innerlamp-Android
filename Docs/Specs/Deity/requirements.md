@@ -1,309 +1,342 @@
 # Requirements — Deity
 
-Version: 1.0
+Version: 1.1
 Last updated: 2026-10-15
-Status: planned (drift) — màn "Chư Phật & Bồ Tát" (`buddhas`), "Chi tiết Phật / Bồ Tát" (`buddha`), khối Trang chủ và Thư viện đã có UI nhưng chạy trên 9 hồ sơ mẫu cứng trong domain; lọc trên máy, không phân trang, không có loại Chư Thiên, không có Hình tượng, vía tính trên máy (quét âm lịch 400 ngày), không truyền thần chú sang Niệm Phật, "Chia sẻ" no-op, chân trang còn "Báo thông tin sai". Chưa có repository/API.
-Feature folder: `app/src/main/java/com/example/innerlamp/ui/screens/buddha/` (tên thư mục code giữ nguyên, product §1.5); khối nổi bật ở `ui/screens/home/` và `ui/screens/library/`
+Status: planned (drift) — the "Chư Phật & Bồ Tát" (Buddhas & Bodhisattvas) screen (`buddhas`), the "Chi tiết Phật / Bồ Tát" (Buddha / Bodhisattva detail) screen (`buddha`) and the Home and Library blocks already have UI but run on 9 sample profiles hardcoded in the domain; filtering on the device, no pagination, no Chư Thiên (devas) type, no Hình tượng (iconography), via computed on the device (scanning the lunar calendar for 400 days), the mantra is not passed to Niệm Phật (Buddha-name recitation), "Chia sẻ" (Share) is a no-op, the footer still has "Báo thông tin sai" (Report wrong information). No repository/API yet.
+Feature folder: `app/src/main/java/com/example/innerlamp/ui/screens/buddha/` (the code folder name is kept, product §1.5); the featured blocks live in `ui/screens/home/` and `ui/screens/library/`
 Product spec: innerlamp-be `docs/product/deity/product.md` @ v1.0
-Contract: innerlamp-be `docs/specs/api/openapi.yaml` @ a8a016b (info.version 1.0.0) — tag Deities (`deitiesTop`, `deitiesList`, `deitiesGet`) và `deitiesSutras`; phần v3.0 (trang 12, `next_via`, `via_events`, tham số `date`, `400 INVALID_DATE`) theo innerlamp-be `docs/specs/features/deity/requirements.md` @ v3.0 (2026-10-15) — **contract not yet in openapi.yaml** (backend `tasks.md` Phase 9)
-Implements: BR-DTY-01, BR-DTY-02, BR-DTY-03, BR-DTY-04, BR-DTY-05, BR-DTY-06, BR-DTY-07, BR-DTY-08, FR-DTY-001, FR-DTY-002, FR-DTY-003, FR-DTY-004, FR-DTY-005, FR-DTY-006, FR-DTY-007, FR-DTY-008, FR-DTY-009, FR-DTY-010, NFR-DTY-01, NFR-DTY-02; liên quan BR-CAL-08, BR-CAL-12, BR-CAL-13 (calendar @ v1.2) — FR-DTY-011 là Backend (Android `n/a` trong product §4.2)
+Contract: innerlamp-be `docs/specs/api/openapi.yaml` @ a8a016b (info.version 1.0.0) — tag Deities (`deitiesTop`, `deitiesList`, `deitiesGet`) and `deitiesSutras`; the v3.0 part (page size 12, `next_via`, `via_events`, the `date` parameter, `400 INVALID_DATE`) follows innerlamp-be `docs/specs/features/deity/requirements.md` @ v3.0 (2026-10-15) — **contract not yet in openapi.yaml** (backend `tasks.md` Phase 9)
+Implements: BR-DTY-01, BR-DTY-02, BR-DTY-03, BR-DTY-04, BR-DTY-05, BR-DTY-06, BR-DTY-07, BR-DTY-08, FR-DTY-001, FR-DTY-002, FR-DTY-003, FR-DTY-004, FR-DTY-005, FR-DTY-006, FR-DTY-007, FR-DTY-008, FR-DTY-009, FR-DTY-010, NFR-DTY-01, NFR-DTY-02; related BR-CAL-08, BR-CAL-12, BR-CAL-13 (calendar @ v1.2) — FR-DTY-011 is Backend (Android `n/a` in product §4.2)
 
 > See `changelog.md` in this folder for the version history of this spec.
 
-Spec platform (layer 2) của **danh mục Chư Phật & Bồ Tát** cho Android. Viết kiểu hỗn hợp: hiện trạng đọc
-từ code ngày 2026-10-15 (branch `docs/deity-specs`, dựa trên `main` @ ec7d77e), phần còn lại prospective.
-Quy tắc sản phẩm (loại và nhãn, thứ tự, cỡ trang, trường thiếu, nguồn ngày vía, lần vía kế tiếp, đại
-nguyện thu gọn) nằm ở product spec và **không** nhắc lại ở đây; file này chỉ nói app Android hiện thực
-các `BR-DTY-*`/`FR-DTY-*` thế nào.
+Platform spec (layer 2) of the **catalogue of Chư Phật & Bồ Tát** (Buddhas and Bodhisattvas) for
+Android. Written in a mixed style: the current state is read from the code on 2026-10-15 (branch
+`docs/deity-specs`, based on `main` @ ec7d77e), the rest is prospective. Product rules (types and
+labels, order, page size, missing fields, the source of the ngày vía (a deity's commemoration day; "via" below),
+the next via occurrence, collapsed đại nguyện (great vows)) live in the product spec and are **not**
+repeated here; this file only says how the Android app implements the `BR-DTY-*`/`FR-DTY-*`.
 
-## Ràng buộc từ product spec
+## Constraints from the product spec
 
-- **Công khai, chỉ đọc** (§2.3, §2.7): không cần đăng nhập; không Bearer (giống `TempleApiService`).
-- **Server quyết định thứ tự, lọc và trang** (BR-DTY-02, BR-DTY-03, NFR-DTY-01): app hiện đúng thứ tự
-  nhận được, không sắp lại, không lọc trên máy, không tải cả danh mục một lần. Vector `deity-order.json`
-  chỉ chạy ở backend (product §4.1).
-- **Ngày vía và lần vía kế tiếp do server trả** (BR-DTY-05, BR-DTY-06; backend deity v3.0 chọn "server
-  tính"): app **không** đổi âm ↔ dương, không quét lịch, không giữ danh sách ngày vía riêng; app chỉ gửi
-  ngày của máy làm "hôm nay" và tự tính **đếm ngược** (BR-CAL-13). Vì app không tự chọn lần vía kế tiếp,
-  `deity-next-via.json` không phải vector của Android (product BR-DTY-06 "every platform that picks it");
-  phần đếm ngược chạy vector `calendar/rules/countdown.json` qua `CalendarCountdown` của `../Calendar/`.
-- **Không dữ liệu mẫu** (FR-DTY-010, §2.1 "Android shows nine sample entries"): mọi vị đến từ backend; id
-  của contract (vd `bodhisattva_avalokiteshvara`) thay cho id mẫu (`quanam`, `thichca`, …).
-- **Phụ thuộc:** `../Calendar/` (`CalendarCountdown`, `LunarDay`, màn Lịch lễ `FestivalsRoute`); màn Niệm
-  Phật (`ui/screens/mala/`, chưa có spec Android); màn bài kinh (`SutraRoute`, chưa có product spec
-  `sutra` lẫn spec Android).
+- **Public, read-only** (§2.3, §2.7): no login needed; no Bearer (like `TempleApiService`).
+- **The server decides order, filtering and paging** (BR-DTY-02, BR-DTY-03, NFR-DTY-01): the app shows
+  exactly the order it receives, does not re-sort, does not filter on the device, does not load the whole
+  catalogue at once. The `deity-order.json` vector runs only on the backend (product §4.1).
+- **The via day and the next via occurrence are returned by the server** (BR-DTY-05, BR-DTY-06; backend
+  deity v3.0 chose "the server computes"): the app does **not** convert lunar ↔ solar, does not scan the
+  calendar, does not keep its own list of via days; the app only sends the device date as "today" and
+  computes the **countdown** itself (BR-CAL-13). Because the app does not pick the next via occurrence
+  itself, `deity-next-via.json` is not an Android vector (product BR-DTY-06 "every platform that picks
+  it"); the countdown part runs the `calendar/rules/countdown.json` vector through `CalendarCountdown`
+  of `../Calendar/`.
+- **No sample data** (FR-DTY-010, §2.1 "Android shows nine sample entries"): every deity comes from the
+  backend; the contract id (e.g. `bodhisattva_avalokiteshvara`) replaces the sample ids (`quanam`,
+  `thichca`, …).
+- **Dependencies:** `../Calendar/` (`CalendarCountdown`, `LunarDay`, the Lịch lễ (festival calendar)
+  screen `FestivalsRoute`); the Niệm Phật screen (`ui/screens/mala/`, no Android spec yet); the sutra
+  screen (`SutraRoute`, neither a `sutra` product spec nor an Android spec yet).
 
 ## User Story
 
-Là người dùng (đã hoặc chưa đăng nhập), tôi muốn xem các vị Phật, Bồ Tát và Chư Thiên nổi bật ở Trang chủ
-và Thư viện, duyệt toàn bộ danh mục theo loại, và mở trang một vị để đọc tiểu sử, đại nguyện, hình tượng,
-thần chú, biết ngày vía sắp tới, trì niệm với tràng hạt, chia sẻ và mở kinh liên quan (product §1.2,
-§2.2).
+As a user (logged in or not), I want to see the featured Buddhas, Bodhisattvas and Chư Thiên on Home
+and Library, browse the whole catalogue by type, and open a deity's page, so that I can read the
+biography, great vows, iconography and mantras, know the upcoming via day, recite with the mala (tràng
+hạt), share, and open related sutras (product §1.2, §2.2).
 
 ## Acceptance Criteria (EARS notation)
 
-### Vị nổi bật ở Trang chủ và Thư viện
+### Featured deities on Home and Library
 
-1. WHEN Trang chủ mở, THE SYSTEM SHALL gọi `GET /v1/deities/top?date=<ngày máy>` (public) và hiện thẻ các
-   vị trong khối "Thư viện Phật & Bồ Tát" đúng thứ tự nhận được, hiện **tất cả** mục nhận được trong
-   carousel cuộn ngang (product §3.6: số thẻ do layout; Android cuộn được nên không cắt), kèm "Xem tất
-   cả" mở `BuddhaListRoute`. (FR-DTY-001, BR-DTY-02)
-2. WHEN Thư viện mở, THE SYSTEM SHALL hiện khối "Chư Phật & Bồ Tát" từ cùng nguồn `top` (cùng thứ tự,
-   dải cuộn ngang, "Xem tất cả" mở `BuddhaListRoute`), và ô "Phật & Bồ Tát" trong lưới hub mở
-   `BuddhaListRoute`. (FR-DTY-001, BR-DTY-02)
-3. WHEN người dùng bấm một thẻ ở Trang chủ, Thư viện hoặc danh mục, THE SYSTEM SHALL mở
-   `BuddhaRoute(buddhaId)` với `id` của contract; back quay lại đúng vị trí cuộn và các trang đã tải.
-   (FR-DTY-001, FR-DTY-004, platform)
-4. WHEN `top` trả rỗng hoặc thất bại, THE SYSTEM SHALL hiện trạng thái trống riêng của khối (không thẻ
-   nào, không thẻ mẫu) kèm "Thử lại" gọi lại `top`, không chặn các khối khác của màn. (FR-DTY-010)
-   - Trang chủ: giữ thẻ rỗng hiện có ("Thư viện đang trống" + "Thử lại", `HomeEmptyCard`).
-   > ⚠️ Not confirmed (product): câu chữ trạng thái trống của khối "Chư Phật & Bồ Tát" ở **Thư viện**
-   > (product chỉ nói "their own empty state"; prototype không có biến thể trống cho Thư viện) — chặn task
-   > Phase 2 "Khối Thư viện"; hand back to ba-writer in innerlamp-be. Mặc định đề xuất: dùng cùng câu với
-   > thẻ rỗng của Trang chủ.
+1. WHEN Home opens, THE SYSTEM SHALL call `GET /v1/deities/top?date=<device date>` (public) and show the
+   deity cards in the "Thư viện Phật & Bồ Tát" (Buddha & Bodhisattva library) block in exactly the order
+   received, showing **all** items received in a horizontally scrolling carousel (product §3.6: the
+   number of cards is up to the layout; Android scrolls so it does not truncate), with "Xem tất cả" (See
+   all) opening `BuddhaListRoute`. (FR-DTY-001, BR-DTY-02)
+2. WHEN Library opens, THE SYSTEM SHALL show the "Chư Phật & Bồ Tát" block from the same `top` source
+   (same order, horizontal scroll strip, "Xem tất cả" opens `BuddhaListRoute`), and the "Phật & Bồ Tát"
+   (Buddhas & Bodhisattvas) tile in the hub grid opens `BuddhaListRoute`. (FR-DTY-001, BR-DTY-02)
+3. WHEN the user taps a card on Home, Library or the catalogue, THE SYSTEM SHALL open
+   `BuddhaRoute(buddhaId)` with the contract `id`; back returns to the same scroll position and the pages
+   already loaded. (FR-DTY-001, FR-DTY-004, platform)
+4. WHEN `top` returns empty or fails, THE SYSTEM SHALL show the block's own empty state (no cards, no
+   sample cards) with "Thử lại" (Retry) calling `top` again, without blocking the screen's other blocks.
+   (FR-DTY-010)
+   - Home: keep the existing empty card ("Thư viện đang trống" (The library is empty) + "Thử lại",
+     `HomeEmptyCard`).
+   > ⚠️ Not confirmed (product): the copy of the "Chư Phật & Bồ Tát" block's empty state on **Library**
+   > (the product only says "their own empty state"; the prototype has no empty variant for Library) —
+   > blocks the Phase 2 task "Library block"; hand back to ba-writer in innerlamp-be. Proposed default:
+   > use the same copy as the Home empty card.
 
-### Thẻ một vị (Trang chủ, Thư viện, danh mục)
+### A deity card (Home, Library, catalogue)
 
-5. WHEN hiện một thẻ, THE SYSTEM SHALL hiện ảnh `thumbnail_url` (Coil; `""`/lỗi tải → ảnh giữ chỗ), nhãn
-   loại theo BR-DTY-01 ("Phật" / "Bồ Tát" / "Chư Thiên" cho `BUDDHA` / `BODHISATTVA` / `DEVA`), `name_vi`,
-   `core_virtue` (thiếu → bỏ dòng, BR-DTY-04; chỉ thẻ danh mục — thẻ Trang chủ/Thư viện theo prototype
-   không có dòng này) và "Vía dd/MM âm lịch" lấy từ ngày âm của `next_via`; `next_via = null` → không
-   có dòng vía. (FR-DTY-002, BR-DTY-01, BR-DTY-04, BR-DTY-06)
-   > ⚠️ Not confirmed (product): thẻ và ô ngày vía hiện thế nào khi `next_via` rơi vào **tháng nhuận**
-   > (BR-CAL-08 thêm "nhuận" sau tháng; định dạng "Vía dd/MM âm lịch" của BR-DTY-06 không có chỗ) — chặn
-   > task Phase 2 "Định dạng ngày vía"; hand back to ba-writer in innerlamp-be. Mặc định đề xuất:
-   > "Vía dd/MM nhuận âm lịch".
-6. WHEN `type` không phải một trong ba giá trị đã biết (contract coi là enum mở), THE SYSTEM SHALL vẫn
-   hiện vị đó như một mục thường và không hiện nhãn loại. (BR-DTY-01, platform)
-   > ⚠️ Not confirmed (product): nhãn cho một loại lạ (ẩn nhãn hay nhãn chung) — không chặn (hiện chỉ có
-   > ba loại); hand back to ba-writer in innerlamp-be.
+5. WHEN showing a card, THE SYSTEM SHALL show the `thumbnail_url` image (Coil; `""`/load error →
+   placeholder image), the type label per BR-DTY-01 ("Phật" (Buddha) / "Bồ Tát" (Bodhisattva) / "Chư
+   Thiên" (Devas) for `BUDDHA` / `BODHISATTVA` / `DEVA`), `name_vi`, `core_virtue` (missing → drop the
+   line, BR-DTY-04; catalogue cards only — Home/Library cards per the prototype do not have this line)
+   and "Vía dd/MM âm lịch" (Via dd/MM lunar) taken from the lunar date of `next_via`; `next_via = null` →
+   no via line. (FR-DTY-002, BR-DTY-01, BR-DTY-04, BR-DTY-06)
+   > ⚠️ Not confirmed (product): how the card and the via date tile appear when `next_via` falls in a
+   > **leap month** (BR-CAL-08 adds "nhuận" (leap) after the month; the "Vía dd/MM âm lịch" format of
+   > BR-DTY-06 has no room for it) — blocks the Phase 2 task "Via date format"; hand back to ba-writer in
+   > innerlamp-be. Proposed default: "Vía dd/MM nhuận âm lịch" (Via dd/MM leap lunar).
+6. WHEN `type` is not one of the three known values (the contract treats it as an open enum), THE SYSTEM
+   SHALL still show that deity as a normal item and show no type label. (BR-DTY-01, platform)
+   > ⚠️ Not confirmed (product): the label for an unknown type (hide the label or a generic label) — not
+   > blocking (there are only three types today); hand back to ba-writer in innerlamp-be.
 
-### Danh mục "Chư Phật & Bồ Tát"
+### The "Chư Phật & Bồ Tát" catalogue
 
-7. WHEN người dùng mở `BuddhaListRoute`, THE SYSTEM SHALL gọi `GET /v1/deities?page=1&date=<ngày máy>`
-   (không `type`), hiện các vị đúng thứ tự nhận được và phụ đề "{N} vị · tiểu sử, đại nguyện, thần chú"
-   với N = `total` của response. (FR-DTY-002, BR-DTY-02, BR-DTY-03)
-8. WHEN người dùng cuộn tới gần cuối danh sách và `page < total_pages`, THE SYSTEM SHALL tải trang kế tiếp
-   và nối vào cuối, mỗi lúc chỉ một request; THE SYSTEM SHALL dừng khi `page >= total_pages` hoặc trang
-   trả về rỗng, và đọc cỡ trang từ `page_size` của response, không giả định 12. (FR-DTY-002, BR-DTY-03,
-   NFR-DTY-01, §3.6)
-9. WHEN người dùng chọn chip "Chư Phật" hoặc "Bồ Tát", THE SYSTEM SHALL hiện đúng ba chip cố định "Tất cả ·
-   Chư Phật · Bồ Tát" (không có chip "Chư Thiên"), chỉ một chip được chọn, gọi lại trang 1 với
-   `type=BUDDHA` / `type=BODHISATTVA` (bỏ hẳn tham số khi "Tất cả"), thay danh sách và cập nhật N; THE
-   SYSTEM SHALL bỏ kết quả của request cũ về muộn và không lọc gì trên máy. (FR-DTY-003, BR-DTY-01,
-   BR-DTY-03, NFR-DTY-02)
-10. WHEN tải trang 1 thất bại (mọi lỗi) **hoặc** trang 1 của "Tất cả" trả `total = 0`, THE SYSTEM SHALL
-    hiện trạng thái trống của prototype `buddhasEmpty` — "Chưa có thông tin chư Phật", câu gợi ý kiểm tra
-    kết nối, "Thử lại" (gọi lại trang 1 với chip đang chọn) và "Xem lịch lễ vía" (mở `FestivalsRoute`) —
-    phụ đề header đổi thành "Chưa có dữ liệu", ẩn chip lọc. (FR-DTY-010)
-11. WHEN một chip loại trả `total = 0` (không lỗi), THE SYSTEM SHALL hiện cùng trạng thái trống của AC10
-    nhưng giữ dãy chip để người dùng đổi lại. (FR-DTY-010, platform)
-12. WHEN tải một trang kế tiếp thất bại, THE SYSTEM SHALL giữ các vị đã tải và hiện "Thử lại" ở cuối danh
-    sách để tải lại đúng trang đó. (platform)
-13. WHEN app bị hệ thống huỷ và mở lại ở danh mục (process death), THE SYSTEM SHALL giữ chip đang chọn rồi
-    tải lại trang 1 theo nó. (platform)
+7. WHEN the user opens `BuddhaListRoute`, THE SYSTEM SHALL call `GET /v1/deities?page=1&date=<device
+   date>` (no `type`), show the deities in exactly the order received and the subtitle "{N} vị · tiểu
+   sử, đại nguyện, thần chú" ({N} deities · biography, great vows, mantras) with N = the response's
+   `total`. (FR-DTY-002, BR-DTY-02, BR-DTY-03)
+8. WHEN the user scrolls near the end of the list and `page < total_pages`, THE SYSTEM SHALL load the
+   next page and append it to the end, only one request at a time; THE SYSTEM SHALL stop when
+   `page >= total_pages` or the returned page is empty, and read the page size from the response's
+   `page_size`, not assume 12. (FR-DTY-002, BR-DTY-03, NFR-DTY-01, §3.6)
+9. WHEN the user selects the "Chư Phật" (Buddhas) or "Bồ Tát" chip, THE SYSTEM SHALL show exactly three
+   fixed chips "Tất cả · Chư Phật · Bồ Tát" (All · Buddhas · Bodhisattvas) (no "Chư Thiên" chip), only
+   one chip selected, call page 1 again with `type=BUDDHA` / `type=BODHISATTVA` (dropping the parameter
+   entirely for "Tất cả"), replace the list and update N; THE SYSTEM SHALL discard the result of an older
+   request that arrives late and not filter anything on the device. (FR-DTY-003, BR-DTY-01, BR-DTY-03,
+   NFR-DTY-02)
+10. WHEN loading page 1 fails (any error) **or** page 1 of "Tất cả" returns `total = 0`, THE SYSTEM SHALL
+    show the empty state of prototype `buddhasEmpty` — "Chưa có thông tin chư Phật" (No information on
+    the Buddhas yet), a hint line suggesting to check the connection, "Thử lại" (calls page 1 again with
+    the selected chip) and "Xem lịch lễ vía" (See the via festival calendar) (opens `FestivalsRoute`) —
+    the header subtitle changes to "Chưa có dữ liệu" (No data yet), and the filter chips are hidden.
+    (FR-DTY-010)
+11. WHEN a type chip returns `total = 0` (no error), THE SYSTEM SHALL show the same empty state as AC10
+    but keep the chip row so the user can switch back. (FR-DTY-010, platform)
+12. WHEN loading a next page fails, THE SYSTEM SHALL keep the deities already loaded and show "Thử lại"
+    at the end of the list to reload exactly that page. (platform)
+13. WHEN the app is killed by the system and reopened on the catalogue (process death), THE SYSTEM SHALL
+    keep the selected chip and then reload page 1 for it. (platform)
 
-### Trang một vị
+### A deity's page
 
-14. WHEN `BuddhaRoute(buddhaId)` mở, THE SYSTEM SHALL hiện trạng thái đang tải và gọi
-    `GET /v1/deities/{id}?date=<ngày máy>` không cần đăng nhập, rồi:
-    - on success: hiện trang theo AC15–AC24;
-    - on failure (`404 DEITY_NOT_FOUND`): hiện trạng thái "không tìm thấy" có nút quay lại;
-    - on failure (khác, kể cả `400 INVALID_DATE`): hiện lỗi có "Thử lại". (FR-DTY-004, BR-DTY-04)
-    > ⚠️ Not confirmed (product): câu chữ của trạng thái "không tìm thấy" và của lỗi tải trang một vị
-    > (product chỉ mô tả ý; prototype không có biến thể lỗi cho `buddha`) — chặn task Phase 2 "Trạng thái
-    > trang một vị"; hand back to ba-writer in innerlamp-be.
-15. WHEN trang một vị hiển thị, THE SYSTEM SHALL hiện các phần đúng thứ tự FR-DTY-005: bìa `image_url`
-    (giữ chỗ khi `""`/lỗi) với nhãn loại và `pure_land`; `name_vi`, `title_honorific`, `name_sanskrit`,
-    `name_chinese`; thẻ vía (AC17); `core_virtue` và dòng `canonical_source`; "Tiểu sử"; "Đại nguyện";
-    "Hình tượng"; "Thần chú & danh hiệu" + hành động (AC20–AC22); "Kinh liên quan" (AC23); chân trang
-    (AC24). Mỗi trường/phần thiếu ẩn theo BR-DTY-04; chuỗi rỗng `""` và mảng rỗng của contract là
-    "thiếu". Tiêu đề header khi cuộn là `name_vi`. (FR-DTY-005, BR-DTY-04)
-16. WHEN tiểu sử dài hơn chiều cao thu gọn (6 dòng, prototype), THE SYSTEM SHALL thu gọn với "Đọc thêm",
-    bấm thì mở hết và đổi thành "Thu gọn"; WHEN tiểu sử vừa 6 dòng, THE SYSTEM SHALL không hiện nút.
-    (FR-DTY-005)
-17. WHEN trang một vị hiển thị và `next_via` khác `null`, THE SYSTEM SHALL hiện thẻ vía: tên sự kiện, ô
-    ngày âm (ngày + "THÁNG GIÊNG" / "THÁNG n" / "THÁNG CHẠP" theo FR-DTY-006), ngày dương kèm thứ, và
-    đếm ngược theo BR-CAL-13 tính từ ngày máy tới `solar_date` qua `CalendarCountdown` ("Hôm nay" /
-    "Ngày mai" / "Còn n ngày"), kèm "Lịch lễ" mở `FestivalsRoute`; WHEN `next_via = null`, THE SYSTEM
-    SHALL ẩn thẻ vía. (FR-DTY-006, BR-DTY-05, BR-DTY-06, BR-DTY-04, BR-CAL-13)
-18. WHEN thẻ vía hiển thị, THE SYSTEM SHALL liệt kê mọi ngày vía của vị theo `via_events` đúng thứ tự nhận
-    được, mỗi mục có tên và (nếu có `next_occurrence`) ngày âm + ngày dương; app không dùng
-    `lunar_memorial_days` (deprecated, backend deity v3.0 AC30). (FR-DTY-006, BR-DTY-05, BR-CAL-08,
-    BR-CAL-12)
-    > ⚠️ Not confirmed (product): một ngày vía **không có** lần diễn ra trong cửa sổ năm nay + năm sau
-    > (`next_occurrence = null`, vd. sự kiện tháng nhuận) có hiện trong danh sách không, và hiện gì — chặn
-    > task Phase 2 "Danh sách ngày vía"; hand back to ba-writer in innerlamp-be. Mặc định đề xuất: hiện
-    > tên, không ngày.
-19. WHEN số đại nguyện lớn hơn 5, THE SYSTEM SHALL hiện 5 đại nguyện đầu, đánh số từ 1 theo thứ tự nhận
-    được, và "Xem đủ N đại nguyện" mở hết rồi đổi thành "Thu gọn"; WHEN ≤ 5, THE SYSTEM SHALL hiện hết, không
-    nút; WHEN `great_vows` rỗng, THE SYSTEM SHALL ẩn phần. (BR-DTY-07, BR-DTY-04)
-20. WHEN hiện "Hình tượng", THE SYSTEM SHALL hiện tư thế, toà ngồi / linh thú, pháp khí (mỗi mục một dòng)
-    và ý nghĩa biểu tượng của `iconography`, ẩn từng dòng thiếu và ẩn cả phần khi cả bốn đều thiếu.
-    (FR-DTY-005, BR-DTY-04)
-21. WHEN hiện "Thần chú & danh hiệu", THE SYSTEM SHALL hiện tối đa ba thẻ theo thứ tự "Danh hiệu"
-    (`title_honorific`), "Thần chú" (chú ngắn Hán Việt rồi Sanskrit), "Đà-la-ni" (tên + đoạn trích), mỗi thẻ
-    thiếu nội dung thì ẩn, và ẩn cả phần khi không thẻ nào có nội dung; thẻ không còn dòng chú thích
-    `note` của dữ liệu mẫu (contract không có). (FR-DTY-005, BR-DTY-04)
-22. WHEN phần "Thần chú & danh hiệu" hiển thị, THE SYSTEM SHALL hiện **một** hàng hành động "Trì niệm với
-    tràng hạt" + "Chia sẻ" ngay sau các thẻ (đặt trong thẻ "Thần chú" theo kiểu nút của prototype), thay
-    cho hai nút lặp lại trên từng thẻ hiện nay; "Trì niệm với tràng hạt" chỉ hiện khi có chú ngắn Hán
-    Việt. (FR-DTY-005, FR-DTY-008, FR-DTY-009, BR-DTY-04)
-    > ⚠️ Not confirmed (product): "Chia sẻ" có hiện (và chia sẻ gì) khi vị **không có** chú ngắn — FR-DTY-009
-    > chỉ nói chia sẻ tên + chú ngắn — chặn task Phase 2 "Chia sẻ"; hand back to ba-writer in innerlamp-be.
-    > Mặc định đề xuất: vẫn hiện, chỉ chia sẻ tên.
+14. WHEN `BuddhaRoute(buddhaId)` opens, THE SYSTEM SHALL show a loading state and call
+    `GET /v1/deities/{id}?date=<device date>` without login, then:
+    - on success: show the page per AC15–AC24;
+    - on failure (`404 DEITY_NOT_FOUND`): show a "not found" state with a back button;
+    - on failure (other, including `400 INVALID_DATE`): show an error with "Thử lại". (FR-DTY-004,
+      BR-DTY-04)
+    > ⚠️ Not confirmed (product): the copy of the "not found" state and of the deity-page load error
+    > (the product only describes the intent; the prototype has no error variant for `buddha`) — blocks
+    > the Phase 2 task "Deity page states"; hand back to ba-writer in innerlamp-be.
+15. WHEN a deity's page is shown, THE SYSTEM SHALL show the sections in exactly the FR-DTY-005 order: the
+    `image_url` cover (placeholder when `""`/error) with the type label and `pure_land`; `name_vi`,
+    `title_honorific`, `name_sanskrit`, `name_chinese`; the via card (AC17); `core_virtue` and the
+    `canonical_source` line; "Tiểu sử" (Biography); "Đại nguyện" (Great vows); "Hình tượng"
+    (Iconography); "Thần chú & danh hiệu" (Mantras & epithets) + actions (AC20–AC22); "Kinh liên quan"
+    (Related sutras) (AC23); the footer (AC24). Each missing field/section is hidden per BR-DTY-04; the
+    contract's empty string `""` and empty array are "missing". The header title on scroll is
+    `name_vi`. (FR-DTY-005, BR-DTY-04)
+16. WHEN the biography is longer than the collapsed height (6 lines, prototype), THE SYSTEM SHALL
+    collapse it with "Đọc thêm" (Read more), which on tap expands it fully and changes to "Thu gọn"
+    (Collapse); WHEN the biography fits in 6 lines, THE SYSTEM SHALL not show the button. (FR-DTY-005)
+17. WHEN a deity's page is shown and `next_via` is not `null`, THE SYSTEM SHALL show the via card: the
+    event name, the lunar date tile (day + "THÁNG GIÊNG" (first lunar month) / "THÁNG n" (month n) /
+    "THÁNG CHẠP" (twelfth lunar month) per FR-DTY-006), the solar date with weekday, and the countdown
+    per BR-CAL-13 computed from the device date to `solar_date` through `CalendarCountdown` ("Hôm nay"
+    (Today) / "Ngày mai" (Tomorrow) / "Còn n ngày" (n days left)), with "Lịch lễ" (Festival calendar)
+    opening `FestivalsRoute`; WHEN `next_via = null`, THE SYSTEM SHALL hide the via card. (FR-DTY-006,
+    BR-DTY-05, BR-DTY-06, BR-DTY-04, BR-CAL-13)
+18. WHEN the via card is shown, THE SYSTEM SHALL list all of the deity's via days from `via_events` in
+    exactly the order received, each item with its name and (if `next_occurrence` is present) the lunar
+    date + solar date; the app does not use `lunar_memorial_days` (deprecated, backend deity v3.0 AC30).
+    (FR-DTY-006, BR-DTY-05, BR-CAL-08, BR-CAL-12)
+    > ⚠️ Not confirmed (product): whether a via day that has **no** occurrence in the window of this year
+    > + next year (`next_occurrence = null`, e.g. a leap-month event) is shown in the list, and what is
+    > shown — blocks the Phase 2 task "Via day list"; hand back to ba-writer in innerlamp-be. Proposed
+    > default: show the name, no date.
+19. WHEN the number of great vows is greater than 5, THE SYSTEM SHALL show the first 5 great vows,
+    numbered from 1 in the order received, and "Xem đủ N đại nguyện" (See all N great vows) expands all
+    and then changes to "Thu gọn"; WHEN ≤ 5, THE SYSTEM SHALL show all, no button; WHEN `great_vows` is
+    empty, THE SYSTEM SHALL hide the section. (BR-DTY-07, BR-DTY-04)
+20. WHEN showing "Hình tượng", THE SYSTEM SHALL show the posture, the throne / mount animal, the sacred
+    artifacts (one item per line) and the symbolic meaning from `iconography`, hiding each missing line
+    and hiding the whole section when all four are missing. (FR-DTY-005, BR-DTY-04)
+21. WHEN showing "Thần chú & danh hiệu", THE SYSTEM SHALL show at most three cards in the order "Danh
+    hiệu" (Epithet) (`title_honorific`), "Thần chú" (Mantra) (the short mantra in Sino-Vietnamese, then
+    Sanskrit), "Đà-la-ni" (Dharani) (name + excerpt), hiding each card that has no content, and hiding
+    the whole section when no card has content; the cards no longer have the sample data's `note`
+    caption line (the contract has none). (FR-DTY-005, BR-DTY-04)
+22. WHEN the "Thần chú & danh hiệu" section is shown, THE SYSTEM SHALL show **one** action row "Trì niệm
+    với tràng hạt" (Recite with the mala) + "Chia sẻ" right after the cards (placed in the "Thần chú"
+    card in the prototype's button style), replacing the two buttons repeated on every card today; "Trì
+    niệm với tràng hạt" is shown only when there is a Sino-Vietnamese short mantra. (FR-DTY-005,
+    FR-DTY-008, FR-DTY-009, BR-DTY-04)
+    > ⚠️ Not confirmed (product): whether "Chia sẻ" is shown (and what it shares) when the deity has
+    > **no** short mantra — FR-DTY-009 only says share the name + short mantra — blocks the Phase 2 task
+    > "Share"; hand back to ba-writer in innerlamp-be. Proposed default: still show it, share the name
+    > only.
 
-### Hành động thực hành
+### Practice actions
 
-23. WHEN người dùng bấm "Trì niệm với tràng hạt", THE SYSTEM SHALL mở màn Niệm Phật với câu niệm là chú
-    ngắn Hán Việt của vị và số hạt 0 (không giữ số hạt cũ). (FR-DTY-008)
-24. WHEN người dùng bấm "Chia sẻ", THE SYSTEM SHALL mở bảng chia sẻ của hệ thống (`Intent.ACTION_SEND`,
-    `text/plain`, qua `Intent.createChooser`) với văn bản gồm `name_vi`, chú ngắn Hán Việt và (nếu có)
-    Sanskrit, mỗi phần một dòng; không tự mở link; WHEN không app nào nhận, THE SYSTEM SHALL không crash.
-    (FR-DTY-009, BR-DTY-04)
-    > ⚠️ Not confirmed (product): văn bản chia sẻ có kèm link trang web của vị không (product Appendix A
-    > mục 3) — chặn nội dung chia sẻ cuối cùng (task Phase 2 "Chia sẻ"); hand back to ba-writer in
-    > innerlamp-be. Tới khi có câu trả lời: không có link.
+23. WHEN the user taps "Trì niệm với tràng hạt", THE SYSTEM SHALL open the Niệm Phật screen with the
+    recitation phrase set to the deity's Sino-Vietnamese short mantra and a bead count of 0 (not keeping
+    the old bead count). (FR-DTY-008)
+24. WHEN the user taps "Chia sẻ", THE SYSTEM SHALL open the system share sheet (`Intent.ACTION_SEND`,
+    `text/plain`, via `Intent.createChooser`) with a text made of `name_vi`, the Sino-Vietnamese short
+    mantra and (if present) the Sanskrit, one part per line; it does not open a link itself; WHEN no app
+    can receive it, THE SYSTEM SHALL not crash. (FR-DTY-009, BR-DTY-04)
+    > ⚠️ Not confirmed (product): whether the shared text includes a link to the deity's web page
+    > (product Appendix A item 3) — blocks the final share content (Phase 2 task "Share"); hand back to
+    > ba-writer in innerlamp-be. Until answered: no link.
 
-### Kinh liên quan và chân trang
+### Related sutras and footer
 
-25. WHEN trang một vị tải xong, THE SYSTEM SHALL gọi `GET /v1/deities/{id}/sutras` (song song với chi
-    tiết, tải hết các trang theo `total_pages`) và hiện "Kinh liên quan" theo thứ tự nhận được; bấm một
-    mục mở `SutraRoute(sutraId)` với `id` của contract; WHEN không có kinh liên kết (`total = 0`), THE
-    SYSTEM SHALL ẩn phần; app không còn khớp kinh theo tên và không còn kinh dự phòng "Pháp Cú".
-    (FR-DTY-007, BR-DTY-04)
-    > ⚠️ Not confirmed (product): thứ tự — FR-DTY-007 nói "in the sutra library's order", còn
-    > `deitiesSutras` xếp theo vai (`SUBJECT`, `SPEAKER`, `MENTIONED`) rồi thứ tự biên tập — không chặn
-    > Android (app hiện đúng thứ tự server trả); hand back to ba-writer in innerlamp-be.
-    > ⚠️ Not confirmed (product): mỗi dòng kinh hiện gì ngoài tên tiếng Việt (prototype có dòng phụ kiểu
-    > "26 phẩm · 423 kệ", contract không có trường đó) — chặn task Phase 2 "Dòng kinh"; hand back to
-    > ba-writer in innerlamp-be. Mặc định đề xuất: tên + `collection`.
-26. WHEN `GET /v1/deities/{id}/sutras` thất bại trong khi chi tiết thành công, THE SYSTEM SHALL ẩn phần
-    "Kinh liên quan" và không chặn phần còn lại của trang. (FR-DTY-007, platform)
-    > ⚠️ Not confirmed (product): lỗi riêng của "Kinh liên quan" có cần báo người dùng/"Thử lại" không —
-    > không chặn; hand back to ba-writer in innerlamp-be.
-27. WHEN trang một vị hiển thị, THE SYSTEM SHALL hiện chân trang chỉ với "Nội dung do Ban biên tập tổng
-    hợp từ kinh điển" — không có "Báo thông tin sai", không yêu thích, không theo dõi. (BR-DTY-08)
+25. WHEN a deity's page finishes loading, THE SYSTEM SHALL call `GET /v1/deities/{id}/sutras` (in
+    parallel with the detail, loading all pages per `total_pages`) and show "Kinh liên quan" in the order
+    received; tapping an item opens `SutraRoute(sutraId)` with the contract `id`; WHEN there are no linked
+    sutras (`total = 0`), THE SYSTEM SHALL hide the section; the app no longer matches sutras by name and
+    no longer has the fallback sutra "Pháp Cú" (Dhammapada). (FR-DTY-007, BR-DTY-04)
+    > ⚠️ Not confirmed (product): order — FR-DTY-007 says "in the sutra library's order", while
+    > `deitiesSutras` sorts by role (`SUBJECT`, `SPEAKER`, `MENTIONED`) then editorial order — does not
+    > block Android (the app shows exactly the order the server returns); hand back to ba-writer in
+    > innerlamp-be.
+    > ⚠️ Not confirmed (product): what each sutra row shows besides the Vietnamese title (the prototype
+    > has a secondary line like "26 phẩm · 423 kệ" (26 chapters · 423 verses), the contract has no such
+    > field) — blocks the Phase 2 task "Sutra row"; hand back to ba-writer in innerlamp-be. Proposed
+    > default: title + `collection`.
+26. WHEN `GET /v1/deities/{id}/sutras` fails while the detail succeeds, THE SYSTEM SHALL hide the "Kinh
+    liên quan" section and not block the rest of the page. (FR-DTY-007, platform)
+    > ⚠️ Not confirmed (product): whether a "Kinh liên quan"-only error needs to be reported to the
+    > user/"Thử lại" — not blocking; hand back to ba-writer in innerlamp-be.
+27. WHEN a deity's page is shown, THE SYSTEM SHALL show the footer with only "Nội dung do Ban biên tập
+    tổng hợp từ kinh điển" (Content compiled by the editorial board from the scriptures) — no "Báo thông
+    tin sai", no favourite, no follow. (BR-DTY-08)
 
-### Ngày của máy
+### The device date
 
-28. WHEN app gọi một trong ba operation deity, THE SYSTEM SHALL gửi `date` = ngày hiện tại của máy
-    (`LocalDate.now(clock)`, múi giờ máy) dạng `YYYY-MM-DD`, và dùng **cùng** ngày đó làm "hôm nay" cho
-    đếm ngược. (BR-DTY-06, BR-CAL-13)
-29. WHEN trang một vị quay lại foreground (`ON_RESUME`) và ngày của máy đã khác ngày dùng cho lần tải,
-    THE SYSTEM SHALL tải lại chi tiết với ngày mới (để `next_via` và đếm ngược không thành "Đã qua").
-    (BR-DTY-06, platform)
+28. WHEN the app calls one of the three deity operations, THE SYSTEM SHALL send `date` = the device's
+    current date (`LocalDate.now(clock)`, device time zone) as `YYYY-MM-DD`, and use that **same** date as
+    "today" for the countdown. (BR-DTY-06, BR-CAL-13)
+29. WHEN a deity's page returns to the foreground (`ON_RESUME`) and the device date differs from the date
+    used for the load, THE SYSTEM SHALL reload the detail with the new date (so that `next_via` and the
+    countdown do not turn into "Đã qua" (Passed)). (BR-DTY-06, platform)
 
-### Hiệu năng và vector
+### Performance and vectors
 
-30. WHEN đo trên mạng 4G, THE SYSTEM SHALL hiện trang 1 của một lần đổi chip trong vòng 2 giây kể từ lúc
-    gửi request. (NFR-DTY-02)
-31. WHEN chạy unit test, THE SYSTEM SHALL qua mọi case của innerlamp-be
-    `docs/product/calendar/rules/countdown.json` (BR-CAL-13) qua `CalendarCountdown` (dùng chung với
-    `../Calendar/`, task ở đó) và test riêng việc trang một vị dùng `CalendarCountdown` với ngày đã gửi;
-    `deity-order.json` và `deity-next-via.json` không chạy trên Android (server chọn thứ tự và lần vía).
-    (BR-DTY-06, BR-CAL-13)
+30. WHEN measured on a 4G network, THE SYSTEM SHALL show page 1 of a chip change within 2 seconds of
+    sending the request. (NFR-DTY-02)
+31. WHEN unit tests run, THE SYSTEM SHALL pass every case of innerlamp-be
+    `docs/product/calendar/rules/countdown.json` (BR-CAL-13) through `CalendarCountdown` (shared with
+    `../Calendar/`, task there) and separately test that a deity's page uses `CalendarCountdown` with the
+    date that was sent; `deity-order.json` and `deity-next-via.json` do not run on Android (the server
+    picks the order and the via occurrence). (BR-DTY-06, BR-CAL-13)
 
-### Hiện trạng code so với từng AC (đọc ngày 2026-10-15)
+### Current code state per AC (read on 2026-10-15)
 
-| AC | Hiện trạng | Ghi chú |
+| AC | Status | Notes |
 |---|---|---|
-| 1 | lệch | `HomeSampleData.load()` (trễ giả 900 ms) trả 9 `BuddhaFigure` mẫu; có skeleton + carousel; id mẫu |
-| 2 | lệch | `LibraryViewModel` lấy đồng bộ 9 `BuddhaProfile` từ `GetBuddhaProfilesUseCase`; ô hub `LibraryHub.Buddhas` → `BuddhaListRoute` ✓ |
-| 3 | ✓ phần điều hướng | `onBuddha(id)` → `BuddhaRoute(id)` ở Home, Library, danh mục; id là id mẫu |
-| 4 | lệch | Home: thẻ rỗng có, nhưng lỗi và rỗng chung với 2 khối khác (`Docs/home_assumptions.md` #13); Library: không có trạng thái trống |
-| 5 | lệch | Không ảnh (gradient giữ chỗ, `home_assumptions.md` #1); nhãn "Phật tương lai" (Di Lặc) — **drift BR-DTY-01**; vía là ngày âm cứng trong mẫu — **drift BR-DTY-05**; dòng phụ là `role` mẫu |
-| 6 | chưa có | `BuddhaCategory` chỉ có `Buddha`, `Bodhisattva`; không có Chư Thiên — **drift BR-DTY-01** |
-| 7, 8 | chưa có | Không phân trang; phụ đề đếm cả 9 mẫu — **drift BR-DTY-03 / NFR-DTY-01** |
-| 9 | lệch | Ba chip đúng, nhưng `BuddhaListUiState.filtered` lọc **trên máy**; phụ đề không theo chip |
-| 10–12 | chưa có | Không có trạng thái trống/lỗi (`TODO(il-data-builder)` trong `BuddhaListViewModel`) |
-| 13 | chưa có | Chip không qua `SavedStateHandle` |
-| 14 | chưa có | `GetBuddhaDetailUseCase` trả vị đầu tiên khi id không khớp; không tải, không lỗi, không 404 |
-| 15 | lệch | Thiếu `title_honorific`, tên chữ Hán, `canonical_source`; header dùng `shortName` (contract không có); có `vowIntro` mẫu |
-| 16 | lệch | "Đọc thêm" luôn hiện kể cả khi tiểu sử ngắn |
-| 17 | lệch | Một ngày vía cứng + quét âm lịch 400 ngày trên máy (`GetBuddhaDetailUseCase.nextVia`) — **drift BR-DTY-05/06**; đếm ngược có (logic trong `BuddhaDetailUiState.nextViaLabel`); "Lịch lễ" → `FestivalsRoute` ✓ |
-| 18 | lệch | Ngày vía khác chỉ là chuỗi `extraVia` mẫu |
-| 19 | ✓ phần thu gọn | 5 + "Xem đủ …" + "Thu gọn" có; nhãn dùng `vowUnit` mẫu ("lời nguyện", "hạnh nguyện"), nhãn đếm "· trích" — sửa theo AC19 |
-| 20 | chưa có | Không có phần Hình tượng — **drift FR-DTY-005** |
-| 21, 22 | lệch | Thẻ mẫu "DANH HIỆU"/"TÂM CHÚ" kèm `note`; hai nút trên **mỗi** thẻ |
-| 23 | lệch | `onChant` mở `MalaRoute` không truyền câu niệm (`MalaUiState.mantra` mặc định "Nam mô A Di Đà Phật") — **drift FR-DTY-008** |
-| 24 | chưa có | `onShare = {}` (no-op) trong `MainActivity.kt` — **drift FR-DTY-009** |
-| 25, 26 | lệch | Kinh liên quan là `BuddhaSutraRef` mẫu, có kinh dự phòng `phapcu` — **drift FR-DTY-007** |
-| 27 | lệch | Chân trang "… · Báo thông tin sai" — **drift BR-DTY-08** |
-| 28, 29 | chưa có | `Clock` inject có ở ViewModel/use case nhưng không gọi API |
-| 30, 31 | chưa có | `GetBuddhaDetailUseCaseTest` test quét âm lịch — sẽ bỏ |
+| 1 | drift | `HomeSampleData.load()` (fake 900 ms delay) returns 9 sample `BuddhaFigure`; has a skeleton + carousel; sample ids |
+| 2 | drift | `LibraryViewModel` synchronously takes 9 `BuddhaProfile` from `GetBuddhaProfilesUseCase`; hub tile `LibraryHub.Buddhas` → `BuddhaListRoute` ✓ |
+| 3 | ✓ navigation part | `onBuddha(id)` → `BuddhaRoute(id)` on Home, Library, catalogue; the id is a sample id |
+| 4 | drift | Home: the empty card exists, but error and empty are shared with 2 other blocks (`Docs/home_assumptions.md` #13); Library: no empty state |
+| 5 | drift | No image (gradient placeholder, `home_assumptions.md` #1); label "Phật tương lai" (Future Buddha) (Di Lặc (Maitreya)) — **drift BR-DTY-01**; the via is a lunar date hardcoded in the sample — **drift BR-DTY-05**; the secondary line is the sample `role` |
+| 6 | missing | `BuddhaCategory` only has `Buddha`, `Bodhisattva`; no Chư Thiên — **drift BR-DTY-01** |
+| 7, 8 | missing | No pagination; the subtitle counts all 9 samples — **drift BR-DTY-03 / NFR-DTY-01** |
+| 9 | drift | The three chips are right, but `BuddhaListUiState.filtered` filters **on the device**; the subtitle does not follow the chip |
+| 10–12 | missing | No empty/error state (`TODO(il-data-builder)` in `BuddhaListViewModel`) |
+| 13 | missing | The chip does not go through `SavedStateHandle` |
+| 14 | missing | `GetBuddhaDetailUseCase` returns the first deity when the id does not match; no loading, no error, no 404 |
+| 15 | drift | Missing `title_honorific`, the Chinese-character name, `canonical_source`; the header uses `shortName` (not in the contract); has a sample `vowIntro` |
+| 16 | drift | "Đọc thêm" is always shown even when the biography is short |
+| 17 | drift | One hardcoded via day + a 400-day lunar scan on the device (`GetBuddhaDetailUseCase.nextVia`) — **drift BR-DTY-05/06**; the countdown exists (logic in `BuddhaDetailUiState.nextViaLabel`); "Lịch lễ" → `FestivalsRoute` ✓ |
+| 18 | drift | The other via days are only the sample `extraVia` string |
+| 19 | ✓ collapse part | 5 + "Xem đủ …" + "Thu gọn" exist; the label uses the sample `vowUnit` ("lời nguyện" (vows), "hạnh nguyện" (practice vows)), count label "· trích" (· excerpt) — fix per AC19 |
+| 20 | missing | No Hình tượng section — **drift FR-DTY-005** |
+| 21, 22 | drift | Sample cards "DANH HIỆU" (EPITHET)/"TÂM CHÚ" (HEART MANTRA) with `note`; two buttons on **each** card |
+| 23 | drift | `onChant` opens `MalaRoute` without passing the recitation phrase (`MalaUiState.mantra` defaults to "Nam mô A Di Đà Phật" (Homage to Amitabha Buddha)) — **drift FR-DTY-008** |
+| 24 | missing | `onShare = {}` (no-op) in `MainActivity.kt` — **drift FR-DTY-009** |
+| 25, 26 | drift | Related sutras are sample `BuddhaSutraRef`, with a fallback sutra `phapcu` — **drift FR-DTY-007** |
+| 27 | drift | Footer "… · Báo thông tin sai" — **drift BR-DTY-08** |
+| 28, 29 | missing | `Clock` is injected in the ViewModel/use case but no API is called |
+| 30, 31 | missing | `GetBuddhaDetailUseCaseTest` tests the lunar scan — to be removed |
 
-## Dữ liệu & API
+## Data & API
 
-Nguồn đúng là `openapi.yaml` (và backend deity `requirements.md` v3.0 cho phần chưa vào contract); không
-chép schema ở đây. Mọi operation public (không `@Authenticated`).
+The source of truth is `openapi.yaml` (and backend deity `requirements.md` v3.0 for the part not yet in
+the contract); schemas are not copied here. Every operation is public (no `@Authenticated`).
 
-| Thao tác | Operation (openapi) | Auth | Lưu cục bộ | Ghi chú |
+| Action | Operation (openapi) | Auth | Stored locally | Notes |
 |---|---|---|---|---|
-| Vị nổi bật | `GET /v1/deities/top?date=` (`deitiesTop`) | public | không | Có trong contract (tối đa 10); `date` và `next_via` trên mục: backend deity v3.0 AC 2, 24–26, 29 — ⚠️ contract not yet in openapi.yaml |
-| Danh mục theo trang + lọc loại | `GET /v1/deities?page=&type=&date=` (`deitiesList`) | public | không | `page`, `type` có trong contract (trang 20 hiện tại); trang 12, `date`, `next_via`: backend deity v3.0 AC 5, 22, 24–26 — ⚠️ contract not yet in openapi.yaml |
-| Trang một vị | `GET /v1/deities/{id}?date=` (`deitiesGet`) | public | không | Phần hồ sơ có trong contract; `next_via`, `via_events`, `date`: backend deity v3.0 AC 8, 24–29 — ⚠️ contract not yet in openapi.yaml. **Không** dùng `lunar_memorial_days` |
-| Kinh liên quan | `GET /v1/deities/{id}/sutras?page=` (`deitiesSutras`) | public | không | Có trong contract; không gửi `role` |
-| Ảnh | `thumbnail_url` / `image_url` | public | cache ảnh của Coil | Dùng nguyên URL server trả; `""` → giữ chỗ |
-| Câu niệm sang Niệm Phật | — (điều hướng trong app) | — | không | Route arg, AC23 |
-| Chia sẻ | — (`ACTION_SEND`) | — | không | AC24 |
+| Featured deities | `GET /v1/deities/top?date=` (`deitiesTop`) | public | none | In the contract (at most 10); `date` and `next_via` on items: backend deity v3.0 AC 2, 24–26, 29 — ⚠️ contract not yet in openapi.yaml |
+| Paged catalogue + type filter | `GET /v1/deities?page=&type=&date=` (`deitiesList`) | public | none | `page`, `type` are in the contract (page size 20 today); page size 12, `date`, `next_via`: backend deity v3.0 AC 5, 22, 24–26 — ⚠️ contract not yet in openapi.yaml |
+| A deity's page | `GET /v1/deities/{id}?date=` (`deitiesGet`) | public | none | The profile part is in the contract; `next_via`, `via_events`, `date`: backend deity v3.0 AC 8, 24–29 — ⚠️ contract not yet in openapi.yaml. **Do not** use `lunar_memorial_days` |
+| Related sutras | `GET /v1/deities/{id}/sutras?page=` (`deitiesSutras`) | public | none | In the contract; `role` is not sent |
+| Images | `thumbnail_url` / `image_url` | public | Coil image cache | Use the URL exactly as the server returns it; `""` → placeholder |
+| Recitation phrase to Niệm Phật | — (in-app navigation) | — | none | Route arg, AC23 |
+| Share | — (`ACTION_SEND`) | — | none | AC24 |
 
 ## Error → UI mapping
 
-| Operation | Failure case | User sees | Hiện trạng code |
+| Operation | Failure case | User sees | Code status |
 |---|---|---|---|
-| `GET /v1/deities/top` | Mọi lỗi (`NoConnection`, `Timeout`, 5xx, `Unknown`, `Serialization`, `400 INVALID_DATE`) hoặc 200 rỗng | Trạng thái trống của khối + "Thử lại" (AC4; Library ⚠️ câu) | lệch (Home: thẻ rỗng chung; Library: không có) |
-| `GET /v1/deities` trang 1 | Mọi lỗi, hoặc `total = 0` ở "Tất cả" | `buddhasEmpty`: "Chưa có thông tin chư Phật" + gợi ý kiểm tra kết nối + "Thử lại" + "Xem lịch lễ vía" (AC10) | chưa có |
-| `GET /v1/deities` trang 1 | 200, `total = 0` ở chip loại | Trạng thái trống AC10, giữ chip (AC11) | chưa có |
-| `GET /v1/deities` trang ≥ 2 | Mọi lỗi | Giữ danh sách, "Thử lại" ở cuối (AC12) | chưa có |
-| `GET /v1/deities/{id}` | `404 DEITY_NOT_FOUND` | "Không tìm thấy" + quay lại (AC14, ⚠️ câu) | chưa có (rơi về vị đầu tiên) |
-| `GET /v1/deities/{id}` | `NoConnection` / `Timeout` / 5xx / `400 INVALID_DATE` / khác | Lỗi + "Thử lại" (AC14, ⚠️ câu) | chưa có |
-| `GET /v1/deities/{id}/sutras` | Mọi lỗi | Ẩn "Kinh liên quan", phần còn lại vẫn hiện (AC26) | chưa có |
-| (máy) | Không app nào nhận `ACTION_SEND` | Không làm gì, không crash (AC24) | chưa có |
+| `GET /v1/deities/top` | Any error (`NoConnection`, `Timeout`, 5xx, `Unknown`, `Serialization`, `400 INVALID_DATE`) or an empty 200 | The block's empty state + "Thử lại" (AC4; Library ⚠️ copy) | drift (Home: shared empty card; Library: none) |
+| `GET /v1/deities` page 1 | Any error, or `total = 0` on "Tất cả" | `buddhasEmpty`: "Chưa có thông tin chư Phật" + a check-the-connection hint + "Thử lại" + "Xem lịch lễ vía" (AC10) | missing |
+| `GET /v1/deities` page 1 | 200, `total = 0` on a type chip | The AC10 empty state, chips kept (AC11) | missing |
+| `GET /v1/deities` page ≥ 2 | Any error | Keep the list, "Thử lại" at the end (AC12) | missing |
+| `GET /v1/deities/{id}` | `404 DEITY_NOT_FOUND` | "Không tìm thấy" (Not found) + back (AC14, ⚠️ copy) | missing (falls back to the first deity) |
+| `GET /v1/deities/{id}` | `NoConnection` / `Timeout` / 5xx / `400 INVALID_DATE` / other | Error + "Thử lại" (AC14, ⚠️ copy) | missing |
+| `GET /v1/deities/{id}/sutras` | Any error | Hide "Kinh liên quan", the rest still shows (AC26) | missing |
+| (device) | No app receives `ACTION_SEND` | Nothing happens, no crash (AC24) | missing |
 
 ## Out of scope
 
-- Tìm kiếm trong danh mục, "Báo thông tin sai", yêu thích, theo dõi, nhắc ngày vía, màn chia sẻ ba thẻ,
-  sửa danh mục (product §1.2).
-- Nạp nội dung danh mục (FR-DTY-011 — Backend).
-- Lịch lễ (`../Calendar/`): spec này chỉ mở `FestivalsRoute` và dùng lại `CalendarCountdown`.
-- Màn bài kinh (`SutraRoute`): spec này chỉ mở nó với `id` của backend. Màn đó hiện chạy trên danh mục
-  kinh mẫu (`GetSutraDetailUseCase`, id kiểu `phapcu`/`k-kinh-phap-cu`), nên id backend (vd `pho-mon`)
-  chưa mở đúng bài cho tới khi feature kinh có spec và data layer — ngoài spec này.
-- Màn Niệm Phật ngoài việc nhận câu niệm (lưu chuỗi hạt, đồng bộ — `MalaViewModel` TODO).
-- Bản đọc offline (product §3.6 cho phép, Android **không** làm ở v1.0 — xem `design.md` "Local storage").
-- Chip "Chư Thiên" (product Appendix A mục 5 — chưa quyết, không chặn).
+- Search in the catalogue, "Báo thông tin sai", favourites, follow, via day reminders, the three-card
+  share screen, editing the catalogue (product §1.2).
+- Loading catalogue content (FR-DTY-011 — Backend).
+- The festival calendar (`../Calendar/`): this spec only opens `FestivalsRoute` and reuses
+  `CalendarCountdown`.
+- The sutra screen (`SutraRoute`): this spec only opens it with the backend `id`. That screen currently
+  runs on a sample sutra catalogue (`GetSutraDetailUseCase`, ids like `phapcu`/`k-kinh-phap-cu`), so a
+  backend id (e.g. `pho-mon`) does not open the right sutra until the sutra feature has a spec and a data
+  layer — outside this spec.
+- The Niệm Phật screen beyond receiving the recitation phrase (saving the bead count, sync —
+  `MalaViewModel` TODO).
+- An offline reading copy (product §3.6 allows it, Android does **not** do it in v1.0 — see `design.md`
+  "Local storage").
+- The "Chư Thiên" chip (product Appendix A item 5 — undecided, not blocking).
 
 ## Pending (not yet implemented)
 
-- Domain: model theo contract, repository, use case; bỏ dữ liệu mẫu và quét âm lịch — `tasks.md` Phase 1.
-- Khối Trang chủ/Thư viện, danh mục có phân trang + lọc trên server + trạng thái trống, trang một vị theo
-  FR-DTY-005 (Hình tượng, thẻ vía từ server, một hàng hành động, bỏ "Báo thông tin sai"), truyền câu niệm
-  sang Niệm Phật, chia sẻ thật (AC1–AC29) — Phase 2.
-- Data layer cho bốn operation (AC1, AC7–AC14, AC25) — Phase 3; trang 12, `date`, `next_via`,
-  `via_events` chờ backend deity v3.0 vào `openapi.yaml`.
-- Vector đếm ngược, đo NFR (AC30, AC31) — Phase 4.
-- Dọn `Docs/home_assumptions.md` (phần Phật ở #1, #13) — Phase 5.
+- Domain: contract-based model, repository, use cases; remove the sample data and the lunar scan —
+  `tasks.md` Phase 1.
+- Home/Library blocks, a catalogue with pagination + server-side filtering + empty state, a deity's page
+  per FR-DTY-005 (Hình tượng, via card from the server, one action row, "Báo thông tin sai" removed),
+  passing the recitation phrase to Niệm Phật, real sharing (AC1–AC29) — Phase 2.
+- Data layer for the four operations (AC1, AC7–AC14, AC25) — Phase 3; page size 12, `date`, `next_via`,
+  `via_events` wait for backend deity v3.0 to land in `openapi.yaml`.
+- Countdown vector, NFR measurement (AC30, AC31) — Phase 4.
+- Clean up `Docs/home_assumptions.md` (the Buddha parts of #1, #13) — Phase 5.
 
 ## Open questions (resolved)
 
-Theo product spec v1.0 (2026-10-15) và backend deity spec v3.0 — các điểm này thay cho hành vi hiện có
-của code Android:
+Per product spec v1.0 (2026-10-15) and backend deity spec v3.0 — these points replace the current
+behaviour of the Android code:
 
-- ~~Nhãn "Phật tương lai" (Di Lặc), không có loại Chư Thiên~~ → ba loại, nhãn "Phật" / "Bồ Tát" / "Chư
-  Thiên", không chip Chư Thiên (BR-DTY-01) → AC5, AC6, AC9. Resolved 2026-10-15.
-- ~~Lọc trên máy, tải cả danh mục~~ → server lọc theo `type`, trang 12, nạp trang kế ở cuối danh sách
-  (BR-DTY-03, FR-DTY-002, FR-DTY-003, §3.6) → AC7–AC9. Resolved 2026-10-15.
-- ~~Ngày vía cứng + quét âm lịch 400 ngày trên máy~~ → ngày vía là sự kiện lịch lễ, lần vía kế tiếp do
-  server tính với `date` của máy; app chỉ đếm ngược (BR-DTY-05, BR-DTY-06; backend deity v3.0) → AC5,
-  AC17, AC18, AC28. Resolved 2026-10-15.
-- ~~Kinh liên quan khớp theo tên, dự phòng Pháp Cú~~ → `GET /v1/deities/{id}/sutras` (FR-DTY-007) → AC25.
+- ~~Label "Phật tương lai" (Di Lặc), no Chư Thiên type~~ → three types, labels "Phật" / "Bồ Tát" / "Chư
+  Thiên", no Chư Thiên chip (BR-DTY-01) → AC5, AC6, AC9. Resolved 2026-10-15.
+- ~~Filtering on the device, loading the whole catalogue~~ → the server filters by `type`, page size 12,
+  the next page loads at the end of the list (BR-DTY-03, FR-DTY-002, FR-DTY-003, §3.6) → AC7–AC9.
   Resolved 2026-10-15.
-- ~~"Báo thông tin sai" ở chân trang~~ → bỏ (BR-DTY-08) → AC27. Resolved 2026-10-15.
-- ~~"Trì niệm" không truyền câu niệm, "Chia sẻ" no-op~~ → truyền chú ngắn, số hạt 0; chia sẻ qua bảng
-  chia sẻ hệ thống (FR-DTY-008, FR-DTY-009) → AC23, AC24. Resolved 2026-10-15.
-- ~~Hình tượng chưa có~~ → giữ phần Hình tượng (FR-DTY-005) → AC20. Resolved 2026-10-15.
-- ~~Dữ liệu mẫu khi lỗi / rỗng~~ → trạng thái trống `buddhasEmpty`, không nội dung giả (FR-DTY-010) →
+- ~~Hardcoded via day + a 400-day lunar scan on the device~~ → a via day is a festival calendar event,
+  the next via occurrence is computed by the server with the device `date`; the app only counts down
+  (BR-DTY-05, BR-DTY-06; backend deity v3.0) → AC5, AC17, AC18, AC28. Resolved 2026-10-15.
+- ~~Related sutras matched by name, Pháp Cú fallback~~ → `GET /v1/deities/{id}/sutras` (FR-DTY-007) →
+  AC25. Resolved 2026-10-15.
+- ~~"Báo thông tin sai" in the footer~~ → removed (BR-DTY-08) → AC27. Resolved 2026-10-15.
+- ~~"Trì niệm" (Recite) does not pass the recitation phrase, "Chia sẻ" is a no-op~~ → pass the short
+  mantra, bead count 0; share through the system share sheet (FR-DTY-008, FR-DTY-009) → AC23, AC24.
+  Resolved 2026-10-15.
+- ~~No Hình tượng yet~~ → keep the Hình tượng section (FR-DTY-005) → AC20. Resolved 2026-10-15.
+- ~~Sample data on error / empty~~ → the `buddhasEmpty` empty state, no fake content (FR-DTY-010) →
   AC4, AC10. Resolved 2026-10-15.
-- ~~Lịch âm & quy tắc ngày 30 / tháng nhuận cho ngày vía (`Docs/home_assumptions.md` #11, đã gỡ trước
-  đây bởi `../Calendar/`)~~ → thuộc lịch lễ, server tính (BR-CAL-04, BR-CAL-07). Resolved 2026-10-15.
+- ~~The lunar calendar & the day-30 / leap-month rules for via days (`Docs/home_assumptions.md` #11,
+  removed earlier by `../Calendar/`)~~ → belongs to the festival calendar, computed by the server
+  (BR-CAL-04, BR-CAL-07). Resolved 2026-10-15.
