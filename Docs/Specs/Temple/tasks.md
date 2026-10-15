@@ -1,6 +1,6 @@
 # Tasks — Temple
 
-Version: 1.0
+Version: 1.1
 Last updated: 2026-10-15
 Status: planned (drift) — chỉ `TempleOptionRepository` (danh sách rút gọn) và các route đã có đúng spec; mọi việc khác `[ ]`
 
@@ -106,9 +106,9 @@ Paths are relative to `app/src/main/java/com/example/innerlamp/`.
 
 - [ ] Báo cột Android của innerlamp-be `docs/product/temple/product.md` §4.2 cho `ba-writer` (spec này
       không sửa repo backend)
-- [ ] Xoá phần chùa trong `Docs/home_assumptions.md` dòng #1 (ảnh chùa / carousel chùa), #3 (chùa từ
-      `HomeSampleData`), #13 (khối chùa) khi Phase 2–3 xong — các dòng đó còn nói về Phật / bài viết nên
-      chỉ bỏ phần chùa
+- [x] Xoá phần chùa trong `Docs/home_assumptions.md` dòng #1 (ảnh chùa / carousel chùa), #3 (chùa từ
+      `HomeSampleData`), #13 (khối chùa) — v1.1, làm sớm ở bước 4 của quy trình tài liệu: các dòng giờ
+      trỏ về spec này (hiện trạng lệch nằm ở bảng trạng thái của `requirements.md`); phần Phật / bài viết giữ nguyên
 - [ ] OKF concept qua `il-okf-writer` khi feature đã kiểm end-to-end
 
 ## Deferred (not blocking Temple)

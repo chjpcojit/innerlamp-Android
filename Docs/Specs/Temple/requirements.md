@@ -1,6 +1,6 @@
 # Requirements — Temple
 
-Version: 1.0
+Version: 1.1
 Last updated: 2026-10-15
 Status: planned (drift) — khối "Chùa Việt Nam" ở Trang chủ, màn "Tất cả chùa" (`templelist`) và "Trang chùa" (`temple`) đã có UI nhưng chạy trên dữ liệu mẫu (8 chùa, có miền "Tây Nguyên"), tìm/lọc trên máy, không phân trang; Trang chùa là bố cục cũ (Theo dõi, Cúng dường, thống kê, thời khóa) và không gọi backend. Chỉ phần danh sách rút gọn (`TempleOptionRepository`) đã nối backend.
 Feature folder: `app/src/main/java/com/example/innerlamp/ui/screens/temple/` (trang chùa) và `ui/screens/templelist/` (danh bạ); khối nổi bật nằm ở `ui/screens/home/` (tên thư mục code giữ nguyên, product §1.5)
@@ -274,7 +274,7 @@ Câu chữ còn chờ product (⚠️ AC7); bảng chỉ nói người dùng th�
 - Data layer cho `top`, danh sách, chi tiết (AC1, AC5–AC13, AC17) — Phase 3; tìm/lọc và trường mới chặn
   bởi contract.
 - Vector (AC35), đo NFR (AC36) — Phase 4.
-- Dọn dữ liệu mẫu và các dòng `Docs/home_assumptions.md` về chùa — Phase 5.
+- Dọn dữ liệu mẫu — Phase 5 (các dòng `Docs/home_assumptions.md` về chùa đã gỡ ở v1.1).
 
 ## Open questions (resolved)
 

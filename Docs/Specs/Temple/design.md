@@ -1,6 +1,6 @@
 # Design — Temple
 
-Version: 1.0
+Version: 1.1
 Last updated: 2026-10-15
 Status: planned (drift) — UI ba điểm (khối nổi bật, danh bạ, trang chùa) có trên dữ liệu mẫu; domain theo contract, repository, data layer cho `top`/danh sách/chi tiết, giờ mở cửa, khoảng cách, chỉ đường chưa có; tìm/lọc và trường mới chờ contract
 
