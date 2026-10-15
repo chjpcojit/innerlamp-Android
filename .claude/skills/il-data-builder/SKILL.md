@@ -69,7 +69,7 @@ existing `domain/` files. Read those first.
 7. **Every generated comment is bilingual: English first, then Vietnamese**, per the Language policy
    in `CLAUDE.md` (and AGENTS.md) — KDoc, `//` comments and `TODO`s alike, e.g.
    `// TODO(il-data-builder): bind to the API … / Nối API …`.
-8. **Never mark a `tasks.md` checkbox `[x]` in this skill.** You write code; `il-spec-android` owns the
+8. **Never mark a `tasks.md` checkbox `[x]` in this skill.** You write code; `spec-writer` owns the
    spec lifecycle.
 
 ## Reference map
