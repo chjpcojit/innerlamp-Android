@@ -3,6 +3,12 @@
 Tracks version history for `requirements.md`, `design.md`, and `tasks.md` in this folder. All three
 files share one changelog since they change together as one spec unit. Newest version first.
 
+## v1.1 (2026-10-15)
+
+- Bước dọn tài liệu cũ: bỏ dòng #5 "Vào xem trước" khỏi `Docs/home_assumptions.md` (khách nay theo tiêu chí
+  20–21); `Docs/Specs/Networking/` v2.4 và `Docs/Specs/Storage/` v1.2 trỏ `AuthTokenStorage` về spec này.
+  `tasks.md` Phase 7 tick mục đó. `requirements.md`/`design.md` không đổi ngoài version.
+
 ## v1.0 (2026-10-14)
 
 - Spec đầu tiên của Android cho đăng nhập, phiên, đăng xuất, quên mật khẩu và khách, viết prospective

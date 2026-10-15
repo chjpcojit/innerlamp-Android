@@ -1,7 +1,7 @@
 # Tasks — Networking
 
-Version: 2.3
-Last updated: 2026-09-22
+Version: 2.4
+Last updated: 2026-10-15
 Status: not started — spec prospective, mọi task còn `[ ]`
 
 > See `changelog.md` in this folder for the version history of this spec.
@@ -97,9 +97,9 @@ trong `design.md`. Chưa có code nào được implement trong `core/network/` 
 
 ## Deferred (feature khác sở hữu, không block Networking)
 
-- **Impl `AuthTokenProvider` thật** đọc/ghi **AndroidKeyStore trực tiếp** — thuộc spec riêng
-  `AuthTokenStorage` (chưa tạo, làm sau). Networking dùng `InMemoryAuthTokenProvider` tới lúc đó.
-- Triển khai refresh-token đầy đủ trong `AuthInterceptor` — thuộc feature auth.
+- **Impl `AuthTokenProvider` thật** đọc/ghi **AndroidKeyStore trực tiếp** — thuộc spec
+  `Docs/Specs/Login/` Phase 1 (chưa implement). Networking dùng `InMemoryAuthTokenProvider` tới lúc đó.
+- Triển khai refresh-token đầy đủ — thuộc `Docs/Specs/Login/` Phase 3 (OkHttp `Authenticator`).
 - `XxxApiService` + DTO + repository của từng feature — thuộc spec của feature đó, đặt ở
   `data/remote/api/`.
 - Cache/offline-first cục bộ — thuộc feature sử dụng Room.

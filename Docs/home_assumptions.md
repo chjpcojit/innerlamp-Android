@@ -8,7 +8,6 @@ Nguồn thiết kế: `Docs/InnerLamp icon consistency/InnerLamp Prototype.dc.ht
 | 2 | Số liệu thực hành (12/20 phút, chuỗi 42 ngày, 7 thanh tuần) và 27 hạt ban đầu là dữ liệu mẫu từ prototype | Chưa có repository thực hành | Nối Room/`SessionRepository`; tràng hạt nên ghi local-first |
 | 3 | Chùa, bài viết, câu kinh lấy từ `HomeSampleData` | Chưa có backend | Thay bằng repository khi có API |
 | 4 | Tên trong lời chào mặc định "quý Phật tử"; avatar chữ "A" | Chưa có nguồn pháp danh (prefs/auth) | Đọc từ hồ sơ người dùng, truyền vào `HomeUiState.create(displayName=…)` |
-| 5 | "Vào xem trước" đi thẳng Home như người dùng đã đăng nhập | Chưa có chế độ preview/guest | Định nghĩa hành vi guest khi có auth |
 | 6 | Bottom nav (Thư viện, Đèn, Đạo tràng, Tôi) và mọi callback đích của Home là no-op | Các route này chưa tồn tại | Nối vào `HomeCallbacks` khi có route |
 | 7 | Ngày "hôm nay" chốt lúc tạo ViewModel, không tự cập nhật qua nửa đêm | Đủ cho bản đầu | Thêm quan sát đổi ngày nếu app hay mở qua đêm |
 | 8 | Âm lịch dùng múi giờ cố định GMT+7 | Thuật toán Hồ Ngọc Đức cho lịch Việt Nam; port từ prototype | Test đối chiếu Tết 2024/2025/2026, tháng nhuận 2023 |

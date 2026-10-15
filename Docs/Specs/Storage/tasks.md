@@ -1,7 +1,7 @@
 # Tasks — Storage
 
-Version: 1.1
-Last updated: 2026-09-22
+Version: 1.2
+Last updated: 2026-10-15
 Status: not started — spec prospective, mọi task còn `[ ]` (trừ ghi chú về file đã có)
 
 > See `changelog.md` in this folder for the version history of this spec.
@@ -120,7 +120,7 @@ Mọi task dưới đây trace trực tiếp về bảng **Layers & components**
 
 - **App-lock mềm bằng `BIOMETRIC_WEAK`** (mở app/khối dữ liệu bằng face Class 2, không bind khoá):
   feature `AppLock` tương lai — xem `requirements.md` "Out of scope".
-- **`AuthTokenStorage`** (token phiên dùng lớp này ở level nào): thuộc feature auth; Storage chỉ cung
-  cấp API.
+- **`AuthTokenStorage`** (token phiên dùng lớp này ở level nào): đã chốt ở `Docs/Specs/Login/` v1.0 —
+  `SecureLevel.DEVICE_UNLOCKED`, qua `AuthSessionStore`; Storage chỉ cung cấp API.
 - **Đồng bộ secret đa thiết bị / cloud**: không thuộc phạm vi (secret chỉ trên máy).
 - **Dọn dữ liệu mồ côi sau restore**: task vận hành riêng.

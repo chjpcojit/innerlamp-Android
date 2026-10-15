@@ -3,6 +3,11 @@
 Tracks version history for `requirements.md`, `design.md`, and `tasks.md` in this folder. All three
 files share one changelog since they change together as one spec unit. Newest version first.
 
+## v1.2 (2026-10-15)
+
+- `tasks.md` Deferred: `AuthTokenStorage` trỏ về `Docs/Specs/Login/` v1.0 (token ở `DEVICE_UNLOCKED`, qua
+  `AuthSessionStore`). `requirements.md`/`design.md` không đổi ngoài version.
+
 ## v1.1 (2026-09-22)
 
 - `requirements.md`: đổi tầng không nhạy cảm sang **`SharedPreferences`** (bỏ DataStore) và bỏ chữ

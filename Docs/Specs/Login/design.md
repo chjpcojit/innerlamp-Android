@@ -1,7 +1,7 @@
 # Design — Login
 
-Version: 1.0
-Last updated: 2026-10-14
+Version: 1.1
+Last updated: 2026-10-15
 Status: planned (drift) — UI Login có (theo số điện thoại, giả lập); `SecureStorage`, `AuthInterceptor` (gắn Bearer) và `InMemoryAuthTokenProvider` có; lưu phiên, refresh, đăng xuất, quên mật khẩu, khách chưa có
 
 > See `changelog.md` in this folder for the version history of this spec.
