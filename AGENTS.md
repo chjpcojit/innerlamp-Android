@@ -116,7 +116,7 @@ Always use the wrapper (`./gradlew`), never a global `gradle`.
   AndroidKeyStore) — never store them in plain prefs or scattered across features.
 - UI: top-level `@Composable fun` with trailing `modifier: Modifier = Modifier`, previews wrapped in
   `InnerLampTheme { ... }`. All code stays under `com.example.innerlamp`.
-- Code comments and docs are written in **Vietnamese**; match that when adding comments.
+- Code comments are bilingual (English first, then Vietnamese); docs are English. See the language policy in `CLAUDE.md`.
 
 ## Testing
 

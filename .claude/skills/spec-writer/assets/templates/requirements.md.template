@@ -10,11 +10,11 @@ Implements: <!-- BR-XXX-01, FR-XXX-001..004 — the IDs whose Android column is 
 
 > See `changelog.md` in this folder for the version history of this spec.
 
-<!-- Retroactive: "Spec này được viết retroactively từ code đang chạy." -->
+<!-- Retroactive: "This spec was written retroactively from the running code." -->
 
 ## User Story
 
-<!-- Một câu, tiếng Việt: Là <ai>, tôi muốn <làm gì>, để <mục tiêu>. Lấy từ product spec, không viết lại nghĩa. -->
+<!-- One sentence, in English: As a <actor>, I want <action>, so that <goal>. Take it from the product spec; do not change its meaning. -->
 
 ## Acceptance Criteria (EARS notation)
 
@@ -27,19 +27,19 @@ the *how* goes in design.md's Step-by-step Flow. See references/ears_notation.md
 
 - WHEN <!-- trigger -->, THE SYSTEM SHALL <!-- behavior -->. (<!-- FR-XXX-001 -->)
 
-## Dữ liệu & API
+## Data & API
 
-<!-- Cite operations; never paste schemas or DTO fields. Bearer gắn qua `@Authenticated` nếu cần. -->
+<!-- Cite operations; never paste schemas or DTO fields. Bearer is attached via `@Authenticated` when needed. -->
 
-| Thao tác | Operation (openapi) | Auth | Lưu cục bộ | Ghi chú |
+| Action | Operation (openapi) | Auth | Stored locally | Notes |
 |---|---|---|---|---|
-| <!-- Đăng nhập --> | <!-- `POST /v1/auth/login` --> | <!-- public / Bearer --> | <!-- secure: token / Room / không --> | <!-- … --> |
+| <!-- Log in --> | <!-- `POST /v1/auth/login` --> | <!-- public / Bearer --> | <!-- secure: token / Room / none --> | <!-- … --> |
 
 ## Error → UI mapping
 
-| Operation | Failure case | User sees | Hiện trạng code |
+| Operation | Failure case | User sees | Code status |
 |---|---|---|---|
-| <!-- `POST /v1/...` --> | <!-- 401 INVALID_CREDENTIALS / AppError.NoConnection --> | <!-- thông báo / trạng thái IL-State --> | <!-- ✓ / lệch / chưa có --> |
+| <!-- `POST /v1/...` --> | <!-- 401 INVALID_CREDENTIALS / AppError.NoConnection --> | <!-- message (quote Vietnamese copy + English gloss) / IL-State --> | <!-- ✓ / drift / missing --> |
 
 ## Out of scope
 
