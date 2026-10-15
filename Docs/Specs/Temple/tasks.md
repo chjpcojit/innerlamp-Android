@@ -1,120 +1,136 @@
 # Tasks — Temple
 
-Version: 1.1
+Version: 1.2
 Last updated: 2026-10-15
-Status: planned (drift) — chỉ `TempleOptionRepository` (danh sách rút gọn) và các route đã có đúng spec; mọi việc khác `[ ]`
+Status: planned (drift) — only `TempleOptionRepository` (short list) and the routes match the spec; everything else `[ ]`
 
 > See `changelog.md` in this folder for the version history of this spec.
 
-Mỗi mục trace về một dòng của bảng **Layers & components** hoặc một Step trong `design.md`.
-`[x]` chỉ khi đã kiểm tra tồn tại **và đúng như product spec v1.1 yêu cầu** trong code ngày
-2026-10-15; mục có code nhưng lệch product để `[ ]` và ghi "(có code, lệch: …)".
+Every item traces to a row of the **Layers & components** table or a Step in `design.md`.
+`[x]` only when verified to exist **and to match what product spec v1.2 requires** in the code on
+2026-10-15; an item that has code but drifts from the product stays `[ ]` and is noted "(has code,
+drift: …)".
 Paths are relative to `app/src/main/java/com/example/innerlamp/`.
 
-## Phase 0 — Đã có, giữ nguyên
+## Phase 0 — Already there, keep
 
 - [x] `domain/repository/TempleOptionRepository.kt` + `data/repository/TempleOptionRepositoryImpl.kt`
-      (`GET /v1/temples/options` qua `safeCall`, bỏ `q` rỗng, cắt 100 ký tự) + `di/TempleModule.kt`
-      `provideTempleOptionRepository` — dùng bởi `../Onboarding/` (FR-TPL-005, AC16)
-- [x] `TempleListRoute`, `TempleRoute(templeId)` trong `ui/navigation/Routes.kt` và wiring Home → danh bạ
-      → trang chùa trong `MainActivity.kt` (AC15; callback `onOffer`/`onSchedule` phải bỏ — Phase 2)
+      (`GET /v1/temples/options` via `safeCall`, drops an empty `q`, cuts to 100 characters) +
+      `di/TempleModule.kt` `provideTempleOptionRepository` — used by `../Onboarding/` (FR-TPL-005, AC16)
+- [x] `TempleListRoute`, `TempleRoute(templeId)` in `ui/navigation/Routes.kt` and the home → directory
+      → temple page wiring in `MainActivity.kt` (AC15; the `onOffer`/`onSchedule` callbacks must go —
+      Phase 2)
 
 ## Phase 1 — Domain
 
-- [ ] `domain/model/Temple.kt`: `Temple`, `TempleLocation`, `TempleRegion` (ba miền, BR-TPL-04),
-      `TemplePage`; bỏ `Temple` cũ khỏi `domain/model/HomeContent.kt` (cập nhật `GetTemplesUseCase`,
-      `GetFestivalCalendarUseCase`, `ChuaSampleData` để vẫn biên dịch — chúng giữ dữ liệu mẫu riêng)
-- [ ] `domain/model/TempleContent.kt` → `TempleDetail` theo `design.md` (có code, lệch: thống kê, thời
-      khóa, `TempleTone`/`TempleGlyph` — bỏ); `OpeningHours`, `TempleAmenities`, `TempleContacts`
-- [ ] `domain/temple/TempleOpenStatusRule.kt` — BR-TPL-09, giờ Việt Nam, `LunarCalendar` (AC27)
+- [ ] `domain/model/Temple.kt`: `Temple`, `TempleLocation`, `TempleRegion` (three regions, BR-TPL-04),
+      `TemplePage`; remove the old `Temple` from `domain/model/HomeContent.kt` (update
+      `GetTemplesUseCase`, `GetFestivalCalendarUseCase`, `ChuaSampleData` so they still compile — they
+      keep their own sample data)
+- [ ] `domain/model/TempleContent.kt` → `TempleDetail` per `design.md` (has code, drift: stats,
+      schedules, `TempleTone`/`TempleGlyph` — remove); `OpeningHours`, `TempleAmenities`,
+      `TempleContacts`
+- [ ] `domain/temple/TempleOpenStatusRule.kt` — BR-TPL-09, Vietnam time, `LunarCalendar`, normal hours
+      on lunar days 1 and 15 when there are no holiday hours (AC27)
 - [ ] `domain/temple/TempleDistance.kt` — haversine (BR-TPL-07, AC30)
 - [ ] `domain/location/LocationProvider.kt` (port, AC30)
 - [ ] `domain/repository/TempleRepository.kt` + `TempleNotFoundException` (AC17)
-- [ ] `domain/usecase/GetFeaturedTemplesUseCase.kt`, `GetTemplePageUseCase.kt` (trim, cắt 100, rỗng →
-      `null` — AC9, AC11); viết lại `GetTempleDetailUseCase.kt` nhận repository, trả `Result` (có code,
-      lệch: trả một chùa mẫu cho mọi id)
+- [ ] `domain/usecase/GetFeaturedTemplesUseCase.kt`, `GetTemplePageUseCase.kt` (trim, cut to 100,
+      empty → `null` — AC9, AC11); rewrite `GetTempleDetailUseCase.kt` to take the repository and
+      return `Result` (has code, drift: returns one sample temple for every id)
 
 ## Phase 2 — UI (`il-ui-builder`)
 
-- [ ] Khối nổi bật: `HomeViewModel` đọc `GetFeaturedTemplesUseCase`, trạng thái riêng của khối; thẻ theo
-      AC4 (ảnh Coil + giữ chỗ); trống (AC2); lỗi + "Thử lại" (AC3, ⚠️ câu); bỏ chùa khỏi
-      `HomeSampleData` (có code, lệch: dữ liệu mẫu, thẻ có `note`)
-- [ ] Nhãn hiển thị `type`/`sect`/`heritage_rank`/miền trong `ui/screens/temple/TempleFormat.kt` (AC4;
-      ⚠️ product — bảng tạm ghi rõ là tạm)
-- [ ] Danh bạ: viết lại `TempleListUiState` + `TempleListViewModel` — phân trang (AC5, AC6, AC8),
-      debounce + huỷ request cũ (AC9), xoá tìm (AC11), bốn chip cố định (AC12), `SavedStateHandle` (AC14)
-      (có code, lệch: lọc trên máy theo tên + nơi chốn, chip suy từ dữ liệu có "Tây Nguyên", không phân
-      trang)
-- [ ] `TempleListScreen`: dòng số chùa tìm thấy, nạp trang kế ở cuối, "Thử lại" cuối danh sách, trạng
-      thái lỗi trang đầu (mất mạng / chung), "Không tìm thấy chùa" + gợi ý (AC7, AC8, AC10, AC13; ⚠️ câu)
-- [ ] Trang chùa: viết lại `TempleUiState`/`TempleViewModel` (bỏ `isFollowing`, `toggleFollow`); trạng
-      thái tải / lỗi / không tìm thấy (AC17)
-- [ ] `TempleScreen`: các phần theo FR-TPL-007 (AC18), giới thiệu thu gọn 5 dòng (AC19), lưu ý đánh số
-      (AC20), tiện ích (AC21; ⚠️ "Kinh sách"), kiến trúc (AC22), vị trí & liên hệ (AC23), chân trang
-      (AC24); bỏ "Theo dõi", "Cúng dường", thống kê, "Thời khóa sắp tới" (AC25; có code, lệch: BR-TPL-08)
-- [ ] "Sự kiện & khóa học": trạng thái trống cố định, không gợi ý theo dõi, không "Xem tất cả" (AC26)
-- [ ] Thẻ giờ: nhãn trạng thái, hai dòng giờ, "Hôm nay"; tính lại khi `ON_RESUME` và mỗi phút
-      (AC27, AC28, AC29; ⚠️ product dòng Rằm khi không có giờ Rằm)
-- [ ] Quyền vị trí: `ACCESS_COARSE_LOCATION` + `ACCESS_FINE_LOCATION` trong `AndroidManifest.xml`; xin
-      một lần (cờ prefs `location_permission_asked`), từ chối thì không xin lại (AC31; ⚠️ thời điểm xin);
-      dòng "Cách bạn …" (AC30)
-- [ ] `ui/screens/temple/TempleIntents.kt` + `<queries>` trong manifest: chỉ đường `geo:` + fallback
-      Google Maps web (AC33); quay số, trình duyệt, mail; không crash khi không có app (AC34); nối
-      `onDirections` trong `MainActivity.kt` (có code, lệch: no-op)
-- [ ] `MainActivity.kt`: bỏ `onOffer`, `onSchedule` của `TempleCallbacks`; tạo ViewModel qua factory
-      `di/TempleModule`
+- [ ] Featured block: `HomeViewModel` reads `GetFeaturedTemplesUseCase`, the block has its own state
+      (loading / content / empty); card per AC4 (Coil image + placeholder); empty (AC2); a failed load
+      shows the same empty state — no error text, no retry, no sample temples (AC3); remove temples from
+      `HomeSampleData` (has code, drift: sample data, card has `note`)
+- [ ] Display labels for `type`/`sect`/`heritage_rank`/region in `ui/screens/temple/TempleFormat.kt`
+      (AC4; ⚠️ product — provisional table marked as provisional)
+- [ ] Directory: rewrite `TempleListUiState` + `TempleListViewModel` — paging (AC5, AC6, AC8), debounce
+      + cancelling old requests (AC9), clearing the search (AC11), four fixed chips (AC12),
+      `SavedStateHandle` (AC14) (has code, drift: on-device filtering by name + place, data-derived
+      chips including "Tây Nguyên", no paging)
+- [ ] `TempleListScreen`: number-found line, next page at the end, "Thử lại" at the end of the list,
+      first-page error state (offline / generic), "Không tìm thấy chùa" + hint (AC7, AC8, AC10, AC13;
+      ⚠️ wording)
+- [ ] Temple page: rewrite `TempleUiState`/`TempleViewModel` (remove `isFollowing`, `toggleFollow`);
+      loading / error / not-found states (AC17)
+- [ ] `TempleScreen`: sections per FR-TPL-007 (AC18), introduction collapsed to 5 lines (AC19),
+      numbered notes (AC20), amenities with "Kinh sách" always "Đang cập nhật" (AC21), architecture
+      with style / materials / highlights / photo set as visible "Đang cập nhật" rows (AC22), location &
+      contacts (AC23), footer (AC24); remove "Theo dõi", "Cúng dường", stats, "Thời khóa sắp tới" (AC25;
+      has code, drift: BR-TPL-08)
+- [ ] "Sự kiện & khóa học": fixed empty state, no follow hint, no "Xem tất cả" (AC26)
+- [ ] Hours card: status label, two hour rows, "Hôm nay"; the "Rằm & Mùng Một" row shows the normal
+      hours when the temple has no holiday hours; recompute on `ON_RESUME` and every minute (AC27,
+      AC28, AC29)
+- [ ] Location permission: `ACCESS_COARSE_LOCATION` + `ACCESS_FINE_LOCATION` in `AndroidManifest.xml`;
+      ask once (prefs flag `location_permission_asked`), never ask again after a denial (AC31;
+      ⚠️ when to ask); "Cách bạn …" line (AC30)
+- [ ] `ui/screens/temple/TempleIntents.kt` + `<queries>` in the manifest: `geo:` directions + Google
+      Maps web fallback (AC33); dialer, browser, mail; no crash without an app (AC34); wire
+      `onDirections` in `MainActivity.kt` (has code, drift: no-op)
+- [ ] `MainActivity.kt`: remove `onOffer`, `onSchedule` from `TempleCallbacks`; create ViewModels via
+      the `di/TempleModule` factory
 
 ## Phase 3 — Data (`il-data-builder`, contract-gated)
 
-- [ ] Xác nhận từng operation trong innerlamp-be `docs/specs/api/openapi.yaml` (cite, không chép
-      schema): `top`, danh sách, chi tiết có @ 0eb7d1f; `q`/`region`/trang 12 và trường mới chi tiết
-      **chưa** (⚠️ contract — hand-off backend, "Deliberately stubbed")
+- [ ] Confirm each operation in innerlamp-be `docs/specs/api/openapi.yaml` (cite, never copy the
+      schema): `top`, list, detail exist @ 0eb7d1f; `q`/`region`/pages of 12 and the new detail fields
+      do **not** (⚠️ contract — backend hand-off, "Deliberately stubbed")
 - [ ] `data/remote/api/TempleApiService.kt`: `getTop`, `getList(page, q, region)`, `getDetail(id)`
-- [ ] `data/remote/dto/TempleDto.kt` (trường mới nullable/default để parse cả bản cũ)
-- [ ] `data/mapper/TempleMapper.kt`: miền, `""` → `null`, giờ `HH:MM - HH:MM` (AC29; ⚠️ contract AC46
-      backend), `YYYY-MM`
-- [ ] `data/repository/TempleRepositoryImpl.kt` qua `NetworkClient.safeCall`; `TEMPLE_NOT_FOUND` →
-      `TempleNotFoundException`; các `AppError` khác theo bảng Error → UI
-- [ ] `core/location/AndroidLocationProvider.kt` (`LocationManager.getCurrentLocation`, hạn 5 s, fallback
-      last known; không lưu/log — AC30, AC32)
-- [ ] `di/TempleModule.kt`: repository, use case, location provider, factory ViewModel
-- [ ] Khi backend có `q`/`region`/trang 12 và trường mới trong `openapi.yaml`: cập nhật dòng `Contract:`
-      của `requirements.md`, bỏ marker ⚠️ (contract), kiểm lại AC9–AC12, AC27, AC29
+- [ ] `data/remote/dto/TempleDto.kt` (new fields nullable/default so the old shape still parses)
+- [ ] `data/mapper/TempleMapper.kt`: region, `""` → `null`, `HH:MM - HH:MM` hours (AC29; ⚠️ contract,
+      backend AC46), `YYYY-MM`
+- [ ] `data/repository/TempleRepositoryImpl.kt` via `NetworkClient.safeCall`; `TEMPLE_NOT_FOUND` →
+      `TempleNotFoundException`; other `AppError`s per the Error → UI table
+- [ ] `core/location/AndroidLocationProvider.kt` (`LocationManager.getCurrentLocation`, 5 s limit,
+      last-known fallback; no storing/logging — AC30, AC32)
+- [ ] `di/TempleModule.kt`: repository, use cases, location provider, ViewModel factories
+- [ ] When the backend has `q`/`region`/pages of 12 and the new fields in `openapi.yaml`: update the
+      `Contract:` line of `requirements.md`, remove the ⚠️ (contract) markers, recheck AC9–AC12, AC27,
+      AC29
 
 ## Phase 4 — Tests
 
-- [ ] Script `scripts/sync-product-vectors.sh` (dùng chung với `../Memorial/`): chép innerlamp-be
-      `docs/product/temple/rules/{temple-open-status,temple-distance}.json` vào
-      `app/src/test/resources/product/temple/rules/` kèm file `SOURCE` (commit + `product_spec_version`);
-      bản chép không bao giờ sửa tay
-- [ ] Chạy mọi case của `rules/temple-open-status.json` (BR-TPL-09) qua `TempleOpenStatusRule` +
-      `TempleFormat` — gồm case múi giờ và ngày âm (AC35)
-- [ ] Chạy mọi case của `rules/temple-distance.json` (BR-TPL-07) qua `TempleFormat.distanceLabel`; test
-      riêng cho `TempleDistance.haversineKm` (AC35)
-- [ ] Mapper: `""` → `null`, giờ không đọc được, miền lạ, tháng `null`
+- [ ] Script `scripts/sync-product-vectors.sh` (shared with `../Memorial/`): copies innerlamp-be
+      `docs/product/temple/rules/{temple-open-status,temple-distance}.json` to
+      `app/src/test/resources/product/temple/rules/` with a `SOURCE` file (commit +
+      `product_spec_version`); the copies are never edited by hand
+- [ ] Run every case of `rules/temple-open-status.json` (BR-TPL-09) through `TempleOpenStatusRule` +
+      `TempleFormat` — including the time-zone, lunar-day and "Rằm without holiday hours uses normal
+      hours" cases (AC35)
+- [ ] Run every case of `rules/temple-distance.json` (BR-TPL-07) through `TempleFormat.distanceLabel`;
+      a separate test for `TempleDistance.haversineKm` (AC35)
+- [ ] Mapper: `""` → `null`, unparseable hours, unknown region, `null` month
 - [ ] Repository: success, 404 `TEMPLE_NOT_FOUND`, `NoConnection`, 5xx, `400 INVALID_FILTER`
-- [ ] `TempleListViewModel`: debounce, huỷ request cũ, xoá tìm bỏ `q`, đổi miền về trang 1, nạp trang kế
-      một request, dừng ở trang cuối, lỗi trang sau giữ danh sách, `SavedStateHandle` (AC5–AC14)
-- [ ] `TempleViewModel`: tải / 404 / lỗi; trạng thái mở cửa với `Clock` cố định; khoảng cách với
-      `FakeLocationProvider` (có / `null`) (AC17, AC27–AC30)
-- [ ] `HomeViewModel`: khối chùa có / trống / lỗi (AC1–AC3)
-- [ ] Bỏ `TempleListUiStateTest` (test lọc trên máy — hành vi bị bỏ theo BR-TPL-05)
-- [ ] Đo AC36 (NFR-TPL-01) thủ công trên máy thật, 4G, khi backend có `q`/`region`
-- [ ] Unit test task: `./gradlew testDevDebugUnitTest` (người dùng chạy — xem `AGENTS.md`)
+- [ ] `TempleListViewModel`: debounce, cancelling old requests, clearing the search drops `q`, a region
+      change returns to page 1, one request per next page, stop at the last page, a later-page error
+      keeps the list, `SavedStateHandle` (AC5–AC14)
+- [ ] `TempleViewModel`: load / 404 / error; open status with a fixed `Clock`; distance with
+      `FakeLocationProvider` (value / `null`) (AC17, AC27–AC30)
+- [ ] `HomeViewModel`: temple block content / empty / failure → the same empty state, no error, no
+      retry (AC1–AC3)
+- [ ] Remove `TempleListUiStateTest` (tests on-device filtering — behavior dropped per BR-TPL-05)
+- [ ] Measure AC36 (NFR-TPL-01) by hand on a real device, 4G, once the backend has `q`/`region`
+- [ ] Unit test task: `./gradlew testDevDebugUnitTest` (run by the user — see `AGENTS.md`)
 
 ## Phase 5 — Documentation
 
-- [ ] Báo cột Android của innerlamp-be `docs/product/temple/product.md` §4.2 cho `ba-writer` (spec này
-      không sửa repo backend)
-- [x] Xoá phần chùa trong `Docs/home_assumptions.md` dòng #1 (ảnh chùa / carousel chùa), #3 (chùa từ
-      `HomeSampleData`), #13 (khối chùa) — v1.1, làm sớm ở bước 4 của quy trình tài liệu: các dòng giờ
-      trỏ về spec này (hiện trạng lệch nằm ở bảng trạng thái của `requirements.md`); phần Phật / bài viết giữ nguyên
-- [ ] OKF concept qua `il-okf-writer` khi feature đã kiểm end-to-end
+- [ ] Report the Android column of innerlamp-be `docs/product/temple/product.md` §4.2 to `ba-writer`
+      (this spec does not edit the backend repo)
+- [x] Remove the temple part of `Docs/home_assumptions.md` lines #1 (temple images / temple carousel),
+      #3 (temples from `HomeSampleData`), #13 (temple block) — v1.1, done early in step 4 of the docs
+      process: those lines now point to this spec (the current drift is in the state table of
+      `requirements.md`); the Buddha / article parts stay
+- [ ] OKF concept via `il-okf-writer` once the feature is verified end-to-end
 
 ## Deferred (not blocking Temple)
 
-- Bản đọc offline (product §3.6 "may") — chỉ khi product owner muốn.
-- Nội dung "Sự kiện & khóa học" khi `sangha` có spec Android.
-- Đổi id mẫu (`tu-quang`, `tp-…`) ở Hồ sơ, Lịch âm, Lịch lễ, tab Chùa sang id thật — spec của các feature
-  đó.
-- Kiểu kiến trúc, vật liệu, điểm nổi bật, "Kinh sách", bộ ảnh khi contract có (BR-TPL-06 "later").
+- Offline reading (product §3.6 "may") — only if the product owner wants it.
+- "Sự kiện & khóa học" content once `sangha` has an Android spec.
+- Switching sample ids (`tu-quang`, `tp-…`) in profile, lunar calendar, festival calendar and the Chùa
+  tab to real ids — those features' specs.
+- Real data for architecture style, materials, highlights, "Kinh sách" and the photo set once the
+  contract has them (BR-TPL-06 "later"; until then they show "Đang cập nhật" — Phase 2).
