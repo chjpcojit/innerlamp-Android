@@ -3,6 +3,17 @@
 Tracks version history for `requirements.md`, `design.md`, and `tasks.md` in this folder. All three
 files share one changelog since they change together as one spec unit. Newest version first.
 
+## v1.1 (2026-10-15)
+
+Bước 4 của quy trình tài liệu: gỡ tài liệu cũ về chùa sau khi product spec v1.1 và spec bốn platform
+được duyệt. Không đổi yêu cầu hay thiết kế.
+
+- `Docs/home_assumptions.md`: bỏ phần chùa ở dòng #1, #3, #13, thay bằng trỏ về spec này; phần Phật /
+  bài viết giữ nguyên.
+- `tasks.md` (1.0 → 1.1): mục dọn `home_assumptions.md` ở Phase 5 đánh `[x]`.
+  `requirements.md` (1.0 → 1.1): mục Pending tương ứng. `design.md` (1.0 → 1.1): no change needed,
+  verified — chỉ header.
+
 ## v1.0 (initial) (2026-10-15)
 
 - Spec đầu tiên của danh bạ chùa cho Android, viết theo kiểu hỗn hợp: hiện trạng đọc từ code ngày
