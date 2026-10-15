@@ -1,6 +1,6 @@
 # Tasks — Calendar
 
-Version: 1.0
+Version: 1.1
 Last updated: 2026-10-15
 Status: in-progress — lối vào, carousel Home và danh sách theo tháng có trên danh mục cục bộ; domain mới, chi tiết, API + bản trên máy, vector còn `[ ]`; Phase 3 chờ backend calendar v3.0
 
@@ -115,7 +115,7 @@ Paths are relative to `app/src/main/java/com/example/innerlamp/`.
 ## Phase 5 — Documentation
 
 - [ ] Báo trạng thái cột Android của product §4.2 cho `ba-writer` (skill này không sửa repo backend)
-- [ ] Xoá `Docs/home_assumptions.md` mục #11 (đã bị product spec thay thế — bước dọn tài liệu sau)
+- [x] Xoá `Docs/home_assumptions.md` mục #11 (đã bị product spec thay thế; bước dọn tài liệu cũ, 2026-10-15)
 - [ ] OKF concept qua `il-okf-writer` khi feature đã kiểm chứng end-to-end
 
 ## Deferred (not blocking Calendar)

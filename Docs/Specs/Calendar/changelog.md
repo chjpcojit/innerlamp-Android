@@ -3,6 +3,12 @@
 Tracks version history for `requirements.md`, `design.md`, and `tasks.md` in this folder. All three
 files share one changelog since they change together as one spec unit. Newest version first.
 
+## v1.1 (2026-10-15)
+
+- Bước dọn tài liệu cũ: bỏ dòng #11 khỏi `Docs/home_assumptions.md` (ngày 30 của tháng thiếu, tháng nhuận
+  không lặp lễ vía — nay là BR-CAL-04, BR-CAL-05 của product spec); dòng #7 ghi chú khối Sự kiện Phật giáo
+  theo spec này. `tasks.md` Phase 5 tick mục tương ứng. `requirements.md` / `design.md` không đổi.
+
 ## v1.0 (initial) (2026-10-15)
 
 - Spec đầu tiên, viết retroactively từ code đang chạy (`main` @ bebaa9c, đọc ngày 2026-10-15) và đối chiếu
