@@ -1,10 +1,10 @@
 # Requirements — Gallery
 
-Version: 1.0
+Version: 1.1
 Last updated: 2026-10-15
-Status: planned (drift) — the "Ảnh chùa đẹp" (Beautiful temple photos) screen (`photos`), its lightbox and the Home photo block have UI on 12 sample photos hardcoded in the domain (placeholders, no real images); filtering on the device, no pagination, varying tile heights, a one-photo lightbox without counter, paging, credit or "Lưu ảnh" (Save photo); Home "+N" is the constant 9. No repository/API yet. List credit and `total` on `top` wait for backend gallery v2.0.
+Status: planned (drift) — the "Ảnh chùa đẹp" (Beautiful temple photos) screen (`photos`), its lightbox and the Home photo block have UI on 12 sample photos hardcoded in the domain (placeholders, no real images); filtering on the device, no pagination, varying tile heights, a one-photo lightbox without counter, paging, credit or "Lưu ảnh" (Save photo); Home "+N" is the constant 9. No repository/API yet. List credit and `total` on `top` wait for backend gallery v2.0, which also gates the viewer's release (product §2.7).
 Feature folder: `app/src/main/java/com/example/innerlamp/ui/screens/photos/` (the code folder name is kept, product §1.5); the Home block lives in `ui/screens/home/`
-Product spec: innerlamp-be `docs/product/gallery/product.md` @ v1.0
+Product spec: innerlamp-be `docs/product/gallery/product.md` @ v1.1
 Contract: innerlamp-be `docs/specs/api/openapi.yaml` @ a8a016b (info.version 1.0.0) — tag Gallery (`galleryTop`, `galleryList`); the v2.0 part (`author`, `license`, `source_url` on every list item, `total` on `top`) follows innerlamp-be `docs/specs/features/gallery/requirements.md` @ v2.0 (2026-10-15, AC 3 and AC 11) — **not built and not yet in openapi.yaml** (backend `tasks.md` Phase 6–7)
 Implements: BR-GAL-01, BR-GAL-02, BR-GAL-03, BR-GAL-04, BR-GAL-05, BR-GAL-06, BR-GAL-07, BR-GAL-08, BR-GAL-09, FR-GAL-001, FR-GAL-002, FR-GAL-003, FR-GAL-004, FR-GAL-005, FR-GAL-006, FR-GAL-007, FR-GAL-008, NFR-GAL-01, NFR-GAL-02, NFR-GAL-03 — FR-GAL-009 is Backend (Android `n/a` in product §4.2)
 
@@ -26,7 +26,12 @@ and are **not** repeated here; this file only says how the Android app implement
 - **The app computes one rule itself**: the Home "+N ảnh" (BR-GAL-07), checked against
   `rules/gallery-home-more.json`.
 - **The credit is legal, not cosmetic** (§2.5, BR-GAL-04): no large photo is shown in a release build
-  without "Ảnh: {author} · {licence}" (Photo: author · licence).
+  without "Ảnh: {author} · {licence}" (Photo: author · licence). Release dependency (§2.7, A2): the viewer
+  is not released to users before backend gallery v2.0 carries the credit in every list, and the app
+  makes no per-photo credit call in the meantime.
+- **One load-error message** (FR-GAL-008, P1): "Không tải được danh sách ảnh. Vui lòng thử lại sau."
+  (Could not load the photo list. Please try again later.), with "Thử lại" (Retry) wherever a retry is
+  possible — called "the load-error message" below. A load failure is always shown, never hidden.
 - **No sample data** (§2.1 "Android shows six sample photos"; the code has 12): every photo comes from
   the backend.
 - **Dependencies:** backend gallery v2.0 (credit in the lists, `total` on `top`) — a release blocker for
@@ -64,13 +69,12 @@ photo under which licence, and save the ones I like to my phone (product §1.2, 
    > final behaviour of this criterion, not the UI work.
 5. WHEN the user taps a tile, the "+N ảnh" tile or "Xem tất cả", THE SYSTEM SHALL open the gallery
    (`PhotosRoute`) with the "Tất cả" chip; a Home tile does not open the viewer. (FR-GAL-001)
-6. WHEN `top` fails (any error), THE SYSTEM SHALL hide the whole block (title, tiles and "Xem tất cả")
-   without blocking the other Home blocks. (FR-GAL-008)
-7. WHEN `top` succeeds with no photo, THE SYSTEM SHALL hide the block. (BR-GAL-02, FR-GAL-008)
-   > ⚠️ Not confirmed (product): BR-GAL-02 says an empty featured list makes "the block show its empty
-   > state", but FR-GAL-008 defines no empty state for the Home block on the apps (only "hidden on
-   > error") — blocks the Phase 2 task "Home block"; hand back to ba-writer in innerlamp-be. Proposed
-   > default (used above): hide it, as on error.
+6. WHEN `top` fails (any error), THE SYSTEM SHALL still show the "Ảnh đẹp Phật giáo" block, with the
+   load-error message "Không tải được danh sách ảnh. Vui lòng thử lại sau." and "Thử lại" (Retry) in
+   place of the tiles — no photo tile, no sample photo, no "+N ảnh" — and "Thử lại" calls `top` again
+   for this block only; the other Home blocks are not blocked or reloaded. (FR-GAL-008)
+7. WHEN `top` succeeds with no photo, THE SYSTEM SHALL still show the "Ảnh đẹp Phật giáo" block, with
+   "Chưa có ảnh nào." (No photos yet.) in place of the tiles and no "+N ảnh". (BR-GAL-02, FR-GAL-008)
 
 ### Gallery grid
 
@@ -92,11 +96,8 @@ photo under which licence, and save the ones I like to my phone (product §1.2, 
     on the device. (FR-GAL-003, BR-GAL-01, BR-GAL-02, BR-GAL-03)
 12. WHEN page 1 of the gallery cannot be loaded on first open (or after "Thử lại" (Retry)), THE SYSTEM
     SHALL show an error message with "Thử lại", no photo tile and no count, and "Thử lại" requests page
-    1 again for the selected chip. (FR-GAL-008)
-    > ⚠️ Not confirmed (product): the wording of the gallery load-error message on the apps (product
-    > Appendix A item 5) — blocks the Phase 2 task "Grid states"; hand back to ba-writer in
-    > innerlamp-be. Proposed default: the website's "Không tải được danh sách ảnh. Vui lòng thử lại sau."
-    > (Could not load the photo list. Please try again later.).
+    1 again for the selected chip; the message is the load-error message "Không tải được danh sách ảnh.
+    Vui lòng thử lại sau." (FR-GAL-008)
 13. WHEN loading a next page fails, THE SYSTEM SHALL keep every photo already shown and show the error
     message with "Thử lại" at the end of the grid, which reloads exactly that page. (FR-GAL-008)
 14. WHEN loading page 1 of a newly selected topic fails, THE SYSTEM SHALL keep the photos already shown,
@@ -113,23 +114,18 @@ photo under which licence, and save the ones I like to my phone (product §1.2, 
 17. WHEN the user taps a tile in the gallery grid, THE SYSTEM SHALL open the full-screen viewer on that
     photo, showing a close button, the counter "{position} / {total}" with `total` = the server total
     under the current filter, the large picture (`image_url`) in a 4:3 frame filled and cropped like the
-    tile, the topic as a small uppercase heading (e.g. "CHÙA" (TEMPLES)), the title, the place and the
+    tile (never letterboxed), the topic as a small uppercase heading (e.g. "CHÙA" (TEMPLES)), the title, the place and the
     credit (AC21). (FR-GAL-004, BR-GAL-05, BR-GAL-06, NFR-GAL-02)
-    > ⚠️ Not confirmed (product): whether the viewer should instead show the whole photo uncropped
-    > (letterboxed) (product Appendix A item 3) — does not block; changes only the viewer frame if
-    > answered yes; hand back to ba-writer in innerlamp-be.
 18. WHEN the user swipes or taps next / previous in the viewer, THE SYSTEM SHALL show that photo with its
     own topic, title, place, credit and position, paging through the whole gallery under the current
     filter in the order received; WHEN the viewer comes within 3 photos of the last loaded photo and
     `page < total_pages`, THE SYSTEM SHALL load the next page (the same request and the same list as the
     grid, AC10); previous is not offered on position 1 and next is not offered on position `total`.
     (FR-GAL-005, BR-GAL-06, NFR-GAL-01)
-19. WHEN loading more photos fails while the viewer is open, THE SYSTEM SHALL stay on the current photo,
-    show the error message, and keep next offered so a new attempt retries the load. (FR-GAL-005,
-    FR-GAL-008)
-    > ⚠️ Not confirmed (product): what the viewer shows when the next photos cannot be loaded (FR-GAL-008
-    > covers the grid only) — blocks the Phase 2 task "Viewer paging"; hand back to ba-writer in
-    > innerlamp-be. Proposed default: as written above.
+19. WHEN the viewer cannot load the next photos, THE SYSTEM SHALL stay on the current photo (its
+    position unchanged, e.g. "20 / 86"), show the load-error message "Không tải được danh sách ảnh. Vui
+    lòng thử lại sau." as a short message (toast; a snackbar on this screen), and keep next offered so
+    moving to the next photo again retries the load. (FR-GAL-005, FR-GAL-008, BR-GAL-06)
 20. WHEN the user closes the viewer (close button or system back), THE SYSTEM SHALL return to the grid
     scrolled so the tile of the photo last shown is visible, with every photo the viewer loaded now also
     in the grid. (FR-GAL-004, platform)
@@ -138,17 +134,17 @@ photo under which licence, and save the ones I like to my phone (product §1.2, 
 
 21. WHEN a photo is shown in the viewer, THE SYSTEM SHALL show the credit "Ảnh: {author} · {licence}"
     (Photo: author · licence) with `author` and `license` exactly as received, for every licence
-    including CC0 and public domain, and the credit changes with the photo. (FR-GAL-006, BR-GAL-04)
+    including CC0 and public domain, and the credit changes with the photo. THE SYSTEM SHALL not release
+    the viewer to users (no release build ships it) before backend gallery v2.0 carries the credit in
+    every list, and SHALL NOT fetch a photo's credit separately in the meantime (no
+    `GET /v1/gallery/{id}` per photo). (FR-GAL-006, BR-GAL-04, product §2.7)
     > ⚠️ Not confirmed: contract pending — `author`, `license`, `source_url` on list items are backend
-    > gallery v2.0 AC 11, not built yet; until it ships the viewer has no credit, so **no release build
-    > may ship the viewer before backend v2.0 is live** (licence breach, product §2.5). The app does not
-    > fall back to one `GET /v1/gallery/{id}` per photo.
+    > gallery v2.0 AC 11, not built yet and not in openapi.yaml — blocks the release of the viewer
+    > (product §2.7), not the UI work.
 22. WHEN the user taps the credit, THE SYSTEM SHALL open the photo's `source_url` in the browser
-    (`Intent.ACTION_VIEW`); WHEN no app can open it, THE SYSTEM SHALL not crash. (FR-GAL-006, BR-GAL-04)
-    > ⚠️ Not confirmed (product): what the credit does when a photo has no source link (empty
-    > `source_url`; the backend loader requires only author and licence, backend v2.0 AC 16) — does not
-    > block (all 86 photos have one); hand back to ba-writer in innerlamp-be. Proposed default: show the
-    > credit text, not tappable.
+    (`Intent.ACTION_VIEW`); WHEN no app can open it, THE SYSTEM SHALL not crash; WHEN the photo has no
+    source link (`source_url` missing or blank), THE SYSTEM SHALL still show the credit
+    "Ảnh: {author} · {licence}", which then cannot be tapped. (FR-GAL-006, BR-GAL-04)
 
 ### Save a photo
 
@@ -157,23 +153,17 @@ photo under which licence, and save the ones I like to my phone (product §1.2, 
     `MediaStore` without requesting any storage permission (minSdk 31), then:
     - on success: show "Đã lưu vào thư viện ảnh" (Saved to the photo library), only after the item is
       fully written;
-    - on failure (download failed, no space, write failed): show that the photo was not saved, never the
-      success message, and leave no half-written item behind. (FR-GAL-007)
-    > ⚠️ Not confirmed (product): the copy of the "save failed" message (product Appendix A item 4) —
-    > blocks the Phase 2 task "Save"; hand back to ba-writer in innerlamp-be. Proposed default: "Chưa
-    > lưu được ảnh. Vui lòng thử lại." (The photo was not saved. Please try again.).
+    - on failure (download failed, no space, write failed): show the short message (toast; a snackbar
+      on this screen) "Không lưu được ảnh. Vui lòng thử lại." (Couldn't save the photo. Please try
+      again.), never the success message, and leave no half-written item behind. (FR-GAL-007)
 24. WHEN the photo is saved on Android, THE SYSTEM SHALL request no runtime permission, so the
     "permission refused → offer the device settings" branch of FR-GAL-007 does not occur on Android.
-    (FR-GAL-007, platform)
-    > ⚠️ Not confirmed (product): product §3.6 has no Android row for FR-GAL-007 saying that no
-    > permission is asked (Android lets an app add its own photos without one) — does not block; hand
-    > back to ba-writer in innerlamp-be to record the variance.
+    (FR-GAL-007, product §3.6 FR-GAL-007 Android row)
 25. WHEN a save is in progress, THE SYSTEM SHALL disable "Lưu ảnh" until it finishes, so one tap saves
     one copy; a later tap saves another copy. (platform)
 26. WHEN the photo is saved, THE SYSTEM SHALL put it in the album folder `Pictures/InnerLamp` with the
-    photo's `id` as the file name. (platform)
-    > ⚠️ Not confirmed: the album folder name on the device — does not block; proposed default
-    > `Pictures/InnerLamp`.
+    photo's `id` as the file name. (platform — product A4 leaves the folder to this spec; confirmed by
+    anh Đức 2026-10-15)
 
 ### Removed actions and content language
 
@@ -186,7 +176,7 @@ photo under which licence, and save the ones I like to my phone (product §1.2, 
     SHALL still show the photo as a normal tile and viewer page, with no topic heading. (BR-GAL-01,
     platform)
     > ⚠️ Not confirmed (product): the heading for an unknown topic — does not block (there are only four
-    > topics); hand back to ba-writer in innerlamp-be.
+    > topics); hand back to ba-writer in innerlamp-be. Default used above: no topic heading.
 
 ### Performance and vectors
 
@@ -240,16 +230,17 @@ the contract); schemas are not copied here. Every operation is public (no `@Auth
 
 | Operation | Failure case | User sees | Code status |
 |---|---|---|---|
-| `GET /v1/gallery/top` | Any error (`NoConnection`, `Timeout`, 5xx, `Serialization`, `Unknown`) | Block hidden (AC6) | missing |
-| `GET /v1/gallery/top` | 200 with no item | Block hidden (AC7, ⚠️ product) | missing |
-| `GET /v1/gallery` page 1 (first open / "Thử lại") | Any error, including `400 INVALID_PAGE` / `INVALID_GALLERY_TYPE` | Error message (⚠️ copy) + "Thử lại", no tile (AC12) | missing |
-| `GET /v1/gallery` page 1 (chip change) | Any error | Previous photos kept, chip reverted, short error message (AC14) | missing |
-| `GET /v1/gallery` page ≥ 2 (grid) | Any error | Photos kept, error + "Thử lại" at the end of the grid (AC13) | missing |
-| `GET /v1/gallery` page ≥ 2 (viewer) | Any error | Stay on the photo, short error message, next still offered (AC19, ⚠️ product) | missing |
+| `GET /v1/gallery/top` | Any error (`NoConnection`, `Timeout`, 5xx, `Serialization`, `Unknown`) | Block shown with "Không tải được danh sách ảnh. Vui lòng thử lại sau." + "Thử lại" in place of the tiles (AC6) | missing (block always shown on samples) |
+| `GET /v1/gallery/top` | 200 with no item | Block shown with "Chưa có ảnh nào." in place of the tiles (AC7) | missing |
+| `GET /v1/gallery` page 1 (first open / "Thử lại") | Any error, including `400 INVALID_PAGE` / `INVALID_GALLERY_TYPE` | "Không tải được danh sách ảnh. Vui lòng thử lại sau." + "Thử lại", no tile (AC12) | missing |
+| `GET /v1/gallery` page 1 (chip change) | Any error | Previous photos kept, chip reverted, load-error message as a snackbar (AC14) | missing |
+| `GET /v1/gallery` page ≥ 2 (grid) | Any error | Photos kept, load-error message + "Thử lại" at the end of the grid (AC13) | missing |
+| `GET /v1/gallery` page ≥ 2 (viewer) | Any error | Stay on the current photo, load-error message as a toast (snackbar), moving next retries (AC19) | missing |
 | `GET /v1/gallery` | 200, `total = 0` | "Chưa có ảnh nào trong chủ đề này." (AC15) | missing |
 | (Coil) | Picture fails to load | Placeholder in the same 4:3 frame (AC9, AC17) | drift (placeholder only) |
-| (device) Save | Download / write / space failure | Not-saved message (⚠️ copy), no success message (AC23) | missing |
+| (device) Save | Download / write / space failure | "Không lưu được ảnh. Vui lòng thử lại." as a toast (snackbar), no success message (AC23) | missing |
 | (device) Source page | No app handles `ACTION_VIEW` | Nothing happens, no crash (AC22) | missing |
+| (data) Credit | Photo without a source link | Credit shown, not tappable (AC22) | missing |
 
 ## Out of scope
 
@@ -287,6 +278,33 @@ Per product spec v1.0 (2026-10-15) — these points replace the current behaviou
 - ~~No credit~~ → "Ảnh: {author} · {licence}" + source page on every large photo (BR-GAL-04) → AC21,
   AC22. Resolved 2026-10-15.
 - ~~Home "+9" constant~~ → N = whole-gallery total − tiles shown (BR-GAL-07) → AC4. Resolved 2026-10-15.
-- ~~Home block on error~~ → hidden on the apps (FR-GAL-008, §3.6) → AC6. Resolved 2026-10-15.
+- ~~Home block on error~~ → hidden on the apps (FR-GAL-008, §3.6) → AC6. Resolved 2026-10-15;
+  **superseded by product v1.1** (P1, below).
 - ~~Save, favourite, wallpaper, share~~ → only "Lưu ảnh" (FR-GAL-007, BR-GAL-08) → AC23–AC27. Resolved
   2026-10-15.
+
+Per product spec v1.1 (2026-10-15, anh Đức's answers to the questions raised by this spec v1.0):
+
+- ~~Gallery load-error copy (Appendix A item 5)~~ → "Không tải được danh sách ảnh. Vui lòng thử lại
+  sau." with "Thử lại", on every platform (FR-GAL-008, P1) → AC12, AC13, AC14, AC19. Resolved 2026-10-15.
+- ~~Home block hidden on error~~ → the block stays, with the load-error message and "Thử lại" in place of
+  the tiles (FR-GAL-008, P1) → AC6. Resolved 2026-10-15.
+- ~~Home block when the gallery is empty~~ → the block shows "Chưa có ảnh nào." (FR-GAL-008, BR-GAL-02,
+  P4) → AC7. Resolved 2026-10-15.
+- ~~Viewer when the next photos fail to load~~ → toast with the load-error message, stay on the current
+  photo, moving next retries (FR-GAL-008, P5) → AC19. Resolved 2026-10-15.
+- ~~"Save failed" copy (Appendix A item 4)~~ → "Không lưu được ảnh. Vui lòng thử lại." as a toast,
+  replacing the proposed "Chưa lưu được ảnh. Vui lòng thử lại." (FR-GAL-007, P2) → AC23. Resolved
+  2026-10-15.
+- ~~§3.6 Android row for FR-GAL-007~~ → added: Android asks for no permission, the "open Settings"
+  branch is iOS only (A3) → AC24. Resolved 2026-10-15.
+- ~~Credit without a source link~~ → credit shown, not tappable (BR-GAL-04, FR-GAL-006, P6) → AC22.
+  Resolved 2026-10-15.
+- ~~Letterboxed viewer (Appendix A item 3)~~ → crop to 4:3, never letterboxed (BR-GAL-05, P3) → AC17.
+  Resolved 2026-10-15.
+- ~~Temporary per-photo credit call~~ → none; the viewer is not released before backend gallery v2.0
+  (product §2.7, A2) → AC21. Resolved 2026-10-15.
+- ~~Album folder on the device~~ → `Pictures/InnerLamp` (product A4 leaves it to this spec; confirmed by
+  anh Đức) → AC26. Resolved 2026-10-15.
+
+Still open: the heading for an unknown topic type (AC29, ⚠️ product; default: no heading).
