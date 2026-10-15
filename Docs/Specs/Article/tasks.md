@@ -1,6 +1,6 @@
 # Tasks — Article
 
-Version: 1.0
+Version: 1.1
 Last updated: 2026-10-15
 Status: planned (drift) — only the routes, the navigation between the three screens and the list's near-end trigger and footer lines already match the spec; everything else is `[ ]`
 
@@ -125,8 +125,8 @@ Paths are relative to `app/src/main/java/com/example/innerlamp/`.
 
 - [ ] Report the Android column status for innerlamp-be `docs/product/article/product.md` §4.2 to
       `ba-writer` (this skill does not edit the backend repo)
-- [ ] In a later PR (not this spec change): remove the article parts of `Docs/home_assumptions.md` rows 1,
-      3, 13 once Phases 2–3 land
+- [x] Remove the article parts of `Docs/home_assumptions.md` rows 1, 3, 13 (they now point here; old-docs
+      cleanup step, 2026-10-15)
 - [ ] Update `../Navigation/` (deep links listed as Deferred) to point at this spec's App Link handling
       when Phase 4 is built
 - [ ] OKF concept via `il-okf-writer` once the feature is verified end-to-end

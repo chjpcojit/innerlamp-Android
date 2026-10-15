@@ -1,6 +1,6 @@
 # Requirements — Article
 
-Version: 1.0
+Version: 1.1
 Last updated: 2026-10-15
 Status: planned (drift) — the Home block "Bài viết Phật pháp hay" (Good Dharma articles), the "Tất cả bài viết" (All articles) list and the article page already have UI, but run on 5 sample articles hardcoded in the domain (the list cycles them to 60, 20 per load); "Đọc tiếp" (Read next) is the next 2 in a cycle, the page has a Save button, "Chia sẻ" (Share) is a no-op, no images, no source attribution or summary notice, no shared-link handling. No repository/API yet.
 Feature folder: `app/src/main/java/com/example/innerlamp/ui/screens/article/` (article page) and `ui/screens/articlelist/` (all articles); the featured block lives in `ui/screens/home/`
@@ -169,7 +169,7 @@ opens the app or the website, so that I can read and pass on Buddhist teachings 
 | 1 | drift | `HomeSampleData.load()` (fake 900 ms delay) returns 5 sample `Article`; skeleton exists; "Xem tất cả" → `ArticleListRoute` ✓ |
 | 2 | ✓ navigation part | `onArticle(id)` → `ArticleRoute(id)` in `MainActivity.kt`; the id is a sample id (`art-1`…) |
 | 3 | drift | Home empty card exists ("Chưa có bài viết" + "Thử lại"), but error and empty are shared with the other blocks (`Docs/home_assumptions.md` #13) |
-| 4 | drift | `ArticleCard` (shared Home/list) shows a gradient `PlaceholderImage`, no real image (`home_assumptions.md` #1); `readTime` is a sample string |
+| 4 | drift | `ArticleCard` (shared Home/list) shows a gradient `PlaceholderImage`, no real image; `readTime` is a sample string |
 | 5 | drift | Subtitle "{visible} / {all} bài" exists but counts 60 cycled samples |
 | 6 | drift | Near-end trigger (3 cards), "Đang tải thêm bài viết…" and the single-request guard exist; pages of **20** (`PAGE_SIZE`) on a local list — **drift BR-ART-03 / NFR-ART-01** |
 | 7 | ✓ copy | "Bạn đã xem hết bài viết" exists; end computed from the local list |
@@ -235,8 +235,8 @@ yet in the contract); schemas are not copied here. Every operation is public (no
 - Data layer for the four operations; `articlesRelated` waits for the backend — Phase 3.
 - Verified App Links and the web link per flavor (domain and `applicationId` open) — Phase 4.
 - Tests — Phase 5.
-- Clean up the article parts of `Docs/home_assumptions.md` rows 1, 3, 13 (a later PR, not this spec
-  change) — Phase 6.
+- ~~Clean up the article parts of `Docs/home_assumptions.md` rows 1, 3, 13~~ — done in v1.1; those rows
+  now point here.
 
 ## Open questions (resolved)
 
