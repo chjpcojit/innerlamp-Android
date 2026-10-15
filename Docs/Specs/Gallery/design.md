@@ -1,8 +1,8 @@
 # Design — Gallery
 
-Version: 1.0
+Version: 1.1
 Last updated: 2026-10-15
-Status: planned (drift) — UI for the Home block, the grid and a one-photo lightbox exists on 12 sample photos; the contract-based domain, repository, data layer, pagination, the 4:3 tiles, the paging viewer, the credit and "Lưu ảnh" (Save photo) do not exist yet; credit and `top.total` wait for backend gallery v2.0
+Status: planned (drift) — UI for the Home block, the grid and a one-photo lightbox exists on 12 sample photos; the contract-based domain, repository, data layer, pagination, the 4:3 tiles, the paging viewer, the credit and "Lưu ảnh" (Save photo) do not exist yet; credit and `top.total` wait for backend gallery v2.0, which also gates the viewer's release (product §2.7)
 
 > See `changelog.md` in this folder for the version history of this spec.
 
@@ -45,13 +45,13 @@ Paths are relative to `app/src/main/java/com/example/innerlamp/`. Status read on
 
 | Layer | File | Responsibility | Status |
 |---|---|---|---|
-| UI / Home block | `ui/screens/home/HomeSections.kt` (`PhotosSection`), `HomeSkeletons.kt` | Title "Ảnh đẹp Phật giáo" (AC1); up to 3 tiles from `featured.items` with Coil `AsyncImage` (`thumbnailUrl`, `ContentScale.Crop`, placeholder on error) in the prototype mosaic (1 large + 2 small; fewer slots when fewer photos); "+N ảnh" overlay on the last tile only when `GalleryHomeMore` says so (AC3, AC4); every tile and "Xem tất cả" → `onPhotos` (AC5); skeleton while loading; the whole section is not composed when hidden (AC6, AC7) | exists — needs change |
-| UI / Home state | `ui/screens/home/HomeUiState.kt`, `HomeViewModel.kt`, `HomeSampleData.kt` | The photo block has its own state `GalleryBlockState` (Loading / Shown(tiles, moreCount) / Hidden) read from `GetFeaturedPhotosUseCase`, independent of the other blocks; remove `photoMore` and `PHOTO_MORE` | exists — needs change |
-| UI / Screen | `ui/screens/photos/PhotosScreen.kt` | Header (`IlNavBar` "Ảnh đẹp Phật giáo", subtitle from `GalleryFormat.subtitle`), chip row (AC2), `LazyVerticalGrid` 2 columns replacing the masonry (`verticalScroll` + two `Column`s) that asks for the next page when ~4 cells remain (AC10); tile = `AsyncImage` in `Modifier.aspectRatio(4f / 3f)` with `ContentScale.Crop` + title + place (AC8, AC9); states: initial loading, initial error + "Thử lại" (Retry) (AC12), empty (AC15), end-of-grid loading / error + "Thử lại" (AC13); snackbar for chip-change errors and save results (AC14, AC23); `LazyGridState.scrollToItem(index)` when the viewer closes (AC20) | exists — needs major change |
-| UI / Viewer | `ui/screens/photos/PhotoViewer.kt` (split out of `PhotosScreen.kt`) | Full-screen dark overlay (keeps the lightbox palette): close button, counter "{position} / {total}", `HorizontalPager` with `pageCount = total` (pages not loaded yet show a loading placeholder), large `AsyncImage` (`imageUrl`) in a 4:3 frame with `ContentScale.Crop`, uppercase topic heading, title, place, credit row (tappable → `GalleryIntents.openSource`), "Lưu ảnh" button (disabled while saving); previous / next buttons hidden on position 1 / `total`; `BackHandler` closes it; tapping the background no longer closes it (AC17–AC22, AC25, AC27) | not created (today `PhotoLightbox` inside `PhotosScreen.kt`) |
+| UI / Home block | `ui/screens/home/HomeSections.kt` (`PhotosSection`), `HomeSkeletons.kt` | Title "Ảnh đẹp Phật giáo" (AC1); up to 3 tiles from `featured.items` with Coil `AsyncImage` (`thumbnailUrl`, `ContentScale.Crop`, placeholder on error) in the prototype mosaic (1 large + 2 small; fewer slots when fewer photos); "+N ảnh" overlay on the last tile only when `GalleryHomeMore` says so (AC3, AC4); every tile and "Xem tất cả" → `onPhotos` (AC5); skeleton while loading; on error the title stays and the load-error message + "Thử lại" (Retry) replace the tiles (AC6); on an empty gallery "Chưa có ảnh nào." (No photos yet.) replaces the tiles (AC7); no "+N ảnh" in either state; the section is always composed | exists — needs change |
+| UI / Home state | `ui/screens/home/HomeUiState.kt`, `HomeViewModel.kt`, `HomeSampleData.kt` | The photo block has its own state `GalleryBlockState` (Loading / Shown(tiles, moreCount) / Error / Empty) read from `GetFeaturedPhotosUseCase`, independent of the other blocks; `retryPhotos()` reloads only this block (AC6); remove `photoMore` and `PHOTO_MORE` | exists — needs change |
+| UI / Screen | `ui/screens/photos/PhotosScreen.kt` | Header (`IlNavBar` "Ảnh đẹp Phật giáo", subtitle from `GalleryFormat.subtitle`), chip row (AC2), `LazyVerticalGrid` 2 columns replacing the masonry (`verticalScroll` + two `Column`s) that asks for the next page when ~4 cells remain (AC10); tile = `AsyncImage` in `Modifier.aspectRatio(4f / 3f)` with `ContentScale.Crop` + title + place (AC8, AC9); states: initial loading, initial error + "Thử lại" (Retry) (AC12), empty (AC15), end-of-grid loading / error + "Thử lại" (AC13); snackbar for chip-change errors, the viewer's next-page errors and save results (AC14, AC19, AC23) — the snackbar is this screen's form of the product's short message (toast); `LazyGridState.scrollToItem(index)` when the viewer closes (AC20) | exists — needs major change |
+| UI / Viewer | `ui/screens/photos/PhotoViewer.kt` (split out of `PhotosScreen.kt`) | Full-screen dark overlay (keeps the lightbox palette): close button, counter "{position} / {total}", `HorizontalPager` with `pageCount = total` (pages not loaded yet show a loading placeholder), large `AsyncImage` (`imageUrl`) in a 4:3 frame with `ContentScale.Crop` (never letterboxed, BR-GAL-05), uppercase topic heading, title, place, credit row (tappable → `GalleryIntents.openSource` only when `credit.sourceUrl` is an http(s) URL; otherwise shown, not tappable — AC22), "Lưu ảnh" button (disabled while saving); previous / next buttons hidden on position 1 / `total`; `BackHandler` closes it; tapping the background no longer closes it (AC17–AC22, AC25, AC27) | not created (today `PhotoLightbox` inside `PhotosScreen.kt`) |
 | UI / State | `ui/screens/photos/PhotosUiState.kt` | `topic: GalleryTopic?` (null = "Tất cả"), `photos: List<GalleryPhoto>`, `total`, `page`, `totalPages`, `loadState` (InitialLoading / InitialError / Loaded / Empty), `moreState` (Idle / Loading / Error / Done), `pendingTopic` (chip shown selected while its page 1 loads), `viewerIndex: Int?`, `saving: Boolean`, one-shot `message` (snackbar); **remove** `filteredPhotos`, `categories`, `countLabel` | exists — rewrite |
 | UI / ViewModel | `ui/screens/photos/PhotosViewModel.kt` | `SavedStateHandle` keeps `topic` (AC16); topic changes through `collectLatest` (cancels the old request, AC11); one next-page request at a time, shared by grid and viewer (AC10, AC18); revert the chip on topic failure (AC14); `openViewer(index)` / `closeViewer()` / `onViewerPage(index)` (prefetch when `index >= photos.size - 3`); `save(photo)` → `SavePhotoToDeviceUseCase`; created through the `di/GalleryModule` factory | exists — rewrite |
-| UI / Format | `ui/screens/photos/GalleryFormat.kt` | Display strings: topic label "Chùa / Tượng Phật / Cảnh thiền / Lễ hội" (Temples / Buddha statues / Meditation scenes / Festivals), uppercase heading (`Unknown` → none, AC29), subtitle "{total} ảnh" / "{total} ảnh · {topic}", counter "{n} / {total}", credit "Ảnh: {author} · {license}" (AC21), messages (load error ⚠️, empty, saved, not saved ⚠️) | not created (labels today in `PhotoCategory.label`, `PhotosUiState.countLabel`) |
+| UI / Format | `ui/screens/photos/GalleryFormat.kt` | Display strings: topic label "Chùa / Tượng Phật / Cảnh thiền / Lễ hội" (Temples / Buddha statues / Meditation scenes / Festivals), uppercase heading (`Unknown` → none, AC29), subtitle "{total} ảnh" / "{total} ảnh · {topic}", counter "{n} / {total}", credit "Ảnh: {author} · {license}" (AC21), messages: load error "Không tải được danh sách ảnh. Vui lòng thử lại sau.", retry "Thử lại", grid empty "Chưa có ảnh nào trong chủ đề này.", Home empty "Chưa có ảnh nào.", saved "Đã lưu vào thư viện ảnh", not saved "Không lưu được ảnh. Vui lòng thử lại." (product v1.1, FR-GAL-007/008) | not created (labels today in `PhotoCategory.label`, `PhotosUiState.countLabel`) |
 | UI / Intents | `ui/screens/photos/GalleryIntents.kt` | `openSource(context, url)`: `Intent(ACTION_VIEW, url.toUri())`, catches `ActivityNotFoundException`; not called for a blank / non-http(s) URL (AC22) | not created |
 | UI / Navigation | `ui/navigation/Routes.kt` (`PhotosRoute`), wiring in `MainActivity.kt` | Keep `PhotosRoute` (object, no argument; Home always opens "Tất cả", AC5); `ilComposable(PhotosRoute)` passes the ViewModel factory from `di/GalleryModule`; update the KDoc title to "Ảnh đẹp Phật giáo" | exists — needs change (small) |
 | Domain / Model | `domain/model/GalleryPhoto.kt` (replaces `PhotoContent.kt`) | `GalleryTopic { Temple, BuddhaStatue, Meditation, Festival, Unknown }`; `GalleryCredit(author, license, sourceUrl?)`; `GalleryPhoto(id, topic, title, place, thumbnailUrl, imageUrl, credit: GalleryCredit?)`; `GalleryPage(items, page, pageSize, total, totalPages)` with `hasMore`; `GalleryFeatured(items, total: Int?)` (`total` null until backend v2.0) | not created |
@@ -64,7 +64,7 @@ Paths are relative to `app/src/main/java/com/example/innerlamp/`. Status read on
 | Data / Remote | `data/remote/dto/GalleryDto.kt` | `@Serializable` DTOs per `openapi.yaml` `GallerySummary` / `GalleryTopEnvelope` / `GalleryListEnvelope`; the v2.0 fields (`author`, `license`, `source_url`, top `total`) declared nullable with default `null` so today's server still parses (`JsonProvider` has `ignoreUnknownKeys`) | not created |
 | Data / Mapper | `data/mapper/GalleryMapper.kt` | `CHUA`/`TUONG_PHAT`/`THIEN`/`LE_HOI` ↔ `GalleryTopic` (unknown → `Unknown`, the item is kept); credit = null when `author` or `license` is null/blank; blank `source_url` → null; title / location passed through unchanged (BR-GAL-09) | not created |
 | Data / Repository | `data/repository/GalleryRepositoryImpl.kt` | Calls the API through `NetworkClient.safeCall`; maps `NetworkResult` → `Result` (`NetworkException(AppError)` on failure); no cache | not created |
-| Core / Media | `core/media/MediaStorePhotoLibrary.kt` | Implements `DevicePhotoLibrary`: gets the original bytes of `imageUrl` from Coil (`SingletonImageLoader` disk cache snapshot; `execute(ImageRequest)` first when missing), inserts into `MediaStore.Images.Media.getContentUri(VOLUME_EXTERNAL_PRIMARY)` with `DISPLAY_NAME = "{id}.jpg"`, `MIME_TYPE = image/jpeg`, `RELATIVE_PATH = Pictures/InnerLamp` (⚠️), `IS_PENDING = 1`; copies the bytes; sets `IS_PENDING = 0`; on any failure deletes the pending row; runs on `DispatcherProvider.io` | not created |
+| Core / Media | `core/media/MediaStorePhotoLibrary.kt` | Implements `DevicePhotoLibrary`: gets the original bytes of `imageUrl` from Coil (`SingletonImageLoader` disk cache snapshot; `execute(ImageRequest)` first when missing), inserts into `MediaStore.Images.Media.getContentUri(VOLUME_EXTERNAL_PRIMARY)` with `DISPLAY_NAME = "{id}.jpg"`, `MIME_TYPE = image/jpeg`, `RELATIVE_PATH = Pictures/InnerLamp` (AC26), `IS_PENDING = 1`; copies the bytes; sets `IS_PENDING = 0`; on any failure deletes the pending row; runs on `DispatcherProvider.io` | not created |
 | DI | `di/GalleryModule.kt` | `provideGalleryRepository()`, `provideDevicePhotoLibrary(context)`, the three use cases, the `PhotosViewModel` factory and the photo-block source of `HomeViewModel` | not created |
 | Manifest | `app/src/main/AndroidManifest.xml` | No new permission (no `WRITE_EXTERNAL_STORAGE`, no `READ_MEDIA_IMAGES`) — AC24 | nothing to change |
 | Tests | `app/src/test/java/com/example/innerlamp/…`, `app/src/test/resources/product/gallery/rules/` | Vector, mapper, repository, ViewModels, format; `ui/screens/photos/PhotosViewModelTest.kt` (exists — tests on-device filtering, to be rewritten) | partly exists (to be rewritten) |
@@ -72,7 +72,7 @@ Paths are relative to `app/src/main/java/com/example/innerlamp/`. Status read on
 ## Navigation flow
 
 ```
-HomeRoute ("Ảnh đẹp Phật giáo" block ← GET /v1/gallery/top; hidden on error / empty)
+HomeRoute ("Ảnh đẹp Phật giáo" block ← GET /v1/gallery/top; error + "Thử lại" / "Chưa có ảnh nào." in place of the tiles)
   └─ (tap a tile | "+N ảnh" | Xem tất cả) ──▶ PhotosRoute ("Tất cả")
 PhotosRoute (GET /v1/gallery, pages 1…n; type)
   ├─ (tap tile #i) ──▶ viewer overlay at i (same screen, same ViewModel)
@@ -116,7 +116,7 @@ Step 3 — Next page (this feature; shared with the viewer, see next flow)
 - Where: PhotosViewModel → GetGalleryPageUseCase → GalleryRepositoryImpl
 - API: GET /v1/gallery?page=N+1 (same type)
     - Success → append items, page = N+1; empty items → moreState = Done (AC10)
-    - Failure (any) → keep photos; moreState = Error → grid: error + "Thử lại" at the end (AC13); viewer: snackbar (AC19)
+    - Failure (any) → keep photos; moreState = Error → grid: load-error message + "Thử lại" at the end (AC13); viewer: snackbar with the load-error message, viewer stays on the current photo (AC19)
 ```
 
 ## Step-by-step Flow — Viewer: open, page, save, close
@@ -125,13 +125,13 @@ Step 3 — Next page (this feature; shared with the viewer, see next flow)
 Step 1 — Open (this feature, no backend call)
 - Trigger: tap tile #i in the grid
 - Where: PhotosScreen → PhotosViewModel.openViewer(i) → viewerIndex = i
-- Effect: pager at page i; counter "i+1 / total"; credit from photos[i].credit (null → no credit line; only possible before backend v2.0, AC21 ⚠️)
+- Effect: pager at page i; counter "i+1 / total"; credit from photos[i].credit (null → no credit line; only possible before backend v2.0, which is why the viewer is not released before it, AC21, product §2.7)
 
 Step 2 — Page (this feature)
 - Trigger: swipe, or next / previous
 - Pre-condition: target index in 0 until total (previous hidden at 0, next hidden at total − 1)
 - Where: PhotosViewModel.onViewerPage(j) → viewerIndex = j; if j >= photos.size − 3 → grid flow Step 3
-- Effect: a page j >= photos.size shows a loading placeholder until Step 3 succeeds; on Step 3 failure the pager returns to the last loaded photo and a snackbar is shown (AC19 ⚠️ product)
+- Effect: a page j >= photos.size shows a loading placeholder until Step 3 succeeds; on Step 3 failure the viewer stays on the current photo — the pager settles back on the last loaded photo, its counter unchanged (e.g. "20 / 86") — and a snackbar shows "Không tải được danh sách ảnh. Vui lòng thử lại sau."; next stays offered and moving next again re-runs Step 3 (AC19, FR-GAL-008)
 
 Step 3 — Save (this feature, device side effect)
 - Trigger: tap "Lưu ảnh"
@@ -143,11 +143,11 @@ Step 3 — Save (this feature, device side effect)
     c. openOutputStream(uri) → copy bytes
     d. update(uri, IS_PENDING = 0)
     - Success (d done) → snackbar "Đã lưu vào thư viện ảnh" (AC23)
-    - Failure (a: download / cache; b: insert null; c/d: IOException, no space) → delete the pending row if b ran; snackbar "not saved" (⚠️ copy); never the success message (AC23)
+    - Failure (a: download / cache; b: insert null; c/d: IOException, no space) → delete the pending row if b ran; snackbar "Không lưu được ảnh. Vui lòng thử lại."; never the success message (AC23)
 
 Step 4 — Open the source (this feature, no backend call)
 - Trigger: tap the credit
-- Pre-condition: credit.sourceUrl is an http(s) URL (else the credit is not tappable, AC22 ⚠️)
+- Pre-condition: credit.sourceUrl is an http(s) URL (else the credit is still shown but not tappable, AC22, P6)
 - Where: PhotoViewer → GalleryIntents.openSource(context, url) (ActivityNotFoundException caught)
 
 Step 5 — Close (this feature)
@@ -159,14 +159,14 @@ Step 5 — Close (this feature)
 
 ```
 Step 1 — Featured photos (this feature)
-- Trigger: Home opens (HomeViewModel init); not retried automatically
+- Trigger: Home opens (HomeViewModel init); "Thử lại" in the block's error state (HomeViewModel.retryPhotos(), this block only); not retried automatically
 - Where: HomeViewModel → GetFeaturedPhotosUseCase → GalleryRepositoryImpl (safeCall)
 - API: GET /v1/gallery/top (galleryTop)
   ⚠️ Not confirmed: contract pending — `total` per backend gallery requirements.md v2.0 AC 3 (not built,
   not in openapi.yaml); until it ships `GalleryFeatured.total` is null and the overlay is not shown.
     - Success, items non-empty → tiles = items.take(3); moreCount = GalleryHomeMore.moreCount(total, tiles.size) when total != null; Shown (AC3, AC4)
-    - Success, items empty → Hidden (AC7, ⚠️ product)
-    - Failure (any AppError) → Hidden (AC6)
+    - Success, items empty → Empty: "Chưa có ảnh nào." in place of the tiles, no overlay (AC7)
+    - Failure (any AppError) → Error: "Không tải được danh sách ảnh. Vui lòng thử lại sau." + "Thử lại" in place of the tiles, no overlay; other Home blocks unaffected (AC6)
 ```
 
 ## Local storage
@@ -182,18 +182,16 @@ Step 1 — Featured photos (this feature)
 - **Backend gallery v2.0** (⚠️ contract pending — backend `requirements.md` v2.0 AC 3, AC 11; backend
   `tasks.md` Phase 6–7, openapi update in Phase 7): the DTOs declare `author`, `license`, `source_url`
   and top `total` nullable. While waiting: no credit in the viewer, no "+N ảnh" overlay. **The viewer
-  must not ship in a release build before v2.0 is live** (BR-GAL-04 is a licence obligation). There is
-  no fallback to `GET /v1/gallery/{id}` per photo and no sample N. When v2.0 lands in `openapi.yaml`:
+  is not released to users before v2.0 is live** (product §2.7, A2; BR-GAL-04 is a licence obligation).
+  There is no per-photo credit call (`GET /v1/gallery/{id}`) in the meantime and no sample N. When v2.0 lands in `openapi.yaml`:
   update the `Contract:` line of `requirements.md`, make the fields required in the DTOs, remove the
   markers.
 - **Picture URLs**: the contract example serves pictures over `http://` from the server host; release
   builds block cleartext traffic (no `networkSecurityConfig` in the app). The staging/production picture
   host must be `https` — follows the pending photo-storage ADR (product Appendix A item 1); a backend /
   infra hand-off, nothing to stub in the app.
-- **Copy still waiting on product**: the gallery load-error message, the "not saved" message, the
-  Home block empty case, the viewer's next-page failure, a credit without source link, an unknown topic
-  heading — `GalleryFormat` keeps the proposed defaults from `requirements.md`, clearly marked as
-  temporary.
+- **Still waiting on product**: only the heading for an unknown topic type (AC29, ⚠️) — `GalleryFormat`
+  shows no heading for `Unknown`, marked as the default. All other copy is confirmed by product v1.1.
 - **UI and data layer**: `top` and the paged list are already in the contract, so Phase 3 is not blocked
   for them — do it in the same batch as Phase 2, no new sample data added to `main`.
   `FakeGalleryRepository` and `FakeDevicePhotoLibrary` live only in `app/src/test/…`; `@Preview` builds
