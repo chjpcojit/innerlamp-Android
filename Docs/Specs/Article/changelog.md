@@ -3,6 +3,17 @@
 Tracks version history for `requirements.md`, `design.md`, and `tasks.md` in this folder. All three
 files share one changelog since they change together as one spec unit. Newest version first.
 
+## v1.1 (2026-10-15)
+
+Step 4 of the docs pipeline: retire the old article notes now that product spec v1.0 and the four
+platform specs are approved. No requirement or design change.
+
+- `Docs/home_assumptions.md`: the article parts of rows #1, #3, #13 are removed and replaced with a
+  pointer to this spec; the Buddha / temple parts stay.
+- `tasks.md` (1.0 → 1.1): the Phase 6 cleanup item is ticked. `requirements.md` (1.0 → 1.1): the matching
+  Pending item is struck through, and the stale `#1` reference in the status table is dropped.
+  `design.md` (1.0 → 1.1): no change needed, verified — header only.
+
 ## v1.0 (initial) (2026-10-15)
 
 - First Android spec of the Dharma articles, written in a mixed style: the current state read from the

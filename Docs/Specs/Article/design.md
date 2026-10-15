@@ -1,6 +1,6 @@
 # Design — Article
 
-Version: 1.0
+Version: 1.1
 Last updated: 2026-10-15
 Status: planned (drift) — UI for the three entry points (Home block, all articles, article page) exists on 5 sample articles; the contract-based domain, repository, data layer, server paging, images, attribution, Share and verified App Links do not exist yet; `GET /v1/articles/{id}/related` is a planned backend contract (not in `openapi.yaml`, not built); the web domain and the final `applicationId` are open (ADR-0004)
 
