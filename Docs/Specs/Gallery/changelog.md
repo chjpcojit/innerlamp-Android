@@ -3,6 +3,12 @@
 Tracks version history for `requirements.md`, `design.md`, and `tasks.md` in this folder. All three
 files share one changelog since they change together as one spec unit. Newest version first.
 
+## v1.0.1 (2026-10-15)
+
+- `tasks.md`: Phase 5 `Docs/home_assumptions.md` row 1 item closed — the row does not cover the
+  gallery tiles, so no edit is needed. No requirement or design change. The Android gallery has no
+  other superseded doc to delete.
+
 ## v1.0 (initial) (2026-10-15)
 
 - First Android spec of the "Ảnh đẹp Phật giáo" (Buddhist photos) gallery, written in a mixed style:
