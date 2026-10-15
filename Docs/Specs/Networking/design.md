@@ -1,7 +1,7 @@
 # Design — Networking
 
-Version: 2.3
-Last updated: 2026-09-22
+Version: 2.4
+Last updated: 2026-10-15
 Status: not started — spec prospective, lớp network dùng chung chưa có code
 
 > See `changelog.md` in this folder for the version history of this spec.
@@ -32,8 +32,8 @@ Ràng buộc kiến trúc của repo được giữ nguyên:
 | core/network | `core/network/NetworkException.kt` | `class NetworkException(val error: AppError) : Exception()`. Cầu nối để tầng `data` bọc `AppError` vào `Result.failure` mà `domain` vẫn chỉ thấy `Throwable`. |
 | core/network | `core/network/JsonProvider.kt` | Tạo `Json` dùng chung cho cả app: `ignoreUnknownKeys = true`, `explicitNulls = false`, `coerceInputValues = true`. Không cấu hình rải rác ở từng feature. |
 | core/network | `core/network/auth/Authenticated.kt` | `@Target(FUNCTION) @Retention(RUNTIME) annotation class Authenticated` — đánh dấu endpoint Retrofit cần Bearer. Mặc định không đánh dấu = public (opt-in). |
-| core/network | `core/network/auth/AuthTokenProvider.kt` | **Port**: `fun currentToken(): String?` (đồng bộ, đọc cache in-memory). `core/network` sở hữu interface này; impl thật nằm ngoài (spec `AuthTokenStorage`). |
-| core/network | `core/network/auth/InMemoryAuthTokenProvider.kt` | Impl tạm: token giữ trong `AtomicReference`, có `update(token?)`/`clear()`. Cho phép wiring + test trước khi `AuthTokenStorage` tồn tại. |
+| core/network | `core/network/auth/AuthTokenProvider.kt` | **Port**: `fun currentToken(): String?` (đồng bộ, đọc cache in-memory). `core/network` sở hữu interface này; impl thật nằm ngoài (spec `Docs/Specs/Login/`, `SessionTokenCache`). |
+| core/network | `core/network/auth/InMemoryAuthTokenProvider.kt` | Impl tạm: token giữ trong `AtomicReference`, có `update(token?)`/`clear()`. Cho phép wiring + test trước khi phần lưu phiên của `Docs/Specs/Login/` được build. |
 | core/network | `core/network/interceptor/CommonHeadersInterceptor.kt` | Gắn header chung (`Accept`, `Content-Type`, app version, locale) vào mọi request. |
 | core/network | `core/network/interceptor/AuthInterceptor.kt` | Đọc `request.tag(Invocation::class.java)` → nếu method có `@Authenticated` thì gắn `Authorization: Bearer <token>` lấy từ `AuthTokenProvider`. Không có token thì gửi request trần (server trả 401). |
 | core/network | `core/network/interceptor/LoggingInterceptor.kt` | OkHttp logging: chỉ bật body ở `debug`, mức `NONE`/header-only ở `release`. |
@@ -188,7 +188,7 @@ Quy tắc bóc envelope trong `safeCall`:
 
 **Quyết định:** network **không** tự đọc security storage, và caller **không** truyền token từng lời
 gọi. Thay vào đó `core/network` định nghĩa port `AuthTokenProvider`; impl thật (AndroidKeyStore) nằm
-ở spec riêng `AuthTokenStorage`, nối vào qua DI.
+ở spec `Docs/Specs/Login/`, nối vào qua DI.
 
 ```
 XxxApiService (feature, data/remote/api/)
@@ -205,19 +205,19 @@ AuthInterceptor
 - **Opt-in, mặc định public**: chỉ method gắn `@Authenticated` mới có header auth.
 - **Port** (`core/network/auth/AuthTokenProvider.kt`): `fun currentToken(): String?`.
   - Đồng bộ, **chỉ đọc cache in-memory** — `Interceptor` chạy đồng bộ, tuyệt đối không I/O keystore.
-  - Cache được nạp lúc app khởi động và cập nhật sau login/logout (do `AuthTokenStorage` lo).
+  - Cache được nạp lúc app khởi động và cập nhật sau login/logout (do `AuthSessionStore` của `Docs/Specs/Login/` lo).
 - **Impl tạm** `InMemoryAuthTokenProvider` (AtomicReference) để wiring/test được trước khi có storage
-  thật; DI thay bằng impl Keystore khi `AuthTokenStorage` xong.
+  thật; DI thay bằng `SessionTokenCache` khi `Docs/Specs/Login/` Phase 1 xong.
 - **401** → `AppError.Unauthorized`; chừa chỗ cắm refresh-token trong `AuthInterceptor` (chưa làm).
-- **Không thuộc networking**: lưu/đọc secret bằng Android Keystore — spec riêng `AuthTokenStorage`.
+- **Không thuộc networking**: lưu/đọc secret bằng Android Keystore — spec `Docs/Specs/Login/`.
 
 ## Deliberately stubbed for now (if applicable)
 
 - `AuthTokenProvider`: hiện chỉ có impl tạm `InMemoryAuthTokenProvider`. Chưa đọc/ghi AndroidKeyStore
-  vì `AuthTokenStorage` (spec riêng) chưa implement — theo yêu cầu làm sau. DI sẽ đổi impl khi có.
+  vì phần lưu phiên của `Docs/Specs/Login/` chưa implement. DI sẽ đổi impl khi có.
   Theo dõi ở `tasks.md` Phase 2 và mục Deferred.
 - `AuthInterceptor`: đã implement đầy đủ phần gắn Bearer + đọc annotation; **refresh-token khi 401 là
-  chỗ cắm còn trống** (thuộc feature auth), theo dõi ở `tasks.md` Deferred.
+  chỗ cắm còn trống** (thuộc `Docs/Specs/Login/`, làm bằng OkHttp `Authenticator`), theo dõi ở `tasks.md` Deferred.
 - `NetworkConfig.baseUrl`: đọc `BuildConfig.BASE_URL` do flavor sinh ra. Hiện dùng **URL fake** cho cả
   3 môi trường (xem bảng trên); khi gọi sẽ fail ở tầng kết nối (`AppError.NoConnection`) vì domain
   chưa tồn tại. `AppError.NotConfigured` chỉ xảy ra nếu URL rỗng. Thay URL thật khi backend sẵn sàng

@@ -1,7 +1,7 @@
 # Requirements — Login
 
-Version: 1.0
-Last updated: 2026-10-14
+Version: 1.1
+Last updated: 2026-10-15
 Status: planned (drift) — màn Đăng nhập có UI theo số điện thoại và giả lập thành công; chưa có lưu phiên, refresh, đăng xuất, quên mật khẩu; "Vào xem trước" vào Home như đã đăng nhập
 Feature folder: `app/src/main/java/com/example/innerlamp/ui/screens/login/` (+ `forgotpassword/` mới), `core/network/auth/`, `MainActivity.kt` (điều hướng khi phiên kết thúc), `ui/screens/profile/` (đăng xuất)
 Product spec: innerlamp-be `docs/product/login/product.md` @ v1.2
@@ -107,7 +107,7 @@ Shape request/response: contract ở header. File này không chép schema.
 | `AuthInterceptor` | Gắn Bearer; `TODO(refresh-token)` | Tiêu chí 10–12 |
 | Đăng xuất | Không có | Tiêu chí 13 |
 | `MainActivity` `onForgotPassword` | TODO | Tiêu chí 14–18 |
-| "Vào xem trước" | Vào Home như đã đăng nhập (`Docs/home_assumptions.md` #5) | Tiêu chí 20–21 |
+| "Vào xem trước" | Vào Home như đã đăng nhập (trước ghi ở `Docs/home_assumptions.md` #5, đã bỏ ở v1.1) | Tiêu chí 20–21 |
 
 ## Out of scope
 

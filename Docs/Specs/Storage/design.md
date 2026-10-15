@@ -1,7 +1,7 @@
 # Design — Storage
 
-Version: 1.1
-Last updated: 2026-09-22
+Version: 1.2
+Last updated: 2026-10-15
 Status: not started — spec prospective; `UserPreferences.kt` sẽ chuyển sang SharedPreferences
 
 > See `changelog.md` in this folder for the version history of this spec.

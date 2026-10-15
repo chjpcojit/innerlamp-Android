@@ -3,6 +3,13 @@
 Tracks version history for `requirements.md`, `design.md`, and `tasks.md` in this folder. All three
 files share one changelog since they change together as one spec unit. Newest version first.
 
+## v2.4 (2026-10-15)
+
+- Trỏ spec `AuthTokenStorage` (trước ghi "chưa tạo, làm sau") về `Docs/Specs/Login/` v1.0: lưu token
+  (`AuthSessionStore`, `SessionTokenCache` thay `InMemoryAuthTokenProvider`) và refresh khi 401 bằng
+  OkHttp `Authenticator` single-flight. Không đổi hành vi hay task của Networking; chỉ đổi chỗ trỏ
+  trong `requirements.md`, `design.md`, `tasks.md`.
+
 ## v2.3 (2026-09-22)
 
 - `requirements.md`: đổi tiêu chí base URL sang guard "rỗng thì `NotConfigured`" và nêu rõ giá trị

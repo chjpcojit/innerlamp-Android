@@ -1,7 +1,7 @@
 # Requirements — Networking
 
-Version: 2.3
-Last updated: 2026-09-22
+Version: 2.4
+Last updated: 2026-10-15
 Status: not started — spec prospective, lớp network dùng chung chưa có code (thư mục `core/network/` chưa tồn tại)
 Feature folder: `app/src/main/java/com/example/innerlamp/core/network/`
 
@@ -64,7 +64,7 @@ không phải lặp lại code cấu hình HTTP, JSON, header, timeout và map l
 - WHEN `AuthTokenProvider` được lấy token, THE SYSTEM SHALL đọc từ bộ nhớ đệm (in-memory) và SHALL
   **không** thực hiện I/O keystore/disk trong `Interceptor` (tránh chặn luồng mạng).
 - WHEN lớp network cần token, THE SYSTEM SHALL lấy qua port `AuthTokenProvider` do `core/network` sở
-  hữu; việc lưu/đọc secret thật (AndroidKeyStore) là trách nhiệm của spec `AuthTokenStorage`, không
+  hữu; việc lưu/đọc secret thật (AndroidKeyStore) là trách nhiệm của spec `Docs/Specs/Login/` (phần lưu phiên), không
   nằm trong `core/network`.
 - WHEN app chạy ở build `debug`, THE SYSTEM SHALL log request/response qua logging interceptor; WHEN
   chạy ở build `release`, THE SYSTEM SHALL **không** log body của request/response.
@@ -82,9 +82,9 @@ không phải lặp lại code cấu hình HTTP, JSON, header, timeout và map l
 - **DTO & mapper của từng feature**: tầng `data` của feature đó sở hữu.
 - **Logic nghiệp vụ / validation**: thuộc `domain/usecase`.
 - **Triển khai refresh-token đầy đủ**: spec này chỉ chừa hook trong `AuthInterceptor`; luồng refresh
-  thuộc feature auth sau này.
-- **Lưu/đọc secret bằng AndroidKeyStore**: thuộc spec riêng **`AuthTokenStorage`** (chưa tạo — sẽ làm
-  sau, theo yêu cầu). Networking chỉ tiêu thụ port `AuthTokenProvider`.
+  thuộc `Docs/Specs/Login/` (OkHttp `Authenticator`, single-flight).
+- **Lưu/đọc secret bằng AndroidKeyStore**: thuộc spec **`Docs/Specs/Login/`** (phần lưu phiên, viết
+  2026-10-14, chưa implement). Networking chỉ tiêu thụ port `AuthTokenProvider`.
 - **Ràng buộc endpoint nào cần auth**: thuộc feature sở hữu `XxxApiService`, nơi gắn `@Authenticated`.
 - **Cache/offline-first cục bộ**: Room vẫn là nguồn dữ liệu có cấu trúc; lớp network không tự cache.
 - **Backend thật / URL thật**: spec dùng URL fake đã chốt cho `dev`/`staging`/`prod`; việc thay bằng
@@ -120,5 +120,5 @@ không phải lặp lại code cấu hình HTTP, JSON, header, timeout và map l
   `AuthTokenProvider` do `core/network` sở hữu, `AuthInterceptor` đọc annotation qua `Invocation`
   rồi gắn `Authorization: Bearer <token>`. Network **không** tự đọc storage; caller **không** truyền
   token từng lời gọi. Lưu token bằng **AndroidKeyStore trực tiếp**, thuộc spec riêng
-  `AuthTokenStorage` (chưa implement, làm sau) — Networking dùng provider in-memory/DI tạm. Resolved
+  spec `Docs/Specs/Login/` (chưa implement) — Networking dùng provider in-memory/DI tạm. Resolved
   2026-09-22.

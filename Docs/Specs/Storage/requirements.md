@@ -1,7 +1,7 @@
 # Requirements — Storage
 
-Version: 1.1
-Last updated: 2026-09-22
+Version: 1.2
+Last updated: 2026-10-15
 Status: not started — spec prospective; `core/datastore/UserPreferences.kt` sẽ được chuyển sang `SharedPreferences`, toàn bộ `core/storage/` chưa tồn tại
 Feature folder: `app/src/main/java/com/example/innerlamp/core/storage/`
 

@@ -1,7 +1,7 @@
 # Tasks — Login
 
-Version: 1.0
-Last updated: 2026-10-14
+Version: 1.1
+Last updated: 2026-10-15
 Status: planned — Phase 1–7 chưa bắt đầu; mục `[x]` đã đọc trong code ngày 2026-10-14 và khớp spec
 
 > See `changelog.md` in this folder for the version history of this spec.
@@ -61,4 +61,4 @@ Paths are relative to `app/src/main/java/com/example/innerlamp/`. Phase 1 làm t
 - [ ] `LoggingInterceptor` không in body `/v1/auth/*` và header `Authorization` (tiêu chí 23)
 - [ ] Chạy tay với backend dev: đăng nhập, sai thông tin, khoá, đặt lại trên máy khác làm phiên máy này hết kèm câu báo, đăng xuất khi mất mạng, khách gặp lời mời
 - [ ] Cập nhật cột Android ở product §4.2 khi xong (báo `ba-writer`)
-- [ ] Bỏ dòng #5 "Vào xem trước" ở `Docs/home_assumptions.md` (bước dọn tài liệu cũ)
+- [x] Bỏ dòng #5 "Vào xem trước" ở `Docs/home_assumptions.md` (bước dọn tài liệu cũ, 2026-10-15)
