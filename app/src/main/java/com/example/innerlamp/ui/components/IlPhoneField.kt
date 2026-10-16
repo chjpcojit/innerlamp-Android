@@ -39,18 +39,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.innerlamp.domain.model.PhoneCountries
 import com.example.innerlamp.domain.model.PhoneCountry
-import com.example.innerlamp.domain.model.formatE164
 import com.example.innerlamp.domain.model.isComplete
 import com.example.innerlamp.ui.theme.BeVietnamPro
 import com.example.innerlamp.ui.theme.IlGold
-import com.example.innerlamp.ui.theme.IlGreenText
+import com.example.innerlamp.ui.theme.IlFormError
 import com.example.innerlamp.ui.theme.InnerLampTheme
 import com.example.innerlamp.ui.theme.LocalIlColors
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Ô nhập số điện thoại (prototype màn Đăng nhập / Đăng ký):
 //   thẻ bo 16 · nhãn 10.5 trong thẻ · [cờ +84 ⌄] │ ô nhập 15 │ ✓ tròn xanh 18
-//   viền vàng .55 khi chưa đủ số, ink-12 khi đủ · gợi ý 10.5 lệch trái 16 bên dưới.
+//   viền đỏ khi lỗi, ink-12 khi bình thường · gợi ý 10.5 lệch trái 16 khi chưa đủ số,
+//   hoặc dòng lỗi đỏ (kèm link tuỳ chọn, vd "Đăng nhập" khi số đã đăng ký).
 // Chạm cụm mã vùng → `onCountryClick` (mở sheet "Chọn quốc gia").
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -63,16 +63,13 @@ fun IlPhoneField(
     modifier: Modifier = Modifier,
     label: String = "Số điện thoại",
     placeholder: String = "0949 123 456",
+    error: String? = null,
+    errorAction: Pair<String, () -> Unit>? = null,
 ) {
     val colors = LocalIlColors.current
     val ok = country.isComplete(value)
     val shape = RoundedCornerShape(16.dp)
-    val borderColor = if (ok) colors.ink.copy(alpha = 0.12f) else IlGold.copy(alpha = 0.55f)
-    val hint = if (ok) {
-        "Mã xác thực sẽ gửi tới ${country.formatE164(value)}"
-    } else {
-        "Nhập 0949… hoặc 949… — chúng tôi tự thêm ${country.dial}"
-    }
+    val borderColor = if (error != null) IlFormError else colors.ink.copy(alpha = 0.12f)
     val textStyle = TextStyle(
         fontFamily = BeVietnamPro,
         fontWeight = FontWeight.Normal,
@@ -146,20 +143,13 @@ fun IlPhoneField(
                     },
                 )
                 // Dấu ✓ tròn xanh — luôn giữ chỗ, chỉ đổi độ mờ (như `opacity` của prototype).
-                CheckBadge(Modifier.alpha(if (ok) 1f else 0f))
+                IlCheckBadge(Modifier.alpha(if (ok) 1f else 0f))
             }
         }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = hint,
-            modifier = Modifier.padding(start = 16.dp),
-            style = TextStyle(
-                fontFamily = BeVietnamPro,
-                fontWeight = FontWeight.Normal,
-                fontSize = 10.5.sp,
-                color = colors.ink.copy(alpha = 0.45f),
-            ),
-        )
+        when {
+            error != null -> IlFieldError(text = error, action = errorAction)
+            !ok -> IlFieldHint("Nhập 0949… hoặc 949… — chúng tôi tự thêm ${country.dial}")
+        }
     }
 }
 
@@ -177,26 +167,7 @@ private fun ChevronDown(color: Color) {
     }
 }
 
-/** Vòng tròn xanh 18dp + dấu tích trắng 1.5dp. */
-@Composable
-private fun CheckBadge(modifier: Modifier = Modifier) {
-    Canvas(modifier.size(18.dp)) {
-        drawCircle(IlGreenText)
-        val w = size.width
-        val path = Path().apply {
-            moveTo(w * 0.29f, w * 0.52f)
-            lineTo(w * 0.44f, w * 0.66f)
-            lineTo(w * 0.72f, w * 0.36f)
-        }
-        drawPath(
-            path,
-            Color.White,
-            style = Stroke(1.5.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
-        )
-    }
-}
-
-@Preview(showBackground = true, widthDp = 340, heightDp = 260)
+@Preview(showBackground = true, widthDp = 340, heightDp = 380)
 @Composable
 private fun IlPhoneFieldPreview() {
     InnerLampTheme {
@@ -212,6 +183,14 @@ private fun IlPhoneFieldPreview() {
                 onValueChange = {},
                 country = PhoneCountries.default,
                 onCountryClick = {},
+            )
+            IlPhoneField(
+                value = "0912 345 678",
+                onValueChange = {},
+                country = PhoneCountries.default,
+                onCountryClick = {},
+                error = "Số điện thoại này đã được đăng ký.",
+                errorAction = "Đăng nhập" to {},
             )
         }
     }

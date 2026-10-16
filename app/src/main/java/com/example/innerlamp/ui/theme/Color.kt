@@ -23,6 +23,7 @@ val IlGreenText = Color(0xFF4E6C59)
 val IlRose = Color(0xFFC2857F)
 val IlRoseText = Color(0xFF9A5F58)
 val IlDanger = Color(0xFFA7443F)
+val IlFormError = Color(0xFFB4533A) // lỗi form: viền ô, chữ lỗi, banner lỗi (màn xác thực)
 
 // ── Bảng màu của các màn LUÔN TỐI (splash, player, hero tối, thiệp chia sẻ) ──
 // Không đi qua token — hardcode để không bị sáng lên ở light mode.

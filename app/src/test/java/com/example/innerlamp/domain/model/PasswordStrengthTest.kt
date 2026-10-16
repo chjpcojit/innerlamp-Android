@@ -9,8 +9,12 @@ class PasswordStrengthTest {
     fun empty_isNone() = assertEquals(PasswordStrength.None, PasswordStrength.of(""))
 
     @Test
-    fun shorterThanMinimum_isWeakEvenWhenMixed() =
-        assertEquals(PasswordStrength.Weak, PasswordStrength.of("aB3$"))
+    fun shortSingleGroup_isWeak() =
+        assertEquals(PasswordStrength.Weak, PasswordStrength.of("abc"))
+
+    @Test
+    fun shortButMixed_isFair() =
+        assertEquals(PasswordStrength.Fair, PasswordStrength.of("aB3$"))
 
     @Test
     fun minimumLengthSingleGroup_isWeak() =
