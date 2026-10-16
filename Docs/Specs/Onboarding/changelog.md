@@ -6,8 +6,9 @@ files share one changelog since they change together as one spec unit. Newest ve
 ## v1.1 (2026-10-16)
 
 - Aligned with the backend's move to email registration: contract is now `openapi.yaml` @ 2.1.1 (Auth tag) and
-  backend feature spec onboarding v8.3; product spec cited at @ v1.6 (v1.5 only changed the §4.2 Backend column; v1.6 defines the
-  `REGISTRATION_IN_PROGRESS` screen, resolved by anh Đức). Mobile never sends `X-API-Key` / `X-InnerLamp-Client-IP`.
+  backend feature spec onboarding v8.3; product spec cited at @ v1.7 (v1.5 only changed the §4.2 Backend column; v1.6 defines the
+  `REGISTRATION_IN_PROGRESS` screen; v1.7 confirms that `PHONE_TAKEN` / `INVALID_TEMPLE` at `verify-otp` return the
+  user to Signup with every value kept and the error on the related field — already the behaviour here). Mobile never sends `X-API-Key` / `X-InnerLamp-Client-IP`.
 - `requirements.md`: criterion 13 states `phone_number` is the digits as typed (no `+`/country code; the server
   normalises to E.164); criterion 14 adds that `verify-otp` for an existing email always returns `OTP_INVALID`;
   new criterion 15a (`409 REGISTRATION_IN_PROGRESS` → stay, show `details.retry_after_seconds`); criterion 21

@@ -4,7 +4,7 @@ Version: 1.1
 Last updated: 2026-10-16
 Status: planned (drift) — splash, 3 intro steps and the Signup form have UI but do not call the backend (`SignupViewModel` simulates success); no code-entry screen, no temple proposal, intro flag not stored; launch always goes to the intro. (Drift table last read against code on 2026-10-14; not re-read for v1.1.)
 Feature folder: `app/src/main/java/com/example/innerlamp/ui/screens/{splash,onboarding,signup}/` (+ new `otp/`)
-Product spec: innerlamp-be `docs/product/onboarding/product.md` @ v1.6
+Product spec: innerlamp-be `docs/product/onboarding/product.md` @ v1.7
 Contract: innerlamp-be `docs/specs/api/openapi.yaml` @ info.version 2.1.1 (Auth tag: `register/request-otp`, `register/resend-otp`, `register/verify-otp`); backend feature spec innerlamp-be `docs/specs/features/onboarding/requirements.md` @ v8.3. Mobile clients do **not** send `X-API-Key` or `X-InnerLamp-Client-IP`.
 Architecture: ADR-0003 (accounts are identified by email and verified by a code sent to the email; SMS removed) — Accepted
 Implements: BR-ONB-01, BR-ONB-02, BR-ONB-03, BR-ONB-04, BR-ONB-05, BR-ONB-06, BR-ONB-07, BR-ONB-08, BR-ONB-09, BR-ONB-10, BR-ONB-11, FR-ONB-001, FR-ONB-002, FR-ONB-003, FR-ONB-004, FR-ONB-005, FR-ONB-006, FR-ONB-007, FR-ONB-008, FR-ONB-009, FR-ONB-010, NFR-ONB-01, NFR-ONB-02, NFR-ONB-03
