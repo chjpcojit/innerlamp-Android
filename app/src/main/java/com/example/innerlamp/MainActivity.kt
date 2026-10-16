@@ -153,7 +153,6 @@ class MainActivity : FragmentActivity() {
                                     }
                                 },
                                 onLoggedIn = enterHome,
-                                onRequestOtp = { /* TODO: điều hướng sang OtpRoute khi có màn OTP */ },
                                 onForgotPassword = { /* TODO: điều hướng sang ForgotRoute khi có màn quên mật khẩu */ },
                                 // TODO: chế độ xem trước (chưa đăng nhập) — hiện vào thẳng Home như người dùng thường.
                                 onPreviewClick = enterHome,

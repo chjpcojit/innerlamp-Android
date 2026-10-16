@@ -10,34 +10,37 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.innerlamp.domain.model.PasswordStrength
 import com.example.innerlamp.ui.theme.BeVietnamPro
-import com.example.innerlamp.ui.theme.IlGreen
+import com.example.innerlamp.ui.theme.IlFormError
+import com.example.innerlamp.ui.theme.IlGold
 import com.example.innerlamp.ui.theme.IlGreenText
-import com.example.innerlamp.ui.theme.IlRose
-import com.example.innerlamp.ui.theme.IlRoseText
 import com.example.innerlamp.ui.theme.InnerLampTheme
 import com.example.innerlamp.ui.theme.LocalIlColors
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Ô nhập mật khẩu: IlField + nút Hiện/Ẩn bên phải + thanh độ mạnh 3 đoạn bên dưới
-// (prototype màn Đăng ký). Tự giữ trạng thái hiện/ẩn.
+// Ô mật khẩu mới (prototype màn Đăng ký / Đặt mật khẩu mới): nhãn trong khung, "Hiện/Ẩn",
+// dòng lỗi đỏ, thanh độ mạnh 3 đoạn chỉ hiện khi đã nhập và không có lỗi.
+// Tự giữ trạng thái hiện/ẩn.
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
@@ -46,39 +49,37 @@ fun IlPasswordField(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     label: String = "Mật khẩu",
-    placeholder: String = "••••••••",
+    placeholder: String = "8–64 ký tự",
+    error: String? = null,
     showStrength: Boolean = true,
+    imeAction: ImeAction = ImeAction.Done,
 ) {
-    var visible by remember { mutableStateOf(false) }
-    val tooShort = value.isNotEmpty() && value.length < PasswordStrength.MIN_LENGTH
-    val accepted = value.length >= PasswordStrength.MIN_LENGTH
+    var visible by rememberSaveable { mutableStateOf(false) }
 
     Column(modifier = modifier.fillMaxWidth()) {
-        IlField(
-            label = label,
+        IlInsetField(
             value = value,
             onValueChange = onValueChange,
+            label = label,
             placeholder = placeholder,
-            isError = tooShort,
-            error = "Mật khẩu phải ≥ ${PasswordStrength.MIN_LENGTH} ký tự",
-            isSuccess = accepted,
-            trailing = if (accepted) "✓" else "",
-            maskPassword = !visible,
-            trailingAction = {
-                IlFieldTextAction(
-                    label = if (visible) "Ẩn" else "Hiện",
-                    onClick = { visible = !visible },
-                )
-            },
+            isError = error != null,
+            masked = !visible,
+            keyboardType = KeyboardType.Password,
+            imeAction = imeAction,
+            trailingAction = { IlRevealToggle(revealed = visible, onToggle = { visible = !visible }) },
         )
-        if (showStrength) {
-            Spacer(Modifier.height(10.dp))
-            IlPasswordStrengthBar(strength = PasswordStrength.of(value))
+        if (error != null) {
+            IlFieldError(error)
+        } else if (showStrength && value.isNotEmpty()) {
+            IlPasswordStrengthBar(
+                strength = PasswordStrength.of(value),
+                modifier = Modifier.padding(start = 2.dp, end = 2.dp, top = 8.dp),
+            )
         }
     }
 }
 
-/** Thanh 3 đoạn cao 3dp + nhãn bên phải; đoạn chưa tô dùng `ink` 12%. */
+/** Thanh 3 đoạn cao 3dp + nhãn bên phải; đoạn chưa tô dùng `ink` 12%. Yếu đỏ · Khá tốt vàng · Mạnh xanh. */
 @Composable
 fun IlPasswordStrengthBar(
     strength: PasswordStrength,
@@ -86,13 +87,10 @@ fun IlPasswordStrengthBar(
 ) {
     val colors = LocalIlColors.current
     val fill = when (strength) {
-        PasswordStrength.Weak -> IlRose
-        PasswordStrength.Fair, PasswordStrength.Strong -> IlGreen
+        PasswordStrength.Weak -> IlFormError
+        PasswordStrength.Fair -> IlGold
+        PasswordStrength.Strong -> IlGreenText
         PasswordStrength.None -> Color.Transparent
-    }
-    val labelColor = when (strength) {
-        PasswordStrength.Weak -> IlRoseText
-        else -> IlGreenText
     }
     val track = colors.ink.copy(alpha = 0.12f)
     val shape = RoundedCornerShape(2.dp)
@@ -112,15 +110,18 @@ fun IlPasswordStrengthBar(
                     .background(color, shape),
             )
         }
-        // Nhãn có chỗ cố định để thanh không giật khi đổi "Yếu"/"Khá tốt"/"Mạnh".
+        // Nhãn có chỗ tối thiểu để thanh không giật khi đổi "Yếu"/"Khá tốt"/"Mạnh".
         Text(
             text = strength.label,
-            modifier = Modifier.width(48.dp),
+            modifier = Modifier
+                .padding(start = 6.dp)
+                .widthIn(min = 44.dp),
+            textAlign = TextAlign.End,
             style = TextStyle(
                 fontFamily = BeVietnamPro,
                 fontWeight = FontWeight.Normal,
                 fontSize = 10.5.sp,
-                color = labelColor,
+                color = fill,
             ),
         )
     }
@@ -135,9 +136,10 @@ private fun IlPasswordFieldPreview() {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             IlPasswordField(value = "", onValueChange = {})
-            IlPasswordField(value = "abc", onValueChange = {})
+            IlPasswordField(value = "abc", onValueChange = {}, error = "Mật khẩu cần ít nhất 8 ký tự.")
             IlPasswordField(value = "matkhau1", onValueChange = {})
             IlPasswordField(value = "MatKhau@2026x", onValueChange = {})
+            Spacer(Modifier.height(4.dp))
         }
     }
 }
