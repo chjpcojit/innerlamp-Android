@@ -1,69 +1,69 @@
 # Tasks — Onboarding
 
-Version: 1.0
-Last updated: 2026-10-14
-Status: planned — Phase 1–7 chưa bắt đầu; mục `[x]` đã đọc trong code ngày 2026-10-14 và khớp spec
+Version: 1.1
+Last updated: 2026-10-16
+Status: planned — Phase 1–7 not started; `[x]` items were read in code on 2026-10-14 and match the spec
 
 > See `changelog.md` in this folder for the version history of this spec.
 
-Mỗi mục trace về một dòng của bảng **Layers & components** hoặc một Step trong `design.md`.
-Paths are relative to `app/src/main/java/com/example/innerlamp/`. Phụ thuộc: `AuthSessionStore` của
-`../Login/tasks.md` Phase 1 phải có trước Phase 3 (mở app) và Phase 5 (xác nhận mã).
+Each item traces to a row of the **Layers & components** table or a Step in `design.md`.
+Paths are relative to `app/src/main/java/com/example/innerlamp/`. Dependency: `AuthSessionStore` from
+`../Login/tasks.md` Phase 1 must exist before Phase 3 (app launch) and Phase 5 (code confirmation).
 
 ## Phase 1 — Domain
 
-- [ ] `domain/auth/RegistrationRules.kt`: số điện thoại đúng bằng độ dài quốc gia (sửa `PhoneCountry.isComplete` đang `>=`), email, mật khẩu 8–64 ký tự sau NFC, họ tên 1–300, pháp danh 0–255 (tiêu chí 9)
-- [x] 12 quốc gia và độ dài số (`domain/model/PhoneCountry.kt` `PhoneCountries`) (tiêu chí 7)
-- [x] Gợi ý độ mạnh mật khẩu 3 mức, không chặn gửi (`domain/model/PasswordStrength.kt`) (tiêu chí 10)
-- [ ] `RegistrationForm`, `RegistrationFieldError`, `CodeTiming`, `TempleProposal`, `RegistrationError`; bỏ `placeOfOrigin` tự do (tiêu chí 7, 13, 18)
+- [ ] `domain/auth/RegistrationRules.kt`: phone number equal to the country's length (fix `PhoneCountry.isComplete`, currently `>=`), email, password 8–64 characters after NFC, full name 1–300, dharma name 0–255 (criterion 9)
+- [x] 12 countries and number lengths (`domain/model/PhoneCountry.kt` `PhoneCountries`) (criterion 7)
+- [x] 3-level password strength hint, does not block submitting (`domain/model/PasswordStrength.kt`) (criterion 10)
+- [ ] `RegistrationForm`, `RegistrationFieldError`, `CodeTiming`, `TempleProposal`, `RegistrationError` (incl. `REGISTRATION_IN_PROGRESS` with its wait); drop the free-text `placeOfOrigin` (criteria 7, 13, 15a, 18)
 - [ ] `domain/repository/RegistrationRepository.kt`
-- [ ] Use case: `ResolveLaunchDestinationUseCase`, `CompleteOnboardingUseCase`, `RequestRegistrationCodeUseCase`, `ResendRegistrationCodeUseCase`, `VerifyRegistrationUseCase` (Step "Mở app" 1, Step "Đăng ký" 1, 3, 4, 6)
-- [ ] Unit test chạy `rules/phone-number.json`, `rules/email.json`, `rules/password.json`, `rules/names.json` của innerlamp-be `docs/product/onboarding/` (tiêu chí 29)
+- [ ] Use cases: `ResolveLaunchDestinationUseCase`, `CompleteOnboardingUseCase`, `RequestRegistrationCodeUseCase`, `ResendRegistrationCodeUseCase`, `VerifyRegistrationUseCase` (Launch Step 1, Registration Steps 1, 3, 4, 6)
+- [ ] Unit test running `rules/phone-number.json`, `rules/email.json`, `rules/password.json`, `rules/names.json` from innerlamp-be `docs/product/onboarding/` (criterion 29)
 
-## Phase 2 — Giới thiệu và cờ
+## Phase 2 — Intro and flag
 
-- [ ] `UserPreferences`: thêm `practiceIntents`, `bellTimes` (tiêu chí 5)
-- [x] Cờ `onboarding_completed` trong `UserPreferences` (tiêu chí 4)
-- [ ] `OnboardingViewModel.complete(then)` gọi `CompleteOnboardingUseCase` trước khi điều hướng; ba lối thoát đều qua đây (tiêu chí 4)
-- [x] 3 bước, "Bỏ qua", thanh tiến độ, "Bắt đầu" / "Tôi đã có tài khoản" / "Quay lại" (`OnboardingScreen`) (tiêu chí 3) — đối chiếu lại câu chữ với product §3.1.1 khi làm Phase 2
-- [ ] Unit test: ba lối thoát đều bật cờ; đăng xuất không xoá cờ và lựa chọn (tiêu chí 6)
+- [ ] `UserPreferences`: add `practiceIntents`, `bellTimes` (criterion 5)
+- [x] `onboarding_completed` flag in `UserPreferences` (criterion 4)
+- [ ] `OnboardingViewModel.complete(then)` calls `CompleteOnboardingUseCase` before navigating; all three exits go through it (criterion 4)
+- [x] 3 steps, "Bỏ qua", progress bar, "Bắt đầu" / "Tôi đã có tài khoản" / "Quay lại" (`OnboardingScreen`) (criterion 3) — re-check wording against product §3.1.1 when doing Phase 2
+- [ ] Unit test: all three exits set the flag; sign-out keeps the flag and the choices (criterion 6)
 
-## Phase 3 — Mở app
+## Phase 3 — App launch
 
-- [ ] `SplashViewModel` dùng `ResolveLaunchDestinationUseCase`; `SplashUiState.destination` (tiêu chí 1)
-- [ ] Lần đầu cài: `AuthSessionStore.clear()` trước khi điều hướng (tiêu chí 2)
-- [ ] `MainActivity`: Splash → đích (pop Splash); Onboarding → Signup / Login (pop Onboarding) (tiêu chí 1, 4)
-- [ ] Unit test `ResolveLaunchDestinationUseCase`: có phiên / chưa xem giới thiệu / còn lại
+- [ ] `SplashViewModel` uses `ResolveLaunchDestinationUseCase`; `SplashUiState.destination` (criterion 1)
+- [ ] First install: `AuthSessionStore.clear()` before navigating (criterion 2)
+- [ ] `MainActivity`: Splash → destination (pop Splash); Onboarding → Signup / Login (pop Onboarding) (criteria 1, 4)
+- [ ] Unit test `ResolveLaunchDestinationUseCase`: session stored / intro not seen / otherwise
 
-## Phase 4 — Form đăng ký, nơi xuất gia, đề xuất chùa
+## Phase 4 — Registration form, place of ordination, temple proposal
 
-- [ ] `SignupScreen`: thứ tự field product §3.1.1, thêm họ tên, pháp danh trống ban đầu, nút "Đăng ký", lỗi dưới field, `PHONE_TAKEN` + link Đăng nhập (tiêu chí 7, 15)
-- [x] "Gợi ý" pháp danh xoay vòng 10 tên (`SignupViewModel.onSuggestDharmaName`) (tiêu chí 8)
-- [ ] `SignupViewModel.submit()`: validate → `RequestRegistrationCodeUseCase`; bỏ qua lần bấm khi đang gửi; giữ mọi giá trị khi lỗi; bỏ giả lập `delay(600)` (tiêu chí 9, 11, 13, 16)
-- [ ] Dòng điều khoản giữ nội dung tĩnh hiện tại; đóng thì giữ form (tiêu chí 12)
-- [ ] `TemplePickerScreen`: `TempleOptionRepository` theo trang, mục "Chưa xuất gia — Cư sĩ tu tại gia" đầu, tìm debounce, bỏ kết quả cũ (tiêu chí 17)
-- [x] `TempleOptionRepository` + `TempleOptionRepositoryImpl` + `di/TempleModule.kt` (tiêu chí 17)
-- [ ] `TempleProposalScreen`: tên, tỉnh, phường/xã, địa chỉ đường; giữ trong `SignupViewModel` (tiêu chí 18)
-- [x] `AdministrativeUnitRepository` + impl + `di/AdministrativeUnitModule.kt` (tiêu chí 18)
-- [ ] Route `TemplePickerRoute`, `TempleProposalRoute` lồng dưới `SignupRoute`, dùng chung `SignupViewModel`
-- [ ] Unit test: form lỗi không gọi repository; body không có `dharma_name` / `ordination_temple_id` khi trống; email có tài khoản xử lý như email mới (tiêu chí 13, 14)
+- [ ] `SignupScreen`: field order per product §3.1.1, add full name, dharma name empty at first, "Đăng ký" button, errors under fields, `PHONE_TAKEN` + Sign-in link, `REGISTRATION_IN_PROGRESS` wait message (criteria 7, 15, 15a)
+- [x] "Gợi ý" dharma name cycling through 10 names (`SignupViewModel.onSuggestDharmaName`) (criterion 8)
+- [ ] `SignupViewModel.submit()`: validate → `RequestRegistrationCodeUseCase`; ignore taps while submitting; keep every value on error; remove the simulated `delay(600)` (criteria 9, 11, 13, 16)
+- [ ] The terms line keeps today's static content; closing it keeps the form (criterion 12)
+- [ ] `TemplePickerScreen`: `TempleOptionRepository` page by page, "Chưa xuất gia — Cư sĩ tu tại gia" first, debounced search, drop stale results (criterion 17)
+- [x] `TempleOptionRepository` + `TempleOptionRepositoryImpl` + `di/TempleModule.kt` (criterion 17)
+- [ ] `TempleProposalScreen`: name, province, ward, street line; kept in `SignupViewModel` (criterion 18)
+- [x] `AdministrativeUnitRepository` + impl + `di/AdministrativeUnitModule.kt` (criterion 18)
+- [ ] Routes `TemplePickerRoute`, `TempleProposalRoute` nested under `SignupRoute`, sharing `SignupViewModel`
+- [ ] Unit test: an invalid form does not call the repository; the body has no `dharma_name` / `ordination_temple_id` when empty and `phone_number` is the typed digits (no `+`, no country code); an email with an account is handled like a new one; `REGISTRATION_IN_PROGRESS` keeps the form (criteria 13, 14, 15a)
 
-## Phase 5 — Data đăng ký và màn nhập mã
+## Phase 5 — Registration data and code screen
 
-- [ ] `RegistrationApiService`, `RegistrationDto` + mapper, `RegistrationRepositoryImpl` qua `safeCall`, map lỗi theo Error → UI (Step "Đăng ký" 1, 3, 4, 6)
-- [ ] `di/RegistrationModule.kt` + ViewModel factory cho Splash / Onboarding / Signup / Otp (thay `viewModel()` không factory)
-- [ ] `OtpRoute` + `OtpScreen` + state: email, 6 ô số, đếm ngược hiệu lực và chờ gửi lại theo `ElapsedClock`, khoá theo `locked_until` (tiêu chí 20, 22, 24)
-- [ ] `ui/components/auth/CodeTimerRow.kt` dùng chung với quên mật khẩu (tiêu chí 20, 23)
-- [ ] Xác nhận: `VerifyRegistrationUseCase` → `AuthSessionStore.save` → đề xuất chùa (bỏ qua kết quả) → `HomeRoute` pop cả luồng (tiêu chí 19, 21)
-- [ ] Gửi lại, "Đổi email", đăng ký hết hạn → pop về Signup giữ giá trị (tiêu chí 23, 25, 26)
-- [ ] Unit test: từng lỗi của Step 3–4; lưu phiên thất bại; đề xuất chùa thất bại không chặn vào Home
+- [ ] `RegistrationApiService`, `RegistrationDto` + mapper (resend body `{email}` only), `RegistrationRepositoryImpl` via `safeCall`, errors mapped per Error → UI; no `X-API-Key` / client-IP header (Registration Steps 1, 3, 4, 6)
+- [ ] `di/RegistrationModule.kt` + ViewModel factory for Splash / Onboarding / Signup / Otp (replacing `viewModel()` without a factory)
+- [ ] `OtpRoute` + `OtpScreen` + state: email, 6 digit boxes, validity countdown and resend wait on `ElapsedClock`, lock from `locked_until` (criteria 20, 22, 24)
+- [ ] `ui/components/auth/CodeTimerRow.kt` shared with forgot password (criteria 20, 23)
+- [ ] Confirm: `VerifyRegistrationUseCase` → `AuthSessionStore.save` → temple proposal (result ignored) → `HomeRoute` popping the whole flow (criteria 19, 21)
+- [ ] Resend, "Đổi email", registration expired, `INVALID_TEMPLE` / `PHONE_TAKEN` at confirm → pop to Signup keeping values (criteria 23, 25, 26)
+- [ ] Unit test: each error of Steps 3–4; session store failure; a temple-proposal failure does not block entering Home
 
-## Phase 6 — Câu chữ và log
+## Phase 6 — Wording and logging
 
-- [ ] Câu chữ theo product §3.1.1; bỏ mọi câu "SMS" / "OTP qua số điện thoại"; không dùng `error.message` của backend (tiêu chí 27)
-- [ ] `LoggingInterceptor`: không log body của `/v1/auth/*` kể cả bản debug (tiêu chí 28)
+- [ ] Wording per product §3.1.1; remove every "SMS" / "OTP by phone number" sentence; never use the backend's `error.message` (criterion 27)
+- [ ] `LoggingInterceptor`: do not log `/v1/auth/*` bodies, also in debug builds (criterion 28)
 
-## Phase 7 — QA và tài liệu
+## Phase 7 — QA and docs
 
-- [ ] Chạy tay với backend dev: lần đầu → giới thiệu → Signup; tắt app mở lại → Login; đăng ký đủ field; email đã có tài khoản; `PHONE_TAKEN`; mã sai / hết hạn / khoá; gửi lại; đổi email; đề xuất chùa
-- [ ] Cập nhật cột Android ở product §4.2 khi xong (báo `ba-writer`)
+- [ ] Manual run against the dev backend (only after the contract 2.1.1 changes ship): first launch → intro → Signup; restart → Login; register with all fields; an email that already has an account; `PHONE_TAKEN`; `REGISTRATION_IN_PROGRESS`; wrong / expired / locked code; resend; change email; temple proposal
+- [ ] Update the Android column of product §4.2 when done (tell `ba-writer`)
