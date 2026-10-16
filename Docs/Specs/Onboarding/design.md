@@ -1,153 +1,157 @@
 # Design — Onboarding
 
-Version: 1.0
-Last updated: 2026-10-14
-Status: planned (drift) — UI splash / giới thiệu / Signup có; use case, repository, data layer đăng ký, màn nhập mã, bộ chọn chùa và đề xuất chùa chưa có
+Version: 1.1
+Last updated: 2026-10-16
+Status: planned (drift) — splash / intro / Signup UI exists; use cases, the registration repository and data layer, the code screen, the temple picker and the temple proposal do not
 
 > See `changelog.md` in this folder for the version history of this spec.
 
 ## Overview
 
-Kiến trúc giữ nguyên `ui → domain ← data → core/{network,storage}`, DI thủ công trong `di/`, mọi lời
-gọi mạng qua `NetworkClient.safeCall`, đổi thread qua `DispatcherProvider`, đếm thời gian bằng elapsed
-time. Mẫu gần nhất: `TempleOptionRepositoryImpl` + `di/TempleModule.kt`.
+The architecture stays `ui → domain ← data → core/{network,storage}`, manual DI in `di/`, every network
+call through `NetworkClient.safeCall`, threading through `DispatcherProvider`, time counted with elapsed
+time. Closest pattern: `TempleOptionRepositoryImpl` + `di/TempleModule.kt`.
 
-Thay đổi chính so với code hiện tại:
+Main changes from the current code:
 
-- **Splash quyết định đích.** `SplashViewModel` gọi `ResolveLaunchDestinationUseCase` (phiên đã lưu?
-  cờ giới thiệu?) thay cho `delay` thuần; `MainActivity` điều hướng theo kết quả. Phiên đọc qua
-  `AuthSessionStore` của `../Login/`.
-- **Cờ và lựa chọn giới thiệu nằm ở `UserPreferences`** (đã có `onboardingCompleted`); thêm ý hướng
-  và khung giờ chuông. Đây là dữ liệu của máy, không xoá khi đăng xuất.
-- **Đăng ký bằng email.** Một `RegistrationRepository` cho ba lời gọi public; `SignupViewModel` và
-  `OtpViewModel` gọi qua use case. Validator thuần Kotlin trong `domain/auth/` để chạy vector của
-  product.
-- **Bộ nhớ của một lần đăng ký** (giá trị form, đề xuất chùa đang giữ, email) nằm ở
-  `SignupViewModel` gắn vào back stack entry của `SignupRoute`; `OtpRoute` dùng chung ViewModel đó
-  (giống `GioRoute`/`GioEditRoute`), nên "Đổi email" và "đăng ký hết hạn" chỉ cần pop về Signup.
-- **Lưu phiên sau khi xác nhận mã** dùng `AuthSessionStore.save` của `../Login/` — một chỗ duy nhất
-  ghi token.
+- **Splash decides the destination.** `SplashViewModel` calls `ResolveLaunchDestinationUseCase` (stored
+  session? intro flag?) instead of a plain `delay`; `MainActivity` navigates on the result. The session is
+  read through `AuthSessionStore` from `../Login/`.
+- **The intro flag and choices live in `UserPreferences`** (`onboardingCompleted` already exists); add
+  the intentions and the bell time. This is device data, not cleared on sign-out.
+- **Email registration.** One `RegistrationRepository` for the three public calls; `SignupViewModel` and
+  `OtpViewModel` go through use cases. A plain-Kotlin validator in `domain/auth/` runs the product's
+  test vectors.
+- **The state of one registration** (form values, held temple proposal, email) lives in a
+  `SignupViewModel` scoped to the back stack entry of `SignupRoute`; `OtpRoute` shares that ViewModel
+  (like `GioRoute`/`GioEditRoute`), so "Đổi email" and "registration expired" just pop back to Signup.
+- **Session storage after the code is confirmed** uses `AuthSessionStore.save` from `../Login/` — the
+  single place that writes tokens.
+- **No client secrets.** Mobile sends neither `X-API-Key` nor `X-InnerLamp-Client-IP` on `register/*`.
 
 ## Layers & components
 
-Paths are relative to `app/src/main/java/com/example/innerlamp/`. Trạng thái đọc ngày 2026-10-14.
+Paths are relative to `app/src/main/java/com/example/innerlamp/`. Status read on 2026-10-14.
 
-| Layer | File | Responsibility | Trạng thái |
+| Layer | File | Responsibility | Status |
 |---|---|---|---|
-| UI / Splash | `ui/screens/splash/SplashViewModel.kt`, `SplashUiState.kt` | Giữ thời lượng splash tối thiểu, gọi `ResolveLaunchDestinationUseCase`, phát `destination` (`Home` / `Onboarding` / `Login`) | có — cần sửa (đang chỉ `delay`) |
-| UI / Navigation | `MainActivity.kt` (`AppNavHost`), `ui/navigation/Routes.kt` | Splash → đích theo `destination` (pop Splash); Onboarding → Signup / Login (pop Onboarding); thêm `OtpRoute`, `TemplePickerRoute`, `TempleProposalRoute` lồng dưới `SignupRoute`; xác nhận mã → `HomeRoute` pop cả luồng | có — cần sửa |
-| UI / Onboarding | `ui/screens/onboarding/OnboardingViewModel.kt` | Bước, ý hướng, chuông như hiện tại; `complete(then)` gọi `CompleteOnboardingUseCase` rồi mới điều hướng | có — cần sửa |
-| UI / Onboarding | `ui/screens/onboarding/OnboardingScreen.kt` | "Tôi đã có tài khoản" / "Bỏ qua" / "Tạo tài khoản" đều đi qua `complete` | có — cần sửa |
-| UI / Signup | `ui/screens/signup/SignupScreen.kt` | Thứ tự field theo product §3.1.1; thêm họ tên; ô nơi xuất gia mở bộ chọn; nút "Đăng ký"; lỗi dưới field; `PHONE_TAKEN` + link Đăng nhập | có — cần sửa |
-| UI / Signup | `ui/screens/signup/SignupViewModel.kt`, `SignupUiState.kt` | Form + lỗi field + `submitting` + đề xuất chùa đang giữ + email/timing cho màn mã; `submit()` gọi `RequestRegistrationCodeUseCase`; map lỗi → UI | có — cần sửa (đang giả lập) |
-| UI / Temple picker | mới `ui/screens/signup/TemplePickerScreen.kt` (+ state trong `SignupViewModel` hoặc `TemplePickerViewModel`) | Danh sách `TempleOptionRepository` theo trang, "Chưa xuất gia — Cư sĩ tu tại gia" đầu, tìm kiếm debounce, bỏ kết quả cũ; lối "Đề xuất chùa" | chưa có |
-| UI / Temple proposal | mới `ui/screens/signup/TempleProposalScreen.kt` | Tên chùa, tỉnh, phường/xã (`AdministrativeUnitRepository`), địa chỉ đường tuỳ chọn; lưu vào `SignupViewModel` | chưa có |
-| UI / Otp | mới `ui/screens/otp/OtpScreen.kt`, `OtpUiState.kt` | "Đã gửi tới <email>", 6 ô số, đếm ngược hiệu lực, "Gửi lại mã" + giây chờ, trạng thái khoá, "Đổi email" | chưa có |
-| UI / Otp | mới `ui/screens/otp/OtpViewModel.kt` hoặc phần Otp của `SignupViewModel` | `verify()`, `resend()`, hai bộ đếm theo `ElapsedClock`, `locked_until` → giờ máy | chưa có |
-| UI / Shared | mới `ui/components/auth/CodeTimerRow.kt` | Hàng đếm ngược + "Gửi lại mã" dùng chung với quên mật khẩu (`../Login/`) | chưa có |
-| Domain / Model | `domain/model/SignupUiModel.kt` → tách: `domain/model/RegistrationForm.kt` (dữ liệu thuần), lỗi field `RegistrationFieldError` | Thêm `fullName`, `templeId`, `templeProposal`; bỏ `placeOfOrigin` tự do, `emailValid`/`phoneOk` tính bằng validator | có — cần sửa |
-| Domain / Model | mới `domain/model/CodeTiming.kt`, `TempleProposal.kt`, `RegistrationError.kt` | Thời hạn mã + chờ gửi lại; đề xuất chùa; lỗi nghiệp vụ map từ `AppError` | chưa có |
-| Domain / Rules | mới `domain/auth/RegistrationRules.kt` | Validator BR-ONB-04…07 (độ dài chính xác theo quốc gia, email, mật khẩu 8–64 ký tự sau NFC, họ tên/pháp danh); dùng lại `PhoneCountries` (12 quốc gia) | chưa có — `PhoneCountry.isComplete` hiện là `>=` |
-| Domain / Rules | `domain/model/PasswordStrength.kt` | Gợi ý 3 mức, không chặn gửi | có |
-| Domain / Repository | mới `domain/repository/RegistrationRepository.kt` | `requestCode(form)`, `resendCode(email)`, `verify(email, code): AuthSession`, `proposeTemple(proposal)` | chưa có |
-| Domain / Use case | mới `domain/usecase/onboarding/ResolveLaunchDestinationUseCase.kt`, `CompleteOnboardingUseCase.kt` | Đích lúc mở app; bật cờ + lưu lựa chọn; lần đầu cài thì `AuthSessionStore.clear()` | chưa có |
-| Domain / Use case | mới `domain/usecase/onboarding/RequestRegistrationCodeUseCase.kt`, `ResendRegistrationCodeUseCase.kt`, `VerifyRegistrationUseCase.kt` | Validate → repository; verify thành công → `AuthSessionStore.save` → gửi đề xuất chùa (bỏ qua kết quả) | chưa có |
-| Data / API | mới `data/remote/api/RegistrationApiService.kt` | 3 route `register/*` + `temple-suggestions`; không có `@Authenticated` | chưa có |
-| Data / DTO | mới `data/remote/dto/RegistrationDto.kt` (+ mapper) | Theo contract ở header; không gửi `dharma_name` / `ordination_temple_id` khi trống | chưa có |
-| Data / Repository | mới `data/repository/RegistrationRepositoryImpl.kt` | `safeCall`; map mã lỗi backend → `RegistrationError` | chưa có |
-| Data / Repository | `data/repository/TempleOptionRepositoryImpl.kt`, `AdministrativeUnitRepositoryImpl.kt` | Danh sách chùa, tỉnh/phường | có |
-| Data / Prefs | `core/datastore/UserPreferences.kt` | `onboardingCompleted` (có); thêm `practiceIntents`, `bellTimes` | có — cần sửa |
-| DI | mới `di/RegistrationModule.kt`; `di/OnboardingModule.kt` (hoặc gộp) | Dựng API service, repository, use case; ViewModel factory cho Splash / Onboarding / Signup / Otp | chưa có — ViewModel đang `viewModel()` không factory |
+| UI / Splash | `ui/screens/splash/SplashViewModel.kt`, `SplashUiState.kt` | Keep a minimum splash time, call `ResolveLaunchDestinationUseCase`, emit `destination` (`Home` / `Onboarding` / `Login`) | exists — needs change (only a `delay` today) |
+| UI / Navigation | `MainActivity.kt` (`AppNavHost`), `ui/navigation/Routes.kt` | Splash → destination (pop Splash); Onboarding → Signup / Login (pop Onboarding); add `OtpRoute`, `TemplePickerRoute`, `TempleProposalRoute` nested under `SignupRoute`; code confirmed → `HomeRoute` popping the whole flow | exists — needs change |
+| UI / Onboarding | `ui/screens/onboarding/OnboardingViewModel.kt` | Step, intentions, bell as today; `complete(then)` calls `CompleteOnboardingUseCase` and only then navigates | exists — needs change |
+| UI / Onboarding | `ui/screens/onboarding/OnboardingScreen.kt` | "Tôi đã có tài khoản" / "Bỏ qua" / "Tạo tài khoản" all go through `complete` | exists — needs change |
+| UI / Signup | `ui/screens/signup/SignupScreen.kt` | Field order per product §3.1.1; add full name; the place-of-ordination field opens a picker; "Đăng ký" button; errors under fields; `PHONE_TAKEN` + Sign-in link; `REGISTRATION_IN_PROGRESS` wait message | exists — needs change |
+| UI / Signup | `ui/screens/signup/SignupViewModel.kt`, `SignupUiState.kt` | Form + field errors + `submitting` + held temple proposal + email/timing for the code screen; `submit()` calls `RequestRegistrationCodeUseCase`; maps errors → UI | exists — needs change (simulated) |
+| UI / Temple picker | new `ui/screens/signup/TemplePickerScreen.kt` (+ state in `SignupViewModel` or `TemplePickerViewModel`) | `TempleOptionRepository` list page by page, "Chưa xuất gia — Cư sĩ tu tại gia" first, debounced search, drop stale results; "Đề xuất chùa" entry | missing |
+| UI / Temple proposal | new `ui/screens/signup/TempleProposalScreen.kt` | Temple name, province, ward (`AdministrativeUnitRepository`), optional street line; saved into `SignupViewModel` | missing |
+| UI / Otp | new `ui/screens/otp/OtpScreen.kt`, `OtpUiState.kt` | "Đã gửi tới <email>", 6 digit boxes, validity countdown, "Gửi lại mã" + wait seconds, lock state, "Đổi email" | missing |
+| UI / Otp | new `ui/screens/otp/OtpViewModel.kt` or the Otp part of `SignupViewModel` | `verify()`, `resend()`, two timers on `ElapsedClock`, `locked_until` → device time | missing |
+| UI / Shared | new `ui/components/auth/CodeTimerRow.kt` | Countdown + "Gửi lại mã" row shared with forgot password (`../Login/`) | missing |
+| Domain / Model | `domain/model/SignupUiModel.kt` → split: `domain/model/RegistrationForm.kt` (plain data), field error `RegistrationFieldError` | Add `fullName`, `templeId`, `templeProposal`; drop the free-text `placeOfOrigin`; `emailValid`/`phoneOk` computed by the validator | exists — needs change |
+| Domain / Model | new `domain/model/CodeTiming.kt`, `TempleProposal.kt`, `RegistrationError.kt` | Code lifetime + resend wait; temple proposal; business errors mapped from `AppError` | missing |
+| Domain / Rules | new `domain/auth/RegistrationRules.kt` | BR-ONB-04…07 validator (exact length per country, email, password 8–64 characters after NFC, full name/dharma name); reuses `PhoneCountries` (12 countries) | missing — `PhoneCountry.isComplete` is `>=` today |
+| Domain / Rules | `domain/model/PasswordStrength.kt` | 3-level hint, does not block submitting | exists |
+| Domain / Repository | new `domain/repository/RegistrationRepository.kt` | `requestCode(form)`, `resendCode(email)`, `verify(email, code): AuthSession`, `proposeTemple(proposal)` | missing |
+| Domain / Use case | new `domain/usecase/onboarding/ResolveLaunchDestinationUseCase.kt`, `CompleteOnboardingUseCase.kt` | Launch destination; set the flag + store the choices; on first install `AuthSessionStore.clear()` | missing |
+| Domain / Use case | new `domain/usecase/onboarding/RequestRegistrationCodeUseCase.kt`, `ResendRegistrationCodeUseCase.kt`, `VerifyRegistrationUseCase.kt` | Validate → repository; verify success → `AuthSessionStore.save` → send the temple proposal (result ignored) | missing |
+| Data / API | new `data/remote/api/RegistrationApiService.kt` | 3 `register/*` routes + `temple-suggestions`; none `@Authenticated` | missing |
+| Data / DTO | new `data/remote/dto/RegistrationDto.kt` (+ mapper) | Per the contract in the header; `phone_number` as typed digits; omit `dharma_name` / `ordination_temple_id` when empty; `resend-otp` body is `{email}` only | missing |
+| Data / Repository | new `data/repository/RegistrationRepositoryImpl.kt` | `safeCall`; maps backend error codes → `RegistrationError` | missing |
+| Data / Repository | `data/repository/TempleOptionRepositoryImpl.kt`, `AdministrativeUnitRepositoryImpl.kt` | Temple list, province/ward | exists |
+| Data / Prefs | `core/datastore/UserPreferences.kt` | `onboardingCompleted` (exists); add `practiceIntents`, `bellTimes` | exists — needs change |
+| DI | new `di/RegistrationModule.kt`; `di/OnboardingModule.kt` (or merged) | Build the API service, repository, use cases; ViewModel factory for Splash / Onboarding / Signup / Otp | missing — ViewModels use `viewModel()` without a factory today |
 
 ## Navigation flow
 
 ```
 SplashRoute (pop)
-  ├─ có phiên            → HomeRoute
-  ├─ chưa xem giới thiệu → OnboardingRoute
-  └─ còn lại             → LoginRoute (gốc, ../Login/)
+  ├─ session stored        → HomeRoute
+  ├─ intro not seen        → OnboardingRoute
+  └─ otherwise             → LoginRoute (root, ../Login/)
 
-OnboardingRoute (pop khi rời, cờ đã bật)
+OnboardingRoute (pop on leaving, flag set)
   ├─ "Tạo tài khoản" / "Bỏ qua" → SignupRoute
   └─ "Tôi đã có tài khoản"      → LoginRoute
 
-SignupRoute  (SignupViewModel giữ form cho cả nhánh)
-  ├─ ô nơi xuất gia → TemplePickerRoute → "Đề xuất chùa" → TempleProposalRoute → pop về Signup
-  ├─ "Đăng nhập"    → LoginRoute (swap như hiện tại)
+SignupRoute  (SignupViewModel keeps the form for the whole branch)
+  ├─ place-of-ordination field → TemplePickerRoute → "Đề xuất chùa" → TempleProposalRoute → pop to Signup
+  ├─ "Đăng nhập"    → LoginRoute (swap as today)
   └─ "Đăng ký" ✓    → OtpRoute
-        ├─ "Đổi email" / đăng ký hết hạn → pop về SignupRoute
-        └─ xác nhận ✓ → HomeRoute, pop toàn bộ luồng (Back thoát app)
+        ├─ "Đổi email" / registration expired → pop to SignupRoute
+        └─ confirmed ✓ → HomeRoute, pop the whole flow (Back exits the app)
 ```
 
-## Step-by-step Flow — Mở app
+## Step-by-step Flow — App launch
 
 ```
-Step 1 — Đọc trạng thái
+Step 1 — Read the state
 - Trigger: SplashViewModel.init.
 - ResolveLaunchDestinationUseCase (dispatchers.io):
-    - cờ onboarding_completed chưa có → AuthSessionStore.clear() (token sót từ lần cài trước) → Onboarding.
+    - onboarding_completed flag missing → AuthSessionStore.clear() (token left from a previous install) → Onboarding.
     - AuthSessionStore.hasSession() → Home.
-    - còn lại → Login.
-- Không gọi mạng; lỗi đọc secure storage → coi như không có phiên (Login).
+    - otherwise → Login.
+- No network call; a secure-storage read failure counts as no session (Login).
 
-Step 2 — Điều hướng
-- Sau thời lượng splash tối thiểu: MainActivity navigate(destination) { popUpTo<SplashRoute>(inclusive) }.
+Step 2 — Navigate
+- After the minimum splash time: MainActivity navigate(destination) { popUpTo<SplashRoute>(inclusive) }.
 ```
 
-## Step-by-step Flow — Đăng ký
+## Step-by-step Flow — Registration
 
 ```
-Step 1 — Gửi form
-- Trigger: "Đăng ký", đã đồng ý điều khoản, RegistrationRules qua hết, không có lần gửi đang chạy.
+Step 1 — Submit the form
+- Trigger: "Đăng ký", terms accepted, RegistrationRules all pass, no submit in flight.
 - API: POST /v1/auth/register/request-otp (public)
-    - 200 → CodeTiming {expiresIn, resendAfter}; sang Step 2. Email đã có tài khoản trả y hệt (tiêu chí 14).
-    - 400 INVALID_* → lỗi dưới field; ở lại.
-    - 409 PHONE_TAKEN → tiêu chí 15; ở lại.
-    - 429 OTP_RESEND_TOO_SOON / OTP_SEND_LIMITED / RATE_LIMITED → câu báo kèm thời gian chờ/giờ mở khoá; ở lại.
-    - 500 EMAIL_SEND_FAILED / 5xx / mất mạng → lỗi chung / không có mạng; ở lại.
+    - 200 → CodeTiming {expiresIn, resendAfter}; go to Step 2. An email that already has an account gets the identical answer (criterion 14).
+    - 400 INVALID_* → error under the field; stay.
+    - 409 PHONE_TAKEN → criterion 15; stay.
+    - 409 REGISTRATION_IN_PROGRESS → criterion 15a: message with details.retry_after_seconds; stay, keep every value.
+    - 429 OTP_RESEND_TOO_SOON / OTP_SEND_LIMITED / RATE_LIMITED → message with the wait/unlock time; stay.
+    - EMAIL_SEND_FAILED / 5xx / no network → generic error / no-network message; stay.
 
-Step 2 — Mở màn nhập mã
-- navigate(OtpRoute); hai bộ đếm chạy từ response, đo bằng ElapsedClock.
+Step 2 — Open the code screen
+- navigate(OtpRoute); both timers run from the response, measured with ElapsedClock.
 
-Step 3 — Gửi lại (lặp được)
-- Trigger: "Gửi lại mã" sau thời gian chờ.
+Step 3 — Resend (repeatable)
+- Trigger: "Gửi lại mã" after the wait.
 - API: POST /v1/auth/register/resend-otp {email}
-    - 200 → xoá ô nhập, chạy lại hai bộ đếm.
-    - 429 OTP_RESEND_TOO_SOON → chạy lại bộ đếm gửi lại từ retry_after_seconds.
-    - 429 OTP_SEND_LIMITED → giờ mở khoá; ô nhập vẫn dùng được.
+    - 200 → clear the input, restart both timers (resend_remaining may be ignored).
+    - 429 OTP_RESEND_TOO_SOON → restart the resend timer from retry_after_seconds.
+    - 429 OTP_SEND_LIMITED → unlock time; the input stays usable.
     - 400 PENDING_REGISTRATION_EXPIRED → Step 5.
 
-Step 4 — Xác nhận
-- Trigger: đủ 6 số, "Xác nhận", ô nhập không bị khoá.
+Step 4 — Confirm
+- Trigger: 6 digits entered, "Xác nhận", input not locked.
 - API: POST /v1/auth/register/verify-otp {email, otp_code}
-    - 201 → AuthSessionStore.save(session) (secure storage + cache token); sang Step 6.
-      Lưu thất bại → "Không lưu được phiên đăng nhập" (tài khoản đã có; người dùng đăng nhập lại được).
-    - 400 OTP_INVALID → báo sai mã, giữ ô nhập.
-    - 400 OTP_EXPIRED → báo hết hạn, nhấn mạnh gửi lại.
-    - 429 OTP_LOCKED → giờ mở khoá, tắt ô nhập tới locked_until.
+    - 201 → AuthSessionStore.save(session) (secure storage + token cache); go to Step 6.
+      Store failure → "Không lưu được phiên đăng nhập" (the account exists; the user can sign in).
+    - 400 OTP_INVALID → wrong-code message, keep the input (also the answer for an email that already has an account).
+    - 400 OTP_EXPIRED → expired message, stress resend.
+    - 429 OTP_LOCKED → unlock time, disable the input until locked_until.
     - 400 PENDING_REGISTRATION_EXPIRED → Step 5.
-    - 409 PHONE_TAKEN (bị lấy trong lúc chờ) → về Signup với lỗi ở ô số điện thoại.
+    - 400 INVALID_TEMPLE (the temple chosen at Step 1 no longer exists) → back to Signup with the error on the place-of-ordination field.
+    - 409 PHONE_TAKEN (taken while waiting) → back to Signup with the error on the phone field.
 
-Step 5 — Đăng ký hết hạn
-- Câu báo của FR-ONB-010; popBackStack về SignupRoute, mọi giá trị giữ nguyên.
+Step 5 — Registration expired
+- Show the FR-ONB-010 message; popBackStack to SignupRoute, every value kept.
 
-Step 6 — Gửi đề xuất chùa (chỉ khi có)
-- API: POST /v1/temple-suggestions (public, không token)
-    - Mọi kết quả → bỏ qua với người dùng.
+Step 6 — Send the temple proposal (only if held)
+- API: POST /v1/temple-suggestions (public, no token)
+    - Any result → ignored as far as the user is concerned.
 - navigate(HomeRoute) { popUpTo<SignupRoute>(inclusive) }.
 ```
 
 ## Local storage
 
-| Dữ liệu | Nơi lưu | Xoá khi đăng xuất? |
+| Data | Where | Cleared on sign-out? |
 |---|---|---|
-| `onboarding_completed`, ý hướng, khung giờ chuông | `UserPreferences` (`PreferencesStorage`) | Không |
-| Token sau khi xác nhận mã | `AuthSessionStore` → `SecureStorage` `DEVICE_UNLOCKED` (`../Login/`) | Có |
-| Form, đề xuất chùa đang giữ | `SignupViewModel` (bộ nhớ, `SavedStateHandle` cho field không nhạy cảm; mật khẩu chỉ trong bộ nhớ) | — |
+| `onboarding_completed`, intentions, bell time | `UserPreferences` (`PreferencesStorage`) | No |
+| Tokens after the code is confirmed | `AuthSessionStore` → `SecureStorage` `DEVICE_UNLOCKED` (`../Login/`) | Yes |
+| Form, held temple proposal | `SignupViewModel` (memory; `SavedStateHandle` for non-sensitive fields; the password only in memory) | — |
 
 ## Deliberately stubbed for now
 
-- Các route `register/*` theo email mới có trong spec backend; cho tới khi backend ship, Android v1.0
-  có thể build và unit test với fake `RegistrationRepository`, E2E chờ backend (innerlamp-be
+- The email `register/*` routes are now in `openapi.yaml` 2.1.1, but the backend changes behind them are
+  uncommitted and untested against a real server (2026-10-16). Until they ship, Android v1.x builds and
+  unit-tests against a fake `RegistrationRepository`; E2E waits for the backend (innerlamp-be
   `docs/specs/features/onboarding/tasks.md`).
-- Điều khoản: giữ nội dung tĩnh hiện tại (BR-ONB-11 phần văn bản dùng chung để sau).
+- Terms: keep today's static content (the shared-text part of BR-ONB-11 comes later).
