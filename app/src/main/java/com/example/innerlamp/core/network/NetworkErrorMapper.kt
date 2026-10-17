@@ -24,11 +24,14 @@ class NetworkErrorMapper(private val json: Json) {
     }
 
     private fun mapHttpException(e: HttpException): AppError {
-        if (e.code() == 401) return AppError.Unauthorized
-
         val body = runCatching { e.response()?.errorBody()?.string() }.getOrNull()
         val envelope = body?.let(::parseEnvelope)
         val detail = envelope?.error
+        // 401 chung (token hết hạn) → Unauthorized; 401 có mã nghiệp vụ riêng
+        // (vd INVALID_CREDENTIALS, REFRESH_TOKEN_INVALID) giữ lại mã để caller phân biệt.
+        if (e.code() == 401 && (detail == null || detail.code == UNAUTHORIZED_CODE)) {
+            return AppError.Unauthorized
+        }
         return if (detail != null) {
             AppError.ApiError(
                 code = detail.code,
@@ -44,4 +47,8 @@ class NetworkErrorMapper(private val json: Json) {
     private fun parseEnvelope(body: String): ApiResponse<JsonElement>? = runCatching {
         json.decodeFromString<ApiResponse<JsonElement>>(body)
     }.getOrNull()
+
+    private companion object {
+        const val UNAUTHORIZED_CODE = "UNAUTHORIZED"
+    }
 }

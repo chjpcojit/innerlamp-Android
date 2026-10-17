@@ -22,11 +22,19 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.innerlamp.di.AuthModule
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -93,6 +101,8 @@ class ProfileCallbacks(
     val onNotifications: () -> Unit = {},
     val onTemple: () -> Unit = {},
     val onTab: (IlBottomTab) -> Unit = {},
+    /** Đã đăng xuất xong (sau khi xác nhận) — mở Login làm gốc. */
+    val onSignedOut: () -> Unit = {},
 )
 
 /**
@@ -109,10 +119,32 @@ class ProfileCallbacks(
 fun ProfileScreen(
     modifier: Modifier = Modifier,
     callbacks: ProfileCallbacks = ProfileCallbacks(),
-    viewModel: ProfileViewModel = viewModel(),
+    viewModel: ProfileViewModel = viewModel(
+        factory = viewModelFactory { initializer { ProfileViewModel(AuthModule.provideSignOutUseCase()) } },
+    ),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    ProfileContent(state = state, callbacks = callbacks, modifier = modifier)
+    var confirmSignOut by rememberSaveable { mutableStateOf(false) }
+    ProfileContent(
+        state = state,
+        callbacks = callbacks,
+        modifier = modifier,
+        onSignOut = { confirmSignOut = true },
+    )
+    if (confirmSignOut) {
+        AlertDialog(
+            onDismissRequest = { confirmSignOut = false },
+            title = { Text("Đăng xuất?") },
+            text = { Text("Bạn sẽ cần đăng nhập lại để dùng các tính năng của tài khoản.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmSignOut = false
+                    viewModel.signOut(callbacks.onSignedOut)
+                }) { Text("Đăng xuất") }
+            },
+            dismissButton = { TextButton(onClick = { confirmSignOut = false }) { Text("Huỷ") } },
+        )
+    }
 }
 
 /** Phần stateless của [ProfileScreen] — dùng cho preview và test. */
@@ -121,6 +153,7 @@ internal fun ProfileContent(
     state: ProfileUiState,
     callbacks: ProfileCallbacks,
     modifier: Modifier = Modifier,
+    onSignOut: () -> Unit = {},
 ) {
     val colors = LocalIlColors.current
     Column(
@@ -163,6 +196,7 @@ internal fun ProfileContent(
             SettingsCard(
                 state = state,
                 callbacks = callbacks,
+                onSignOut = onSignOut,
                 modifier = Modifier.padding(horizontal = 20.dp),
             )
 
@@ -500,6 +534,7 @@ private fun PaywallCard(
 private fun SettingsCard(
     state: ProfileUiState,
     callbacks: ProfileCallbacks,
+    onSignOut: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalIlColors.current
@@ -523,9 +558,9 @@ private fun SettingsCard(
             title = "Chùa của tôi",
             kind = IlSettingKind.Value,
             value = state.templeName,
-            last = true,
             onClick = callbacks.onTemple,
         )
+        IlSettingRow(title = "Đăng xuất", kind = IlSettingKind.Chevron, last = true, onClick = onSignOut)
     }
 }
 

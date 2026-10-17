@@ -4,13 +4,26 @@ import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.example.innerlamp.di.AuthModule
 import com.example.innerlamp.di.CurrentActivityProvider
+import com.example.innerlamp.domain.model.AuthError
+import com.example.innerlamp.domain.model.CodeTiming
+import com.example.innerlamp.ui.navigation.ForgotPasswordRoute
+import com.example.innerlamp.ui.navigation.OtpRoute
+import com.example.innerlamp.ui.navigation.ResetPasswordRoute
+import com.example.innerlamp.ui.screens.forgotpassword.ForgotPasswordScreen
+import com.example.innerlamp.ui.screens.forgotpassword.ResetPasswordScreen
+import com.example.innerlamp.ui.screens.login.LoginNote
+import com.example.innerlamp.ui.screens.otp.OtpScreen
+import com.example.innerlamp.ui.screens.signup.SignupViewModel
+import com.example.innerlamp.ui.screens.signup.signupViewModelFactory
 import com.example.innerlamp.ui.components.IlBottomTab
 import com.example.innerlamp.ui.navigation.AppNavHost
 import com.example.innerlamp.ui.navigation.ArticleListRoute
@@ -106,7 +119,20 @@ class MainActivity : FragmentActivity() {
                 // Vào Home và xoá cả luồng onboarding/đăng nhập khỏi back stack (Back thoát app).
                 val enterHome: () -> Unit = {
                     navController.navigate(HomeRoute) {
-                        popUpTo<OnboardingRoute> { inclusive = true }
+                        popUpTo(navController.graph.id) { inclusive = true }
+                    }
+                }
+                // Mở Login làm gốc và xoá toàn bộ back stack (sau đăng xuất / hết phiên / đổi mật khẩu).
+                val openLoginAsRoot: (LoginRoute) -> Unit = { route ->
+                    navController.navigate(route) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                    }
+                }
+                // Refresh token bị từ chối → xoá dữ liệu tài khoản trên máy, về Login kèm thông báo.
+                LaunchedEffect(Unit) {
+                    AuthModule.sessionEvents.ended.collect {
+                        AuthModule.provideSessionStore().clear()
+                        openLoginAsRoot(LoginRoute(note = LoginNote.SessionExpired.name))
                     }
                 }
                 Box {
@@ -117,9 +143,11 @@ class MainActivity : FragmentActivity() {
                         ilComposable(SplashRoute) {
                             SplashScreen(
                                 onFinished = {
-                                    // Xoá splash khỏi back stack: ấn Back ở onboarding
-                                    // không quay lại splash.
-                                    navController.navigate(OnboardingRoute) {
+                                    // Có phiên đã lưu → vào thẳng Home; không thì onboarding.
+                                    // Xoá splash khỏi back stack: ấn Back không quay lại splash.
+                                    val destination: Any =
+                                        if (AuthModule.provideSessionStore().hasSession()) HomeRoute else OnboardingRoute
+                                    navController.navigate(destination) {
                                         popUpTo<SplashRoute> { inclusive = true }
                                     }
                                 },
@@ -129,22 +157,65 @@ class MainActivity : FragmentActivity() {
                             OnboardingScreen(
                                 onComplete = { navController.navigate(SignupRoute) },
                                 onSkip = { navController.navigate(SignupRoute) },
-                                onLogin = { navController.navigate(LoginRoute) },
+                                onLogin = { navController.navigate(LoginRoute()) },
                             )
                         }
                         ilComposable(SignupRoute) {
                             SignupScreen(
                                 onBack = { navController.popBackStack() },
+                                onOtpSent = { email, timing ->
+                                    navController.navigate(OtpRoute(email, timing.expiresInSeconds, timing.resendAfterSeconds))
+                                },
                                 // Thay signup bằng login để Back từ login không quay lại signup rồi lặp vòng.
                                 onLoginClick = {
-                                    navController.navigate(LoginRoute) {
+                                    navController.navigate(LoginRoute()) {
                                         popUpTo<SignupRoute> { inclusive = true }
                                     }
                                 },
                             )
                         }
-                        ilComposable(LoginRoute) {
+                        ilComposable(OtpRoute(email = "", expiresInSeconds = 0, resendAfterSeconds = 0)) { entry ->
+                            val route = entry.toRoute<OtpRoute>()
+                            // Cùng ViewModel với Signup để "Đổi email" / hết hạn quay về mà giữ nguyên form.
+                            val signupEntry = remember(entry) { navController.getBackStackEntry(SignupRoute) }
+                            val signupViewModel: SignupViewModel = viewModel(signupEntry, factory = signupViewModelFactory())
+                            OtpScreen(
+                                email = route.email,
+                                timing = CodeTiming(route.expiresInSeconds, route.resendAfterSeconds),
+                                onVerified = enterHome,
+                                onBackToSignup = { error: AuthError? ->
+                                    signupViewModel.onReturnedFromOtp(error)
+                                    navController.popBackStack()
+                                },
+                            )
+                        }
+                        ilComposable(ForgotPasswordRoute()) { entry ->
+                            ForgotPasswordScreen(
+                                initialEmail = entry.toRoute<ForgotPasswordRoute>().email,
+                                onCodeSent = { email, timing ->
+                                    navController.navigate(
+                                        ResetPasswordRoute(email, timing.expiresInSeconds, timing.resendAfterSeconds),
+                                    )
+                                },
+                                onBack = { navController.popBackStack() },
+                            )
+                        }
+                        ilComposable(ResetPasswordRoute(email = "", expiresInSeconds = 0, resendAfterSeconds = 0)) { entry ->
+                            val route = entry.toRoute<ResetPasswordRoute>()
+                            ResetPasswordScreen(
+                                email = route.email,
+                                timing = CodeTiming(route.expiresInSeconds, route.resendAfterSeconds),
+                                onPasswordChanged = { email ->
+                                    openLoginAsRoot(LoginRoute(note = LoginNote.PasswordChanged.name, email = email))
+                                },
+                                onBack = { navController.popBackStack() },
+                            )
+                        }
+                        ilComposable(LoginRoute()) { entry ->
+                            val route = entry.toRoute<LoginRoute>()
                             LoginScreen(
+                                note = route.note?.let { name -> LoginNote.entries.firstOrNull { it.name == name } },
+                                prefillEmail = route.email,
                                 onBack = { navController.popBackStack() },
                                 // Thay login bằng signup (ngược với luồng ở trên) để không tạo vòng lặp.
                                 onSignupClick = {
@@ -153,7 +224,7 @@ class MainActivity : FragmentActivity() {
                                     }
                                 },
                                 onLoggedIn = enterHome,
-                                onForgotPassword = { /* TODO: điều hướng sang ForgotRoute khi có màn quên mật khẩu */ },
+                                onForgotPassword = { navController.navigate(ForgotPasswordRoute()) },
                                 // TODO: chế độ xem trước (chưa đăng nhập) — hiện vào thẳng Home như người dùng thường.
                                 onPreviewClick = enterHome,
                             )
@@ -252,6 +323,7 @@ class MainActivity : FragmentActivity() {
                                     },
                                     onSettings = { navController.navigate(SettingsRoute) },
                                     onTemple = { navController.navigate(TempleRoute("tu-quang")) },
+                                    onSignedOut = { openLoginAsRoot(LoginRoute()) },
                                     // TODO(navigation): nối route tương ứng cho các khối còn lại
                                     // (Sửa hồ sơ, Thống kê, Dấu ấn, Cúng dường, Sen Vàng, Chuông
                                     // tỉnh thức, Thông báo) khi các màn đó có.

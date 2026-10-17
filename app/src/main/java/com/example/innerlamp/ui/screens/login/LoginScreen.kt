@@ -44,6 +44,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.innerlamp.di.AuthModule
 import com.example.innerlamp.ui.components.IlAuthCta
 import com.example.innerlamp.ui.components.IlBlurHeaderScaffold
 import com.example.innerlamp.ui.components.IlFieldError
@@ -85,9 +88,19 @@ fun LoginScreen(
     onForgotPassword: () -> Unit = {},
     onSignupClick: () -> Unit = {},
     onPreviewClick: () -> Unit = {},
-    viewModel: LoginViewModel = viewModel(),
+    note: LoginNote? = null,
+    prefillEmail: String? = null,
+    viewModel: LoginViewModel = viewModel(
+        factory = viewModelFactory { initializer { LoginViewModel(AuthModule.provideSignInUseCase()) } },
+    ),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Thông báo đầu form + email điền sẵn đến từ route (hết phiên / vừa đổi mật khẩu).
+    LaunchedEffect(note, prefillEmail) {
+        viewModel.showNote(note)
+        viewModel.prefillEmail(prefillEmail)
+    }
 
     // Đăng nhập xong → điều hướng một lần rồi hạ cờ.
     LaunchedEffect(uiState.loggedIn) {

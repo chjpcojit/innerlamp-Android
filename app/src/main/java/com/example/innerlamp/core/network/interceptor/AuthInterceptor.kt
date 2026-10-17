@@ -2,6 +2,7 @@ package com.example.innerlamp.core.network.interceptor
 
 import com.example.innerlamp.core.network.auth.AuthTokenProvider
 import com.example.innerlamp.core.network.auth.Authenticated
+import com.example.innerlamp.core.network.auth.SessionGeneration
 import okhttp3.Interceptor
 import okhttp3.Response
 import retrofit2.Invocation
@@ -26,14 +27,14 @@ class AuthInterceptor(
         val authedRequest = if (token != null) {
             request.newBuilder()
                 .header("Authorization", "Bearer $token")
+                .tag(SessionGeneration::class.java, SessionGeneration(tokenProvider.currentGeneration()))
                 .build()
         } else {
             // Không có token → gửi trần, để server tự quyết định (thường trả 401).
             request
         }
 
-        // TODO(refresh-token): chừa chỗ cắm refresh khi response 401 ở đây
-        // (thuộc feature auth, chưa implement trong Networking).
+        // 401 được `TokenRefreshAuthenticator` xử lý (refresh một lần rồi retry).
         return chain.proceed(authedRequest)
     }
 }

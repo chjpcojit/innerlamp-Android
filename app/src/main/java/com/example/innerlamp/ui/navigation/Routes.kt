@@ -40,7 +40,24 @@ object SignupRoute : IlDestination
  * Dùng transition mặc định (crossfade).
  */
 @Serializable
-object LoginRoute : IlDestination
+data class LoginRoute(
+    /** Name of a `LoginNote` shown at the top (session ended / password changed). / Tên `LoginNote` hiện đầu form. */
+    val note: String? = null,
+    /** Email to prefill (after a password reset). / Email điền sẵn (sau khi đổi mật khẩu). */
+    val email: String? = null,
+) : IlDestination
+
+/** Màn nhập mã xác thực gửi qua email sau khi đăng ký. Thời hạn lấy từ response của server. */
+@Serializable
+data class OtpRoute(val email: String, val expiresInSeconds: Int, val resendAfterSeconds: Int) : IlDestination
+
+/** Màn quên mật khẩu: nhập email để nhận mã. */
+@Serializable
+data class ForgotPasswordRoute(val email: String = "") : IlDestination
+
+/** Màn đặt mật khẩu mới bằng mã đã gửi qua email. */
+@Serializable
+data class ResetPasswordRoute(val email: String, val expiresInSeconds: Int, val resendAfterSeconds: Int) : IlDestination
 
 /**
  * Trang chủ — tab gốc đầu tiên của bottom nav. Vào từ đăng nhập / "Vào xem trước".

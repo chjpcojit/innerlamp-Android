@@ -1,5 +1,6 @@
 package com.example.innerlamp.ui.screens.signup
 
+import com.example.innerlamp.domain.model.CodeTiming
 import com.example.innerlamp.domain.model.PhoneCountries
 import com.example.innerlamp.domain.model.PhoneCountry
 import com.example.innerlamp.domain.model.TempleOption
@@ -30,6 +31,8 @@ data class SignupUiState(
     val isSubmitting: Boolean = false,
     /** Đã gửi mã xác thực tới email này — screen điều hướng sang OTP rồi hạ cờ. */
     val otpSentTo: String? = null,
+    /** Thời hạn mã theo server, đi kèm [otpSentTo]. */
+    val otpTiming: CodeTiming? = null,
 ) {
     val country: PhoneCountry get() = PhoneCountries.byIso(selectedCountryIso)
 
@@ -49,13 +52,14 @@ data class SignupErrors(
 )
 
 /** Banner lỗi phía trên CTA "Đăng ký". */
-enum class SignupBanner(val title: String, val body: String, val retryable: Boolean) {
-    Network(
-        "Không kết nối được",
-        "Kiểm tra mạng rồi thử lại. Thông tin bạn đã nhập vẫn được giữ nguyên.",
-        retryable = true,
-    ),
-    RateLimited("Bạn đã thử quá nhiều lần", "Vui lòng thử lại sau 15 phút.", retryable = false),
+data class SignupBanner(val title: String, val body: String, val retryable: Boolean) {
+    companion object {
+        val Network = SignupBanner(
+            "Không kết nối được",
+            "Kiểm tra mạng rồi thử lại. Thông tin bạn đã nhập vẫn được giữ nguyên.",
+            retryable = true,
+        )
+    }
 }
 
 /** Lựa chọn ở ô "Nơi xuất gia". */
