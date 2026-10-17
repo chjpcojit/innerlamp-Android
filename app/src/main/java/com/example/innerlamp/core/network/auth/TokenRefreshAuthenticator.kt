@@ -33,8 +33,12 @@ class TokenRefreshAuthenticator(
         val sentHeader = response.request.header(AUTHORIZATION) ?: return null
         if (response.priorResponse != null) return null
         val sentToken = sentHeader.removePrefix(BEARER)
+        // The session may have changed (sign-out / another sign-in) while the request was in flight:
+        // never retry it with another account's token. / Phiên có thể đã đổi: không retry bằng token tài khoản khác.
+        val sentGeneration = response.request.tag(SessionGeneration::class.java)?.value ?: return null
 
         synchronized(lock) {
+            if (sentGeneration != cache.currentGeneration()) return null
             val refreshToken = cache.refreshToken() ?: return null
             val current = cache.currentToken()
             if (current != null && current != sentToken) return retryWith(response, current)

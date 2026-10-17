@@ -13,18 +13,33 @@ class SessionTokenCache : AuthTokenProvider {
     @Volatile
     private var refresh: String? = null
 
+    @Volatile
+    private var generation = 0L
+
     override fun currentToken(): String? = access
+
+    override fun currentGeneration(): Long = generation
 
     fun refreshToken(): String? = refresh
 
+    /** A new session (sign-in / registration / app start): starts a new generation. / Phiên mới: sang generation mới. */
     @Synchronized
     fun set(accessToken: String, refreshToken: String) {
+        generation++
+        access = accessToken
+        refresh = refreshToken
+    }
+
+    /** Replaces the pair after a refresh; same session, same generation. / Thay cặp token sau refresh; cùng phiên. */
+    @Synchronized
+    fun rotate(accessToken: String, refreshToken: String) {
         access = accessToken
         refresh = refreshToken
     }
 
     @Synchronized
     fun clear() {
+        generation++
         access = null
         refresh = null
     }

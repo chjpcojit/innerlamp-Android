@@ -32,9 +32,14 @@ class TokenRefreshAuthenticatorTest {
     private fun authenticator(refresher: TokenRefresher) =
         TokenRefreshAuthenticator(cache, refresher, events, dispatchers)
 
-    private fun response401(bearer: String?, prior: Response? = null): Response {
+    private fun response401(bearer: String?, prior: Response? = null, generation: Long = cache.currentGeneration()): Response {
         val request = Request.Builder().url("https://example.test/v1/x")
-            .apply { bearer?.let { header("Authorization", "Bearer $it") } }
+            .apply {
+                bearer?.let {
+                    header("Authorization", "Bearer $it")
+                    tag(SessionGeneration::class.java, SessionGeneration(generation))
+                }
+            }
             .build()
         return Response.Builder().request(request).protocol(Protocol.HTTP_1_1)
             .code(401).message("Unauthorized").priorResponse(prior).build()
@@ -53,10 +58,12 @@ class TokenRefreshAuthenticatorTest {
 
     @Test
     fun cachedTokenAlreadyChanged_retriesWithoutRefreshing() = runTest {
-        cache.set("newer", "refresh")
+        cache.set("old", "refresh")
+        val response = response401("old")
+        cache.rotate("newer", "refresh") // another call refreshed meanwhile
         val refresher = FakeRefresher(RefreshOutcome.Failed)
 
-        val retry = authenticator(refresher).authenticate(null, response401("old"))
+        val retry = authenticator(refresher).authenticate(null, response)
 
         assertEquals("Bearer newer", retry?.header("Authorization"))
         assertEquals(0, refresher.calls)
@@ -98,9 +105,22 @@ class TokenRefreshAuthenticatorTest {
         cache.set("old", "refresh")
         val refresher = FakeRefresher(RefreshOutcome.Success("new"))
 
-        val retry = authenticator(refresher).authenticate(null, response401("new", prior = response401("old")))
+        val retry = authenticator(refresher).authenticate(null, response401("old", prior = response401("old")))
 
         assertNull(retry)
         assertEquals(0, refresher.calls)
+    }
+
+    @Test
+    fun sessionChangedInFlight_isNotRetriedWithAnotherAccountsToken() = runTest {
+        cache.set("tokenA", "refreshA")
+        val response = response401("tokenA")
+        cache.clear()
+        cache.set("tokenB", "refreshB") // user B signs in while A's request was in flight
+        val refresher = FakeRefresher(RefreshOutcome.Success("new"))
+
+        assertNull(authenticator(refresher).authenticate(null, response))
+        assertEquals(0, refresher.calls)
+        assertEquals("tokenB", cache.currentToken())
     }
 }

@@ -23,8 +23,9 @@ class AuthSessionStoreImpl(
 ) : AuthSessionStore {
 
     override suspend fun save(session: AuthSession): Result<Unit> {
-        val tokens = updateTokens(session.accessToken, session.refreshToken)
+        val tokens = writeTokens(session.accessToken, session.refreshToken)
         if (tokens.isFailure) return tokens
+        cache.set(session.accessToken, session.refreshToken)
         prefs.putLong(KEY_USER_ID, session.user.id)
         prefs.putString(KEY_EMAIL, session.user.email)
         session.user.fullName?.let { prefs.putString(KEY_FULL_NAME, it) } ?: prefs.remove(KEY_FULL_NAME)
@@ -32,7 +33,10 @@ class AuthSessionStoreImpl(
         return Result.success(Unit)
     }
 
-    override suspend fun updateTokens(accessToken: String, refreshToken: String): Result<Unit> {
+    override suspend fun updateTokens(accessToken: String, refreshToken: String): Result<Unit> =
+        writeTokens(accessToken, refreshToken).onSuccess { cache.rotate(accessToken, refreshToken) }
+
+    private suspend fun writeTokens(accessToken: String, refreshToken: String): Result<Unit> {
         val written = secure.put(SecureLevel.DEVICE_UNLOCKED, KEY_ACCESS, accessToken)
             .mapCatching { secure.put(SecureLevel.DEVICE_UNLOCKED, KEY_REFRESH, refreshToken).getOrThrow() }
         if (written.isFailure) {
@@ -40,9 +44,7 @@ class AuthSessionStoreImpl(
             secure.delete(KEY_ACCESS)
             secure.delete(KEY_REFRESH)
             cache.clear()
-            return written
         }
-        cache.set(accessToken, refreshToken)
         return written
     }
 
