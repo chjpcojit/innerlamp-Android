@@ -3,6 +3,10 @@
 Tracks version history for `requirements.md`, `design.md`, and `tasks.md` in this folder. All three
 files share one changelog since they change together as one spec unit. Newest version first.
 
+## v1.0.1 (2026-10-17)
+
+- `design.md`: the Navigation spec was updated (Navigation v1.1), so the "Navigation still says" note and the Navigation items of "Legacy to clean up" are resolved. `requirements.md`, `tasks.md`: no change needed, verified.
+
 ## v1.0 (initial)
 
 - Android layer-2 spec of lighting a lamp and the lamp garden, written prospectively on 2026-10-17 from

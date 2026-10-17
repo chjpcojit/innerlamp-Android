@@ -1,6 +1,6 @@
 # Design — LightLamp
 
-Version: 1.0
+Version: 1.0.1
 Last updated: 2026-10-17
 Status: not started — no lamp screen, route, domain, data or DI exists; the centre bottom-nav button opens the meditation setup. Contract part for the v2.0 changes (optional recipient, `is_mine`) is not in `openapi.yaml` yet, so the UI is built on a fake repository first.
 
@@ -30,8 +30,8 @@ BR-LMP-12) and the end-date formatting (device time zone, BR-LMP-03). The archit
   `onNav(IlBottomTab.Lamp)`. In `MainActivity.kt` the four screens that show the bar (Home, Library, Chùa,
   Profile) each handle `IlBottomTab.Lamp -> navController.navigate(SetupRoute) { launchSingleTop = true }`
   (lines 253, 281, 304, 319 at read time). There is no `BottomNavShell`; each screen draws its own bar.
-- **`../Navigation/` still says the lamp button opens the meditation setup** (requirements, design and
-  tasks); that is the superseded behavior, listed in the report for the cleanup change.
+- **`../Navigation/` v1.1 now says the lamp button opens Thắp đèn** (updated 2026-10-17); the old
+  "opens meditation setup" lines are gone.
 - **Meditation stays reachable** without the button: `HomeCallbacks.onSetup`, `ChuaCallbacks.onMeditate`
   and `TalkCallbacks.onMeditate` all navigate to `SetupRoute` (read in `MainActivity.kt`).
 - **Auth pieces that exist:** `AuthSessionStore.hasSession()`, `@Authenticated` Retrofit calls with
@@ -186,12 +186,8 @@ choices, the typed recipient and prayer, and the chosen chip across rotation and
 - **Guest introduction** reuses `AuthGate` / `SignInPrompt` once `../Login/` builds them; until then a minimal
   introduction local to the lamp screens stands in.
 
-## Legacy to clean up (listed for the later cleanup change; deleted nowhere in this change)
+## Legacy to clean up (the Navigation spec was updated on 2026-10-17; the items below are code and design handoff, left for the implementation change)
 
-- `Docs/Specs/Navigation/requirements.md` (the criterion "WHEN the user taps the lamp button, THE SYSTEM SHALL
-  navigate to the meditation prepare screen"), `design.md` (the `IlBottomNav` row text "nút đèn → màn chuẩn bị thiền",
-  the `BottomNavShell` row, the tree entry "Đèn (SetupRoute — nút đèn giữa)", the `navigation("lamp", start = SetupRoute)`
-  line and the bullet "Nút đèn (Lamp) → SetupRoute"), `tasks.md` (the Phase 3 item "Nút đèn (Lamp) → SetupRoute").
 - `app/src/main/java/com/example/innerlamp/ui/screens/signup/LegalSheet.kt` line 283: the privacy text says prayers are private
   by default and "only shown in the lamp garden when you choose public" — the product shows no prayer in the garden at all
   (BR-LMP-10) and has no public choice.

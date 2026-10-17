@@ -1,7 +1,7 @@
 # Requirements — Navigation
 
-Version: 1.0
-Last updated: 2026-09-25
+Version: 1.1
+Last updated: 2026-10-17
 Status: in-progress — type-safe navigation + transition đã có (Splash/Onboarding); bottom-nav shell, route đầy đủ, modal slide-up còn thiếu
 Feature folder: `app/src/main/java/com/example/innerlamp/ui/navigation/`
 
@@ -70,7 +70,7 @@ lại code nav/transition, và mỗi màn hình tự quyết định animation v
   giữ nguyên stack và vị trí cuộn), và SHALL **không** đẩy tab đó lên đầu stack mới mỗi lần bấm.
 - WHEN người dùng bấm lại tab đang active, THE SYSTEM SHALL pop tab đó về màn gốc của nó (hành vi
   chuẩn bottom-nav), không đẩy thêm bản sao.
-- WHEN người dùng bấm nút đèn (Lamp), THE SYSTEM SHALL điều hướng sang màn chuẩn bị thiền.
+- WHEN the user taps the centre lamp button, THE SYSTEM SHALL open the Thắp đèn (light a lamp) screen; the behavior is specified in `../LightLamp/` and meditation stays reachable from Home and the Meditation area.
 
 ### Modal (prospective)
 
