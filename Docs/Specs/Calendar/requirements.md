@@ -1,284 +1,368 @@
 # Requirements — Calendar
 
-Version: 1.0
-Last updated: 2026-10-15
-Status: in-progress — màn "Lịch lễ Phật giáo" (`ui/screens/festivals/`) và khối "Sự kiện Phật giáo" ở Trang chủ đã chạy, nhưng tính ngày từ danh mục cục bộ trong app (drift BR-CAL-01…07, BR-CAL-05); chưa gọi backend, chưa có màn chi tiết, chưa có bản offline, chưa tải năm sau, chưa lọc theo nhóm/lễ lớn từ dữ liệu
-Feature folder: `app/src/main/java/com/example/innerlamp/ui/screens/festivals/` (tên cũ `festivals`, product §1.5; `ui/screens/calendar/` là màn Lịch âm, không thuộc spec này)
-Product spec: innerlamp-be `docs/product/calendar/product.md` @ v1.1
-Contract: innerlamp-be `docs/specs/api/openapi.yaml` @ 0eb7d1f (info.version 1.0.0; `calendarEvents` vẫn là bản trước v3.0: `bearerAuth`, chưa có `is_major`/`sort_order`/`recurrence`) + thay đổi đã chốt nhưng chưa có trong contract: innerlamp-be `docs/specs/features/calendar/design.md` @ v3.0 (0eb7d1f; backend Phase 14–18)
-Implements: BR-CAL-01, BR-CAL-02, BR-CAL-03, BR-CAL-04, BR-CAL-05, BR-CAL-06, BR-CAL-07 (Android: bỏ tính cục bộ, hiện ngày server trả), BR-CAL-08, BR-CAL-09, BR-CAL-10, BR-CAL-12, BR-CAL-13, BR-CAL-14, BR-CAL-15, FR-CAL-001, FR-CAL-002, FR-CAL-003, FR-CAL-004, FR-CAL-005, FR-CAL-006, FR-CAL-007, FR-CAL-008, NFR-CAL-03
+Version: 1.2
+Last updated: 2026-10-17
+Status: in-progress — the "Lịch lễ Phật giáo" screen (`ui/screens/festivals/`) and the "Sự kiện Phật giáo" block on Home are running, but they compute dates from a catalogue that lives in the app (drift from BR-CAL-01…07, BR-CAL-05); no backend call yet, no detail screen, no offline copy, no next-year loading, no filtering by group / major event from data. The backend contract is now final (2.2.0), so the work is no longer blocked.
+Feature folder: `app/src/main/java/com/example/innerlamp/ui/screens/festivals/` (old name `festivals`, product §1.5; `ui/screens/calendar/` is the lunar calendar screen and is not part of this spec)
+Product spec: innerlamp-be `docs/product/calendar/product.md` @ v1.2
+Contract: innerlamp-be `docs/specs/api/openapi.yaml` @ info.version 2.2.0 (commit 3af0844 on branch `feat/calendar-v3-public-major-via`, pushed in innerlamp-be PR #55, not yet merged (re-cite after merge); `calendarEvents` is final: public, with `is_major` / `sort_order` / `recurrence`). Backend feature spec: innerlamp-be `docs/specs/features/calendar/` @ v3.2 (same commit).
+Implements: BR-CAL-01, BR-CAL-02, BR-CAL-03, BR-CAL-04, BR-CAL-05, BR-CAL-06, BR-CAL-07 (Android: drop local computation, show the dates the server returns), BR-CAL-08, BR-CAL-09, BR-CAL-10, BR-CAL-11, BR-CAL-12, BR-CAL-13, BR-CAL-14, BR-CAL-15, FR-CAL-001, FR-CAL-002, FR-CAL-003, FR-CAL-004, FR-CAL-005, FR-CAL-006, FR-CAL-007, FR-CAL-008, NFR-CAL-03
 
 > See `changelog.md` in this folder for the version history of this spec.
 
-Spec platform (layer 2) của **Sự kiện Phật giáo** cho Android, viết retroactively từ code (đọc ngày
-2026-10-15, `main` @ bebaa9c) và đối chiếu với product spec v1.1. Hành vi sản phẩm nằm ở product spec
-và **không** nhắc lại ở đây; file này chỉ nói app Android hiện thực các `BR-CAL-*`/`FR-CAL-*` thế nào.
+Platform spec (layer 2) of **Buddhist events** for Android, originally written retroactively from the code
+(read on 2026-10-15, `main` @ bebaa9c) and re-synced on 2026-10-17 with product spec v1.2 and contract
+2.2.0. Product behaviour lives in the product spec and is **not** repeated here; this file only says how
+the Android app implements the `BR-CAL-*` / `FR-CAL-*`.
 
-Cột Android `n/a` ở product §4.2 (không thuộc spec này): BR-CAL-11, BR-CAL-16, FR-CAL-009 (website, §3.6),
-FR-CAL-010, NFR-CAL-01, NFR-CAL-02. BR-CAL-14 ghi `n/a` cho Android ở §4.2 nhưng "Applies to" của nó và
-FR-CAL-005 (Android `planned`) đều cần nó — spec này hiện thực BR-CAL-14 cùng màn chi tiết và báo lệch
-cho `ba-writer` (xem changelog, Hand-offs).
+The Android column is `n/a` in product §4.2 (not part of this spec) for: BR-CAL-16 (a turned-off event is
+simply not returned by the server), FR-CAL-009 (website, §3.6), FR-CAL-010, NFR-CAL-01, NFR-CAL-02.
+Since product v1.2, BR-CAL-11 and BR-CAL-14 are `planned` for Android (they were `n/a` in v1.1) and this
+spec implements both (BR-CAL-11 in AC32, BR-CAL-14 in AC15 and AC16).
 
-`Docs/home_assumptions.md` mục #11 bị thay thế bởi product spec (BR-CAL-04, BR-CAL-05) — xem "Open
-questions (resolved)". Spec này không xoá file đó.
+`Docs/home_assumptions.md` item #11 is superseded by the product spec (BR-CAL-04, BR-CAL-05) — see "Open
+questions (resolved)". This spec does not delete that file.
 
-## Ràng buộc từ product spec
+## Constraints from the product spec and the contract
 
-- **Server là nguồn duy nhất của sự kiện và ngày** (§2.5, BR-CAL-01…07, BR-CAL-05): app bỏ danh mục lễ
-  cục bộ, bỏ việc tự tính ngày lễ và tự thêm Rằm / Mùng Một; mọi lần diễn ra, ngày dương, ngày âm, nhóm,
-  cờ lễ lớn đến từ `GET /v1/calendar/events`. `LunarCalendar` vẫn ở lại vì Sổ giỗ (BR-MEM-10) và màn
-  Lịch âm dùng.
-- **Công khai** (FR-CAL-001): không cần phiên, không gắn Bearer, không gửi `X-API-Key` (backend design
-  v3.0 Step 1a: app di động không gửi header này).
-- **Một năm một lần tải, từ năm hiện tại tới 2100** (FR-CAL-002, FR-CAL-004).
-- **Chi tiết dùng năm đã tải**, không có operation chi tiết riêng (Appendix A "Separate detail
+- **The server is the only source of events and dates** (§2.5, BR-CAL-01…07, BR-CAL-05): the app drops
+  the local festival catalogue, stops computing festival dates and stops adding Rằm / Mùng Một itself;
+  every occurrence, solar date, lunar date, group and major flag comes from `GET /v1/calendar/events`.
+  `LunarCalendar` stays because the memorial book (BR-MEM-10) and the lunar calendar screen use it.
+- **Public route** (FR-CAL-001, contract 2.2.0): no session needed, no `Authorization` header (the server
+  ignores it if sent), and the mobile app **must not** send `X-API-Key` — that header is for the website
+  only and a wrong key is rejected with `401 INVALID_API_KEY`. Requests without the key are served and
+  are counted by the per-IP rate limit (below).
+- **Per-IP rate limit** (contract 2.2.0, `calendar.events_rate_limit`, dev: 60 requests/minute): over the
+  limit → `429 RATE_LIMITED` with `details.retry_after_seconds` and a `Retry-After` header. The app
+  therefore loads each year once, caches it (memory + Room) and never refetches a year it has already
+  loaded in the session unless the user taps "Thử lại" (AC31).
+- **One year per load, from the current year to 2100** (FR-CAL-002, FR-CAL-004). The server serves any
+  year in 1900..2100; the app only asks for the current year onward.
+- **Detail uses the loaded year**, there is no separate detail operation (Appendix A "Separate detail
   capability? No").
-- **Bản trên máy** (FR-CAL-007, §3.5 "Device copy"): nội dung công khai, không có dữ liệu cá nhân, thay ở
-  lần tải thành công kế tiếp.
-- **Phụ thuộc backend** (backend design v3.0, chưa triển khai): route công khai (hôm nay còn đòi JWT —
-  Android chưa có phiên thật nên mọi lần gọi sẽ nhận 401), `is_major` (BR-CAL-10), `sort_order`
-  (BR-CAL-12), `recurrence` (tầng 3 của BR-CAL-15), seed có Rằm / Mùng 1 ở `sort_order` cuối và
-  `guidance` một việc một dòng (product Appendix B mục 5). Chuyển Android sang API chỉ bật khi backend
-  Phase 18 đã lên môi trường `dev` (tasks Phase 3).
+- **Device copy** (FR-CAL-007, §3.5 "Device copy"): public content, no personal data, replaced on the next
+  successful load. The app keeps its own Room copy and does **not** use an OkHttp HTTP cache.
+- **Cache-Control** (contract 2.2.0): with `year` the answer is `public, max-age=86400` (dev; it was
+  `private` before 2.2.0); without `year` it is `no-cache`. Android always sends an explicit `year`
+  (AC2) and relies on its own Room cache, so it does not depend on this header.
+- **Fields the app reads** (contract 2.2.0, all required on each `events[]` item): `is_major` (the 10
+  "Lễ lớn" of BR-CAL-10), `sort_order` (integer >= 1, display order within a day; Mùng 1 and Rằm always
+  have the largest value), `recurrence` (`solar`, `lunar`, `lunar_monthly`, `lunar_last_day`,
+  `solar_term`; decoded open-ended, an unknown value maps to `Unknown`). Mùng 1 and Rằm are recognised
+  by `recurrence == lunar_monthly`, never by comparing `code` and never by computing them locally.
+- **Backend content still to be confirmed by editors:** the seed catalogue now has 60 events (it was 51
+  or 54 in earlier documents). The six new events are Buddha / Bodhisattva via-day events (Tỳ Lô Giá Na
+  15/4, Hư Không Tạng 15/1, Kim Cương Thủ 8/4, Lục Độ Mẫu 8/1, Bạch Độ Mẫu 15/10, Kim Cương Tát Đỏa
+  15/7); their dates come from `phat_botat.json` and have **not** been checked against GHPGVN
+  (⚠️ Not confirmed, content owner). The Android app shows whatever the server returns.
+- **Via dates come only from this calendar** (contract 2.2.0, BR-DTY-05): any hard-coded list of via
+  dates of Buddhas / Bodhisattvas in the app must be removed (see `tasks.md` Phase 1 and the note under
+  "Out of scope" about `docs/Specs/Deity`, which this spec does not edit).
 
 ## User Story
 
-Là Phật tử dùng InnerLamp trên Android (khách hay đã đăng nhập), tôi muốn xem các lễ Phật giáo, ngày lễ
-Việt Nam và lễ dân gian của từng năm cùng ngày dương, ngày âm và còn bao lâu, để biết năm nay Phật đản,
-Vu Lan, Rằm… rơi vào ngày nào mà không phải tự tính lịch âm (product §1.3, §2.2).
+As a Buddhist using InnerLamp on Android (guest or signed in), I want to see the Buddhist festivals,
+Vietnamese public holidays and folk festivals of each year with their solar date, lunar date and how many
+days are left, so that I know on which day Phật đản, Vu Lan, Rằm… fall this year without computing the
+lunar calendar myself (product §1.3, §2.2).
 
 ## Acceptance Criteria (EARS notation)
 
-### Truy cập và nguồn dữ liệu
+### Access and data source
 
-1. WHEN khách hoặc người dùng đã đăng nhập mở lịch lễ, chi tiết hay Trang chủ, THE SYSTEM SHALL tải dữ
-   liệu bằng `GET /v1/calendar/events?year=<năm>` **không** gắn `Authorization` và **không** gửi
-   `X-API-Key`, và không bao giờ hiện lời mời đăng nhập ở feature này. (FR-CAL-001)
-2. WHEN app cần sự kiện của một năm, THE SYSTEM SHALL luôn gửi `year` tường minh (không để trống), với
-   năm hiện tại tính theo `Asia/Ho_Chi_Minh`. (FR-CAL-002, platform)
-   > ⚠️ Not confirmed: luôn gửi `year` tường minh thay vì để server tự chọn — mặc định đã chọn: **có**,
-   > để câu trả lời được `Cache-Control: public` (backend E17) và mọi màn dùng cùng một năm; merge PR =
-   > duyệt.
-3. WHEN app hiện một lần diễn ra, THE SYSTEM SHALL lấy ngày dương, ngày âm (kể cả cờ tháng nhuận), tên,
-   nhóm và cờ lễ lớn đúng như server trả, và không tự tính, tự thêm hay tự bỏ lần diễn ra nào — kể cả
-   Rằm và Mùng Một. (BR-CAL-01, BR-CAL-02, BR-CAL-03, BR-CAL-04, BR-CAL-05, BR-CAL-06, BR-CAL-07)
-4. WHEN hiển thị ngày âm của một lần diễn ra, THE SYSTEM SHALL hiện ngày/tháng âm và dấu "(nhuận)" khi
-   `lunar_date.is_leap_month` là `true`, cùng ngày dương, theo BR-CAL-08. (BR-CAL-08)
-5. WHEN gộp nhiều năm hoặc lọc, THE SYSTEM SHALL giữ thứ tự BR-CAL-12 (ngày dương, `sort_order`, `code`)
-   bằng một bộ so sánh dùng chung trong `domain/calendar/`. (BR-CAL-12)
+1. WHEN a guest or a signed-in user opens the festival calendar, a detail or Home, THE SYSTEM SHALL load
+   data with `GET /v1/calendar/events?year=<year>` **without** an `Authorization` header and **without**
+   `X-API-Key`, and SHALL never show a sign-in prompt in this feature. (FR-CAL-001)
+2. WHEN the app needs the events of a year, THE SYSTEM SHALL always send an explicit `year` (never
+   empty), with the current year computed in `Asia/Ho_Chi_Minh`. (FR-CAL-002, platform)
+   > ⚠️ Not confirmed: always send an explicit `year` instead of letting the server choose — default
+   > chosen: **yes**, so that every screen uses the same year and the answer is cacheable
+   > (`Cache-Control: public, max-age=86400` with `year`; contract 2.2.0); merge of the PR = approval.
+3. WHEN the app shows an occurrence, THE SYSTEM SHALL take the solar date, lunar date (including the leap
+   month flag), name, groups, major flag and display order exactly as the server returns them
+   (`is_major`, `sort_order`, `recurrence` included), and SHALL NOT compute, add or drop any occurrence —
+   Rằm and Mùng Một included. (BR-CAL-01, BR-CAL-02, BR-CAL-03, BR-CAL-04, BR-CAL-05, BR-CAL-06,
+   BR-CAL-07)
+4. WHEN showing the lunar date of an occurrence, THE SYSTEM SHALL show the lunar day/month and the mark
+   "(nhuận)" when `lunar_date.is_leap_month` is `true`, together with the solar date, per BR-CAL-08. The
+   leap mark belongs to the lunar date and is never appended to the event name. (BR-CAL-08)
+5. WHEN merging several years or filtering, THE SYSTEM SHALL keep the BR-CAL-12 order (solar date,
+   `sort_order`, `code`) using one shared comparator in `domain/calendar/`. (BR-CAL-12)
 
-### Lịch lễ Phật giáo (danh sách)
+### Festival calendar (list)
 
-6. WHEN người dùng mở lịch lễ (từ "Tất cả" của khối Home, "Lịch lễ" ở tab Chùa, hoặc "Lịch lễ" ở chi
-   tiết Phật/Bồ Tát), THE SYSTEM SHALL mở `FestivalsRoute`, tải năm hiện tại và hiện các lần diễn ra theo
-   tháng dương 1 → 12, cuộn tới tháng hiện tại. (FR-CAL-002)
-7. WHEN hiển thị một dòng của lịch lễ, THE SYSTEM SHALL hiện ngày dương và thứ, tên sự kiện, ngày âm
-   (AC4), nhãn đếm ngược theo BR-CAL-13 (AC21), dấu lễ lớn khi `is_major` (BR-CAL-10) và nhãn tên của
-   từng nhóm của sự kiện, theo tên và thứ tự trong `data.groups` (BR-CAL-09). (FR-CAL-002, BR-CAL-09,
-   BR-CAL-10, BR-CAL-13)
-8. WHEN người dùng chọn một dòng, THE SYSTEM SHALL mở chi tiết của đúng lần diễn ra đó (AC14).
+6. WHEN the user opens the festival calendar (from "Tất cả" of the Home block, "Lịch lễ" on the temple
+   tab, or "Lịch lễ" on the Buddha / Bodhisattva detail), THE SYSTEM SHALL open `FestivalsRoute`, load the
+   current year and show the occurrences by solar month 1 → 12, scrolled to the current month.
+   (FR-CAL-002)
+7. WHEN showing one row of the festival calendar, THE SYSTEM SHALL show the solar day and weekday, the
+   event name, the lunar date (AC4), the countdown label per BR-CAL-13 (AC21), the major mark when
+   `is_major` (BR-CAL-10) and one label for each group of the event, using the names and order in
+   `data.groups` (BR-CAL-09). (FR-CAL-002, BR-CAL-09, BR-CAL-10, BR-CAL-13)
+8. WHEN the user taps a row, THE SYSTEM SHALL open the detail of exactly that occurrence (AC14).
    (FR-CAL-005)
-9. WHEN lịch lễ hiển thị, THE SYSTEM SHALL **không** hiện "chùa tổ chức" (số chùa, chip chùa) và câu giới
-   thiệu nhắc tới chùa — chưa có nguồn dữ liệu (product §1.2). (FR-CAL-002)
+9. WHEN the festival calendar is shown, THE SYSTEM SHALL **not** show "hosting temples" (temple count,
+   temple chips) nor the intro sentence that mentions temples — there is no data source yet (product
+   §1.2). (FR-CAL-002)
 
-### Lọc
+### Filtering
 
-10. WHEN lịch lễ hiển thị, THE SYSTEM SHALL có các chip lọc "Tất cả", "Lễ lớn", rồi một chip cho mỗi nhóm
-    trong `data.groups` theo thứ tự đó, mỗi chip kèm số lần diễn ra khớp trong các năm đã tải; **không**
-    còn chip "Rằm & Mùng Một". (FR-CAL-003, BR-CAL-09, BR-CAL-10)
-11. WHEN người dùng chọn một chip, THE SYSTEM SHALL chỉ hiện các lần diễn ra khớp (lễ lớn = `is_major`;
-    nhóm = sự kiện có mã nhóm đó), ẩn tháng không còn dòng nào, và giữ chip khi tải thêm năm (AC12).
-    (FR-CAL-003)
+10. WHEN the festival calendar is shown, THE SYSTEM SHALL offer the filter chips "Tất cả", "Lễ lớn", then
+    one chip per group in `data.groups`, in that order, each with the count of matching occurrences in
+    the loaded years; there is **no** "Rằm & Mùng Một" chip any more. The Phật giáo group is permanent
+    (BR-CAL-09), the other groups are data and may be added by the back office, so group names and
+    codes other than `buddhist` are never hard-coded. (FR-CAL-003, BR-CAL-09, BR-CAL-10)
+11. WHEN the user selects a chip, THE SYSTEM SHALL show only the matching occurrences (major = `is_major`;
+    group = events that carry that group code), hide months that end up with no row, and keep the chip
+    when more years are loaded (AC12). (FR-CAL-003)
 
-### Tải năm sau
+### Loading the next year
 
-12. WHEN người dùng cuộn tới cuối năm cuối cùng đã tải và năm đó nhỏ hơn 2100, THE SYSTEM SHALL tải năm
-    kế tiếp và nối vào cuối danh sách, rồi:
-    - on success: nối 12 tháng của năm mới, áp chip đang chọn;
-    - on failure có bản trên máy của năm đó: nối bản trên máy kèm câu "có thể chưa cập nhật" (AC24);
-    - on failure không có bản trên máy: giữ nguyên danh sách, hiện hàng "Thử lại" ở cuối; bấm thì tải
-      lại năm đó. (FR-CAL-004, FR-CAL-007)
-13. WHEN năm cuối đã tải là 2100, THE SYSTEM SHALL không tải thêm và không hiện hàng tải thêm; THE SYSTEM
-    SHALL không bao giờ đề nghị năm trước năm hiện tại. (FR-CAL-004)
+12. WHEN the user scrolls to the end of the last loaded year and that year is below 2100, THE SYSTEM SHALL
+    load the next year and append it to the end of the list, then:
+    - on success: append the 12 months of the new year, applying the selected chip;
+    - on failure with a device copy of that year: append the device copy with the "may be out of date"
+      line (AC24);
+    - on failure without a device copy: keep the list as it is and show a "Thử lại" row at the end;
+      tapping it reloads that year. (FR-CAL-004, FR-CAL-007)
+13. WHEN the last loaded year is 2100, THE SYSTEM SHALL not load more and SHALL not show a load-more row;
+    THE SYSTEM SHALL never offer a year before the current year. (FR-CAL-004)
 
-### Chi tiết ngày lễ
+### Festival detail
 
-14. WHEN người dùng mở một lần diễn ra (từ lịch lễ hoặc khối Home), THE SYSTEM SHALL mở
-    `FestivalDetailRoute(eventCode, solarDate)` và lấy sự kiện từ năm của `solarDate` đã tải (bộ nhớ, rồi
-    bản trên máy, rồi tải năm đó nếu chưa có), rồi hiện ảnh, nhãn nhóm và dấu lễ lớn, tên, ngày âm, thẻ
-    ngày dương kèm thứ và đếm ngược, mô tả và "Phật tử thường làm gì". (FR-CAL-005, BR-CAL-08,
-    BR-CAL-10, BR-CAL-13)
-15. WHEN hiển thị mô tả dài và lễ nghi, THE SYSTEM SHALL tách đoạn / mục theo BR-CAL-14 (chỉ theo xuống
-    dòng), hiện lễ nghi thành danh sách đánh số, và ẩn mục rỗng. (BR-CAL-14)
-16. WHEN `image_url` là `null` hoặc ảnh tải lỗi, THE SYSTEM SHALL hiện ảnh mặc định dùng chung.
-    (BR-CAL-14)
-    > ⚠️ Not confirmed: ảnh mặc định dùng chung là ảnh nào trên Android — mặc định đã chọn: dùng lại
-    > placeholder gradient hiện có của Trang chủ (`PlaceholderImage`, `home_assumptions.md` #1) cho tới
-    > khi có ảnh mặc định chung (product §2.7); merge PR = duyệt.
-17. WHEN chi tiết hiển thị, THE SYSTEM SHALL không có mục "Kinh nên tụng", "Chùa tổ chức" hay nút "Nhắc tôi
-    ngày này" (product §1.2), và không có nút sự kiện trước/sau (FR-CAL-009 chỉ website, §3.6); back quay
-    về màn trước. (FR-CAL-005)
-18. WHEN năm của `solarDate` đã có (tải được hoặc bản trên máy) nhưng không có lần diễn ra `eventCode`
-    vào ngày đó, THE SYSTEM SHALL báo không tìm thấy sự kiện và cho quay lại. (FR-CAL-005)
+14. WHEN the user opens an occurrence (from the festival calendar or the Home block), THE SYSTEM SHALL
+    open `FestivalDetailRoute(eventCode, solarDate)` and take the event from the year of `solarDate`
+    (memory, then device copy, then load that year if absent), then show the image, group labels and
+    major mark, name, lunar date, a solar date card with weekday and countdown, the description and "Phật
+    tử thường làm gì". (FR-CAL-005, BR-CAL-08, BR-CAL-10, BR-CAL-13)
+15. WHEN showing the long description and the guidance, THE SYSTEM SHALL split them per BR-CAL-14, on line
+    breaks (`\n`) only and **never** on commas or semicolons: each line of `long_description` is one
+    paragraph; each line of `guidance` is one action, shown as a numbered list (a leading "-", "•" or
+    "*" is dropped). (BR-CAL-14)
+16. WHEN a section's content is empty, THE SYSTEM SHALL hide the section; an empty `long_description` is
+    hidden and SHALL NOT be replaced by the short description. WHEN `image_url` is `null` or the image
+    fails to load, THE SYSTEM SHALL show the shared default image. (BR-CAL-14)
+    > ⚠️ Not confirmed: which image is the shared default on Android — default chosen: reuse the existing
+    > Home gradient placeholder (`PlaceholderImage`, `home_assumptions.md` #1) until a shared default
+    > image exists (product §2.7); merge of the PR = approval.
+17. WHEN the detail is shown, THE SYSTEM SHALL have no "Kinh nên tụng" section, no "Chùa tổ chức" section
+    and no "Nhắc tôi ngày này" button (product §1.2), and no previous/next event buttons (FR-CAL-009 is
+    website only, §3.6); back returns to the previous screen. (FR-CAL-005)
+18. WHEN the year of `solarDate` is available (loaded or device copy) but has no occurrence `eventCode` on
+    that day, THE SYSTEM SHALL report that the event was not found and let the user go back.
+    (FR-CAL-005)
 
-### Khối "Sự kiện Phật giáo" ở Trang chủ
+### "Sự kiện Phật giáo" block on Home
 
-19. WHEN Trang chủ hiển thị, THE SYSTEM SHALL dựng khối theo BR-CAL-15 từ tháng hiện tại (ngày của máy)
-    trong sáu tháng — tải năm hiện tại và, khi cửa sổ sáu tháng sang năm sau, cả năm sau — dùng chung
-    repository với lịch lễ; mỗi tháng chọn dòng và "+N sự kiện khác" bằng hàm thuần
-    `domain/calendar/HomeEventBlock` (tầng 3 nhận ra bằng `recurrence = lunar_monthly`, nhóm Phật giáo
-    bằng mã `buddhist`); tháng không có dòng nào vẫn có thẻ với câu trống; chọn một dòng mở chi tiết
-    (AC14); chọn "Tất cả" hoặc "+N sự kiện khác" mở lịch lễ ở tháng hiện tại. (FR-CAL-006, BR-CAL-10,
-    BR-CAL-12, BR-CAL-15)
-    > ⚠️ Not confirmed (contract): `openapi.yaml` chưa nói mã nhóm `buddhist` là ổn định (chỉ có trong ví
-    > dụ và `rules/home-block.json`) — mặc định đã chọn: hằng `BUDDHIST_GROUP = "buddhist"` trong
-    > `domain/calendar/`; hand-off cho backend ghi rõ trong contract. Merge PR = duyệt mặc định.
+19. WHEN Home is shown, THE SYSTEM SHALL build the block per BR-CAL-15 from the current month in Vietnam
+    time (`Asia/Ho_Chi_Minh`) for six months — loading the current year and, when the six-month window
+    crosses into the next year, the next year too — using the same repository as the festival calendar.
+    For each month the pure function `domain/calendar/HomeEventBlock` picks the rows and "+N sự kiện
+    khác": Buddhist-group occurrences only (group code `buddhist`), at most three, major events first,
+    then other named events, then Rằm and Mùng Một (tier 3 recognised by `recurrence = lunar_monthly`),
+    each tier in BR-CAL-12 order. A month with no row still has a card with the empty message. The block
+    shows **no countdown** (name and lunar date only; the countdown is on the festival calendar and the
+    detail). Choosing a row opens the detail (AC14); choosing "Tất cả" or "+N sự kiện khác" opens the
+    festival calendar at the current month. (FR-CAL-006, BR-CAL-10, BR-CAL-12, BR-CAL-15)
+    > Resolved 2026-10-17 (backend): the code `buddhist` is stable (product BR-CAL-09 v1.2: the Phật giáo
+    > group is permanent). The openapi note about not hard-coding groups concerns display names and groups
+    > the back office may add. Constant `BUDDHIST_GROUP = "buddhist"` in `domain/calendar/`.
 
-### Đếm ngược và ngày đổi
+### Countdown and date change
 
-20. WHEN app quay lại foreground (ON_RESUME) sau khi ngày của máy đã đổi, THE SYSTEM SHALL tính lại đếm
-    ngược ở lịch lễ và chi tiết, và dựng lại khối Home cho tháng mới. (platform)
-21. WHEN hiển thị đếm ngược ở bất kỳ màn nào, THE SYSTEM SHALL dùng một hàm thuần chung
-    `domain/calendar/CalendarCountdown` với "hôm nay" là ngày của máy, cho đúng nhãn của BR-CAL-13.
-    (BR-CAL-13)
+20. WHEN the app returns to the foreground (ON_RESUME) after the date has changed, THE SYSTEM SHALL
+    recompute the countdown in the festival calendar and the detail (device date, BR-CAL-13) and rebuild
+    the Home block for the new month (Vietnam time, BR-CAL-15). (platform)
+21. WHEN showing a countdown on any screen, THE SYSTEM SHALL use one shared pure function
+    `domain/calendar/CalendarCountdown` with "today" being the device date, producing exactly the
+    labels of BR-CAL-13. (BR-CAL-13)
 
-### Offline và lỗi tải
+### Offline and load errors
 
-22. WHEN một năm được tải thành công, THE SYSTEM SHALL ghi nó vào bản trên máy (Room), thay bản cũ của năm
-    đó, và xoá bản của các năm trước năm hiện tại. (FR-CAL-007, platform)
-23. WHEN mở lịch lễ hoặc Trang chủ mà năm cần đã có bản trên máy, THE SYSTEM SHALL hiện bản đó ngay (chưa
-    có câu "có thể chưa cập nhật") trong lúc gọi mạng, rồi thay bằng kết quả mới khi thành công.
-    (NFR-CAL-03, FR-CAL-007)
-    > ⚠️ Not confirmed: hiện bản trên máy trước rồi làm mới (thay vì chờ mạng) — mặc định đã chọn: **có**,
-    > để đạt 0,5 s của NFR-CAL-03; câu "có thể chưa cập nhật" chỉ hiện khi lần gọi mạng thất bại (AC24);
-    > merge PR = duyệt.
-24. WHEN tải một năm thất bại vì bất kỳ lý do nào (không mạng, hết giờ, 5xx, 429, 401 của backend cũ, lỗi
-    parse) và máy có bản của năm đó, THE SYSTEM SHALL hiện bản đó kèm câu "có thể chưa cập nhật" (Error →
-    UI) — ở đầu lịch lễ, ở khối Home, hoặc ở đầu năm được nối từ bản trên máy (AC12). (FR-CAL-007)
-25. WHEN tải năm hiện tại thất bại và máy chưa có bản của năm đó, THE SYSTEM SHALL hiện thông báo lỗi tải
-    kèm nút "Thử lại" — câu riêng khi `AppError.NoConnection`/`Timeout`, câu chung cho lỗi khác; ở khối
-    Home thông báo này thay chỗ các thẻ tháng, khối không biến mất. (FR-CAL-008)
-26. WHEN người dùng bấm "Thử lại" và lần tải thành công, THE SYSTEM SHALL hiện năm hiện tại như AC6 (lịch
-    lễ) hoặc dựng lại khối (Home). (FR-CAL-008)
-27. WHEN cửa sổ sáu tháng của khối Home cần hai năm và chỉ một năm có dữ liệu (mạng hoặc bản trên máy),
-    THE SYSTEM SHALL hiện thẻ của các tháng có dữ liệu và, ở thẻ của tháng thuộc năm không có dữ liệu,
-    thông báo lỗi tải kèm "Thử lại". (FR-CAL-006, FR-CAL-008)
-    > ⚠️ Not confirmed (product): FR-CAL-008 không nói khối Home làm gì khi chỉ tải được một trong hai năm
-    > — mặc định Android: báo lỗi trên từng thẻ tháng thiếu dữ liệu như trên; hand back to ba-writer in
-    > innerlamp-be.
-28. WHEN app nhận 401 từ `GET /v1/calendar/events` (backend chưa lên v3.0), THE SYSTEM SHALL coi là lỗi tải
-    như AC24/AC25, không xoá phiên, không mời đăng nhập. (FR-CAL-001, platform)
+22. WHEN a year is loaded successfully, THE SYSTEM SHALL write it to the device copy (Room), replacing the
+    previous copy of that year, and delete the copies of years before the current year. (FR-CAL-007,
+    platform)
+23. WHEN opening the festival calendar or Home while the needed year already has a device copy, THE
+    SYSTEM SHALL show that copy immediately (without the "may be out of date" line) while the network
+    call runs, then replace it with the fresh result on success. (NFR-CAL-03, FR-CAL-007)
+    > ⚠️ Not confirmed: show the device copy first, then refresh (instead of waiting for the network) —
+    > default chosen: **yes**, to meet the 0.5 s of NFR-CAL-03; the "may be out of date" line only shows
+    > when the network call fails (AC24); merge of the PR = approval.
+24. WHEN loading a year fails for any reason (no network, timeout, 5xx, 429, an unexpected 401, parse
+    error) and the device has a copy of that year, THE SYSTEM SHALL show that copy with the line "Dữ
+    liệu có thể chưa được cập nhật." (Error → UI) — at the top of the festival calendar, on the Home
+    block, or at the start of the year appended from the device copy (AC12). (FR-CAL-007)
+25. WHEN loading the current year fails and the device has no copy of that year, THE SYSTEM SHALL show a
+    load-error message with a "Thử lại" button — its own line for `AppError.NoConnection` / `Timeout`, a
+    general line for other errors, and the rate-limit line of AC31 for 429; on the Home block this
+    message replaces the month cards, the block does not disappear. (FR-CAL-008)
+26. WHEN the user taps "Thử lại" and the load succeeds, THE SYSTEM SHALL show the current year as in AC6
+    (festival calendar) or rebuild the block (Home). (FR-CAL-008)
+27. WHEN the six-month window of the Home block needs two years and only one has data (network or device
+    copy), THE SYSTEM SHALL show the cards of the months that have data and, on the cards of the months
+    of the year without data, the load-error message with "Thử lại". (FR-CAL-006, FR-CAL-008,
+    BR-CAL-15)
+28. WHEN the app receives 401 from `GET /v1/calendar/events`, THE SYSTEM SHALL treat it as an unexpected
+    failure (the route is public and the app sends neither `Authorization` nor `X-API-Key`, so a 401
+    means something is wrong, for example a proxy or a wrong environment), handle it like any other
+    generic load failure (AC24 / AC25), not clear the session and not prompt for sign-in. (FR-CAL-001,
+    platform)
 
-### Hiệu năng và kiểm thử
+### Performance and testing
 
-29. WHEN mở lịch lễ của năm hiện tại trên mạng 4G, THE SYSTEM SHALL hiện danh sách trong vòng 2 giây; khi
-    có bản trên máy, trong vòng 0,5 giây (AC23). (NFR-CAL-03)
-30. WHEN chạy unit test, THE SYSTEM SHALL qua mọi case của innerlamp-be
-    `docs/product/calendar/rules/countdown.json`, `rules/ordering.json` và `rules/home-block.json`;
-    `rules/event-placement.json` chỉ dành cho backend (product §4.1). (BR-CAL-12, BR-CAL-13, BR-CAL-15)
+29. WHEN opening the festival calendar of the current year on a 4G network, THE SYSTEM SHALL show the list
+    within 2 seconds; with a device copy, within 0.5 seconds (AC23). (NFR-CAL-03)
+30. WHEN unit tests run, THE SYSTEM SHALL pass every case of innerlamp-be
+    `docs/product/calendar/rules/countdown.json`, `rules/ordering.json` and `rules/home-block.json`;
+    `rules/event-placement.json` is for the backend only (product §4.1). (BR-CAL-12, BR-CAL-13,
+    BR-CAL-15)
 
-### Hiện trạng code so với từng AC (đọc ngày 2026-10-15)
+### Rate limit and public holidays (added in v1.2)
 
-| AC | Hiện trạng | Ghi chú |
+31. WHEN `GET /v1/calendar/events` returns `429 RATE_LIMITED`, THE SYSTEM SHALL treat it as a distinct
+    case (not as a generic HTTP error): show a retry-later message that tells the user to wait, using
+    `details.retry_after_seconds` (or the `Retry-After` header) for the waiting time when present, and
+    SHALL NOT retry automatically in a loop — only the user's "Thử lại" triggers another call. With a
+    device copy the copy is shown as in AC24; without one, the message with "Thử lại" is shown as in
+    AC25. (FR-CAL-008, platform)
+    > ⚠️ Not confirmed (product): the §3.1.1 messages table has no line for a rate limit. Default chosen:
+    > "Bạn thao tác quá nhanh. Vui lòng đợi {n} giây rồi thử lại." (EN gloss: "You are going too fast.
+    > Please wait {n} seconds and try again."), and "Vui lòng đợi một lát rồi thử lại." when
+    > `retry_after_seconds` is absent; hand back to ba-writer in innerlamp-be to fix the copy for all
+    > platforms.
+32. WHEN showing an occurrence whose `is_public_holiday` is `true`, THE SYSTEM SHALL mark it as a public
+    holiday on that occurrence's own day only, and SHALL NOT show any substitute day off (nghỉ bù) —
+    the app derives no holiday from other days and adds no occurrence for them. (BR-CAL-11)
+
+### Current state of the code against each AC (read on 2026-10-15, unchanged in v1.2)
+
+| AC | Current state | Note |
 |---|---|---|
-| 1 | lệch | Không gọi API; khách xem được (FR-CAL-001 `done` chỉ vì dữ liệu là cục bộ) |
-| 2, 3 | chưa có | `GetBuddhistEventMonthsUseCase` có 19 lễ vía cố định + tự thêm Rằm/Mùng Một mỗi ngày âm 15/1 — **drift BR-CAL-01…07, BR-CAL-05**; chỉ có sự kiện Phật giáo (**drift BR-CAL-09**) |
-| 4 | lệch | `lunarLabel` = "d/m âm lịch", **không có "(nhuận)"** (Rằm/Mùng Một tháng nhuận vẫn hiện) |
-| 5 | chưa có | Thứ tự theo ngày, mỗi ngày tối đa một sự kiện (lễ vía thắng Rằm/Mùng Một cùng ngày) |
-| 6 | lệch | `FestivalsRoute` có, vào từ Home/Chùa/Phật ✓, cuộn tới tháng hiện tại ✓; nhưng tải sẵn **3 năm** (tháng 1 năm nay → hết năm thứ ba), không theo năm, tháng không có sự kiện bị bỏ |
-| 7 | lệch | Có ngày + thứ, tên, ngày âm, đếm ngược; **không có nhãn nhóm**; ngày tô màu theo `isFestival` (mọi lễ có tên), không theo cờ lễ lớn |
-| 8 | chưa có | Dòng không bấm được (chỉ chip chùa bấm được) |
-| 9 | lệch | Mỗi dòng hiện "N chùa tổ chức" + chip chùa từ dữ liệu mẫu (`GetFestivalCalendarUseCase.hostsFor`) và câu giới thiệu về chùa |
-| 10, 11 | lệch | Chip "Tất cả" / "Lễ lớn" / "Rằm & Mùng Một"; "Lễ lớn" thực ra lọc `isFestival` (mọi lễ có tên), `MAJOR_KEYS` (8 key) chỉ dùng để chọn chùa mẫu; không có chip nhóm, không có số đếm |
-| 12, 13 | chưa có | Không tải thêm năm; không có giới hạn 2100 |
-| 14–18 | chưa có | Không có màn chi tiết |
-| 19 | lệch | `EventsSection` có carousel thẻ tháng, tối đa 3 dòng, "+N sự kiện khác", "Tất cả" ✓; nhưng **12 tháng của năm dương** (không phải 6 tháng từ tháng hiện tại), **không chia tầng**, dòng bấm vào mở lịch lễ (không mở chi tiết) |
-| 22–28 | chưa có | Không có tải mạng, bản trên máy, lỗi tải hay thử lại |
-| 20 | chưa có | "Hôm nay" chốt lúc dựng ViewModel (`home_assumptions.md` #7) |
-| 21 | ✓ phần lớn | `FestivalsUiState.countdown` đúng logic BR-CAL-13; chữ "còn N ngày" viết thường (product "Còn n ngày"); chưa đối chiếu vector |
-| 29 | chưa đo | |
-| 30 | chưa có | `FestivalsViewModelTest`, `GetBuddhistEventMonthsUseCaseTest` test danh mục cục bộ, chưa chạy vector |
+| 1 | drift | No API call; a guest can view it (FR-CAL-001 `done` only because the data is local) |
+| 2, 3 | missing | `GetBuddhistEventMonthsUseCase` has 19 fixed via days + adds Rằm/Mùng Một on every lunar day 15/1 itself — **drift from BR-CAL-01…07, BR-CAL-05**; only Buddhist events (**drift from BR-CAL-09**) |
+| 4 | drift | `lunarLabel` = "d/m âm lịch", **no "(nhuận)"** (Rằm/Mùng Một of a leap month still shown) |
+| 5 | missing | Ordered by day, at most one event per day (a via festival beats Rằm/Mùng Một on the same day) |
+| 6 | drift | `FestivalsRoute` exists, entry from Home/Temple/Buddha ✓, scroll to the current month ✓; but it preloads **3 years** (January this year → end of the third year), not per year, and months without events are dropped |
+| 7 | drift | Has day + weekday, name, lunar date, countdown; **no group label**; the day is coloured by `isFestival` (every named festival), not by the major flag |
+| 8 | missing | Rows are not tappable (only the temple chip is) |
+| 9 | drift | Each row shows "N chùa tổ chức" + temple chips from sample data (`GetFestivalCalendarUseCase.hostsFor`) and an intro sentence about temples |
+| 10, 11 | drift | Chips "Tất cả" / "Lễ lớn" / "Rằm & Mùng Một"; "Lễ lớn" actually filters `isFestival` (every named festival); `MAJOR_KEYS` (8 keys, which does not match the 10 of BR-CAL-10) is only used to pick sample temples — it is **deleted, not ported**; no group chips, no counts |
+| 12, 13 | missing | No next-year loading; no 2100 limit |
+| 14–18 | missing | No detail screen |
+| 19 | drift | `EventsSection` has a month-card carousel, at most 3 rows, "+N sự kiện khác", "Tất cả" ✓; but **12 months of the solar year** (not 6 months from the current month), **no tiers**, a row opens the festival calendar (not the detail) |
+| 22–28, 31 | missing | No network load, device copy, load error or retry |
+| 20 | missing | "Today" is fixed when the ViewModel is built (`home_assumptions.md` #7) |
+| 21 | mostly ✓ | `FestivalsUiState.countdown` follows BR-CAL-13; the "còn N ngày" text is lower case (product "Còn n ngày"); not checked against the vectors |
+| 29 | not measured | |
+| 30 | missing | `FestivalsViewModelTest`, `GetBuddhistEventMonthsUseCaseTest` test the local catalogue, vectors not run |
+| 32 | missing | Nothing shows `is_public_holiday` yet; no code derives substitute days either (to be confirmed when the list row is built) |
 
-## Dữ liệu & API
+## Data & API
 
-Nguồn đúng là `openapi.yaml` (operation `calendarEvents`) và backend `design.md` v3.0 cho phần chưa vào
-contract; không chép schema ở đây.
+The source of truth is `openapi.yaml` (operation `calendarEvents`, contract 2.2.0); the schema is not
+copied here.
 
-| Thao tác | Operation (openapi) | Auth | Lưu cục bộ | Ghi chú |
+| Operation | Operation (openapi) | Auth | Local storage | Note |
 |---|---|---|---|---|
-| Tải một năm | `GET /v1/calendar/events?year=YYYY` (`calendarEvents`) | public — không Bearer, không `X-API-Key` | Room: bản của năm đó (thay toàn bộ) | Hôm nay contract còn `bearerAuth` → 401; v3.0 bỏ (backend E4). `year` luôn tường minh (AC2) |
-| Cờ lễ lớn, thứ tự hiển thị, loại quy tắc | `events[].is_major`, `sort_order`, `recurrence` | — | trong bản của năm | ⚠️ Not confirmed (contract): chưa có trong `openapi.yaml` @ 0eb7d1f, đã chốt ở backend design v3.0 (E13) — chặn AC5, AC7 (dấu lễ lớn), AC10–AC11 ("Lễ lớn"), AC19, AC30 (dữ liệu thật) |
-| Chi tiết | — (dùng năm đã tải) | — | đọc bản của năm | Không có operation riêng (product Appendix A) |
-| Ảnh sự kiện | `events[].image_url` (có thể `null`) | — | Coil cache | Seed hiện để `null` → ảnh mặc định (AC16) |
+| Load one year | `GET /v1/calendar/events?year=YYYY` (`calendarEvents`) | public — no Bearer, no `X-API-Key` | Room: the copy of that year (full replace) | Final since 2.2.0 (commit 3af0844, innerlamp-be PR #55 not yet merged). `year` always explicit (AC2). Per-IP limit → `429 RATE_LIMITED` (AC31) |
+| Major flag, display order, rule kind | `events[].is_major`, `sort_order`, `recurrence` | — | inside the copy of the year | Required fields since 2.2.0. `recurrence` decoded open-ended (unknown → `Recurrence.Unknown`). Rằm / Mùng Một = `lunar_monthly` |
+| Content lines | `events[].long_description`, `events[].guidance` | — | inside the copy of the year | One paragraph / action per `\n`-separated line (AC15) |
+| Detail | — (uses the loaded year) | — | reads the copy of the year | No separate operation (product Appendix A) |
+| Event image | `events[].image_url` (may be `null`) | — | Coil cache | Seed still has `null` → default image (AC16) |
 
 ## Error → UI mapping
 
-Product spec v1.1 không có bảng câu chữ cho feature này; câu tiếng Việt dưới là mặc định Android.
+The Vietnamese strings are the shared copy of product spec v1.2 §3.1.1 (messages table, approved
+2026-10-15); only the lines marked ⚠️ are Android defaults.
 
-> ⚠️ Not confirmed (product): câu chữ cho bản trên máy, lỗi tải (mất mạng / lỗi khác), "Thử lại", không
-> tìm thấy sự kiện và tháng trống ở khối Home — product chỉ mô tả ý nghĩa (FR-CAL-005, FR-CAL-007,
-> FR-CAL-008, BR-CAL-15). Mặc định Android là các câu trong cột "User sees"; hand back to ba-writer in
-> innerlamp-be để chốt câu chung cho bốn nền tảng.
+> ⚠️ Not confirmed (product): the §3.1.1 table has no line for the rate limit (AC31) and no label for the
+> back action of the not-found state ("Quay lại"); the Android defaults are in the "User sees" column;
+> hand back to ba-writer in innerlamp-be.
 
-| Operation | Failure case | User sees | Hiện trạng code |
+| Operation | Failure case | User sees | Current code |
 |---|---|---|---|
-| `GET /v1/calendar/events` (năm hiện tại) | Mọi lỗi, có bản trên máy | Bản trên máy + "Dữ liệu đã lưu trên máy, có thể chưa cập nhật." (AC24) | chưa có |
-| `GET /v1/calendar/events` (năm hiện tại) | `AppError.NoConnection` / `Timeout`, không có bản | "Không có kết nối mạng. Kiểm tra mạng rồi thử lại." + "Thử lại" (AC25) | chưa có |
-| `GET /v1/calendar/events` (năm hiện tại) | 5xx / `HttpError` (kể cả 429) / `Unauthorized` (backend cũ) / `ApiError` / `Serialization` / `Unknown`, không có bản | "Chưa tải được lịch lễ. Vui lòng thử lại." + "Thử lại" (AC25, AC28) | chưa có |
-| `GET /v1/calendar/events` (năm kế tiếp) | Mọi lỗi, không có bản | Danh sách giữ nguyên, hàng cuối "Chưa tải được năm YYYY · Thử lại" (AC12) | chưa có |
-| `GET /v1/calendar/events` (khối Home) | Như hai dòng năm hiện tại | Câu tương ứng thay chỗ các thẻ (hoặc trên thẻ tháng thiếu dữ liệu, AC27) + "Thử lại" | chưa có (lỗi hiện không thể xảy ra vì dữ liệu cục bộ) |
-| (local) chi tiết | Không có lần diễn ra `eventCode` ngày `solarDate` trong năm đó | "Không tìm thấy sự kiện này." + "Quay lại" (AC18) | chưa có |
-| (local) chi tiết | Năm của `solarDate` không tải được và không có bản | Như dòng lỗi tải năm hiện tại, "Thử lại" tải lại năm đó | chưa có |
-| (local) khối Home | Tháng không có sự kiện nhóm Phật giáo | Thẻ tháng với "Tháng này chưa có sự kiện Phật giáo." (AC19) | chưa có |
-| (local) ảnh | `image_url` `null` hoặc tải lỗi | Ảnh mặc định (AC16) | chưa có |
+| `GET /v1/calendar/events` (current year) | Any failure, device copy exists | Device copy + "Dữ liệu có thể chưa được cập nhật." (AC24) | missing |
+| `GET /v1/calendar/events` (current year) | `AppError.NoConnection` / `Timeout`, no copy | "Không có kết nối mạng. Vui lòng kiểm tra và thử lại." + "Thử lại" (AC25) | missing |
+| `GET /v1/calendar/events` (current year) | `429 RATE_LIMITED`, no copy | ⚠️ "Bạn thao tác quá nhanh. Vui lòng đợi {n} giây rồi thử lại." ("Vui lòng đợi một lát rồi thử lại." when no `retry_after_seconds`) + "Thử lại"; no automatic retry (AC31) | missing |
+| `GET /v1/calendar/events` (current year) | 5xx / other `HttpError` / `Unauthorized` (401, unexpected) / `ApiError` / `Serialization` / `Unknown`, no copy | "Không tải được lịch lễ." + "Thử lại" (AC25, AC28) | missing |
+| `GET /v1/calendar/events` (next year) | Any failure, no copy | List unchanged, last row "Không tải được năm {year}." + "Thử lại" (AC12) | missing |
+| `GET /v1/calendar/events` (Home block) | Same as the current-year rows | The matching line replaces the cards (or sits on the month cards missing data, AC27) + "Thử lại" | missing (a failure cannot happen today because the data is local) |
+| (local) detail | No occurrence `eventCode` on `solarDate` in that year | "Không tìm thấy ngày lễ này." + ⚠️ "Quay lại" (AC18) | missing |
+| (local) detail | Year of `solarDate` cannot be loaded and no copy | Same as the current-year load-error rows, "Thử lại" reloads that year | missing |
+| (local) Home block | Month with no Buddhist event | Month card with "Tháng này không có ngày lễ Phật giáo." (AC19) | missing |
+| (local) image | `image_url` `null` or load error | Default image (AC16) | missing |
 
-`400 INVALID_YEAR` không thể xảy ra (app chỉ gửi năm hiện tại → 2100); nếu có, xử lý như lỗi khác.
+`400 INVALID_YEAR` cannot happen (the app only sends the current year → 2100); if it does, handle it like
+any other failure.
 
 ## Out of scope
 
-- Màn Lịch âm (`ui/screens/calendar/` — `CalScreen`, `LunarDetailScreen`), chấm Rằm · Mùng Một ở dải tuần
-  của Trang chủ, ảnh Phật theo ngày — cùng slug nhưng là product v1.x (§1.2). Các chỗ này vẫn dùng
-  `LunarCalendar` cục bộ. Báo `ba-writer` xem BR-CAL-05 ("clients stop computing them") có áp cho chúng
-  khi viết v1.x không.
-- Sự kiện của chùa (`EventsRoute`, "Khóa tu & lễ sắp tới") — feature sangha.
-- Nhắc một ngày lễ ("Nhắc tôi ngày này", nút "Nhắc tôi" ở tab Chùa) — product §1.2, sẽ dùng ADR-0001.
-- Kinh nên tụng, chùa tổ chức trên chi tiết hay danh sách (§1.2).
-- Sự kiện trước/sau trên chi tiết (FR-CAL-009, website, §3.6).
-- Ngày nghỉ lễ / nghỉ bù (BR-CAL-11 cột Android `n/a`), sự kiện bị tắt (BR-CAL-16 — server không trả).
-- Năm trước năm hiện tại (FR-CAL-004).
-- Nội dung ngoài tiếng Việt (§1.2).
+- The lunar calendar screen (`ui/screens/calendar/` — `CalScreen`, `LunarDetailScreen`), the Rằm · Mùng
+  Một dot on Home's week strip, the daily Buddha image — same slug but product v1.x (§1.2). These still
+  use the local `LunarCalendar`. Ask `ba-writer` whether BR-CAL-05 ("clients stop computing them")
+  applies to them when v1.x is written.
+- Temple events (`EventsRoute`, "Khóa tu & lễ sắp tới") — sangha feature.
+- Reminding a festival ("Nhắc tôi ngày này", the "Nhắc tôi" button on the temple tab) — product §1.2, will
+  use ADR-0001.
+- Sutras to chant, hosting temples on the detail or the list (§1.2).
+- Previous/next event on the detail (FR-CAL-009, website, §3.6).
+- Substitute days off (nghỉ bù): the app never shows them (BR-CAL-11, AC32) — there is nothing to build
+  beyond not deriving them; turned-off events (BR-CAL-16) — the server does not return them.
+- Years before the current year (FR-CAL-004).
+- Content in languages other than Vietnamese (§1.2).
+- The hard-coded via-date list of Buddhas / Bodhisattvas (BR-DTY-05): the Deity spec
+  (`docs/Specs/Deity`) is owned by another change and is **not** edited here. Cross-reference: once this
+  calendar is the source of via dates (60-event catalogue, contract 2.2.0), the Deity feature must read
+  via dates from `calendarEvents` and remove its own list; `tasks.md` Phase 1 records the dependency.
 
 ## Pending (not yet implemented)
 
-- Bỏ danh mục và cách tính cục bộ; tải qua API với bản trên máy (AC1–AC5, AC22–AC28) — `tasks.md`
-  Phase 1, Phase 3; chặn bởi backend v3.0 (route công khai, `is_major`, `sort_order`, `recurrence`).
-- Lịch lễ theo năm + tải năm sau tới 2100, nhãn nhóm, dấu lễ lớn, bỏ chùa tổ chức (AC6–AC13) — Phase 2.
-- Màn chi tiết (AC14–AC18) — Phase 2.
-- Khối Home theo BR-CAL-15, dòng mở chi tiết (AC19, AC27) — Phase 1, Phase 2.
-- Tính lại khi đổi ngày (AC20) — Phase 2.
-- Khối "Ngày lễ & ngày chay sắp tới" ở tab Chùa đổi nguồn (⚠️ product, xem design.md) — Phase 2.
-- Vector và đo hiệu năng (AC29, AC30) — Phase 4.
+- Drop the local catalogue and calculation; load through the API with a device copy (AC1–AC5, AC22–AC28,
+  AC31) — `tasks.md` Phase 1, Phase 3. No longer blocked: the contract is final (2.2.0); the only
+  external dependency is that the backend commit 3af0844 is not pushed yet, so it cannot be cited by
+  others until merged.
+- Festival calendar per year + load next years up to 2100, group labels, major mark, no hosting temples
+  (AC6–AC13) — Phase 2.
+- Detail screen (AC14–AC18) — Phase 2.
+- Home block per BR-CAL-15, rows open the detail (AC19, AC27) — Phase 1, Phase 2.
+- Recompute on date change (AC20) — Phase 2.
+- Public-holiday rule (AC32) — Phase 2.
+- The "Ngày lễ & ngày chay sắp tới" block on the temple tab changes source (⚠️ product, see design.md) —
+  Phase 2.
+- Vectors and performance measurement (AC29, AC30), tests for AC31 and AC32 — Phase 4.
 
 ## Open questions (resolved)
 
-Theo product spec v1.1 (2026-10-15):
+Per product spec v1.1 (2026-10-15) and v1.2 (2026-10-17):
 
-- ~~`home_assumptions.md` #11: ngày 30 âm của tháng thiếu tính là 29; tháng nhuận không lặp lại lễ vía;
-  Rằm/Mùng Một tháng nhuận vẫn là ngày trai~~ → server tính theo BR-CAL-04 (ngày 30 không có ở tháng
-  thiếu trừ sự kiện "ngày cuối tháng"; lễ không lặp ở tháng nhuận) và BR-CAL-05 (Rằm / Mùng Một có cả
-  tháng nhuận, chỉ đến từ danh mục). Android không còn quy tắc nào của mục này (AC3). Resolved 2026-10-15.
-- ~~Danh sách lễ lớn cố định `MAJOR_KEYS` (8 key)~~ → cờ `is_major` từ dữ liệu, 10 sự kiện ban đầu
-  (BR-CAL-10) → AC7, AC10, AC11. Resolved 2026-10-15.
-- ~~Chỉ hiện sự kiện Phật giáo~~ → lịch lễ hiện mọi nhóm có chip lọc; khối Home chỉ nhóm Phật giáo
-  (BR-CAL-09, BR-CAL-15) → AC10, AC19. Resolved 2026-10-15.
-- ~~Lịch lễ cần đăng nhập?~~ → công khai (FR-CAL-001) → AC1. Resolved 2026-10-15.
-- ~~Năm nào xem được~~ → năm hiện tại trở đi, từng năm, tới 2100 (FR-CAL-004) → AC12, AC13. Resolved
-  2026-10-15.
-- ~~Chi tiết cần operation riêng?~~ → không, dùng năm đã tải (product Appendix A) → AC14. Resolved
-  2026-10-15.
-- ~~Chùa tổ chức, kinh nên tụng, nhắc~~ → ngoài v1.0 (§1.2) → AC9, AC17. Resolved 2026-10-15.
+- ~~`home_assumptions.md` #11: lunar day 30 of a short month counts as 29; a leap month does not repeat
+  via festivals; Rằm/Mùng Một of a leap month are still fast days~~ → the server computes per BR-CAL-04
+  (day 30 does not exist in a short month except for "last day of the month" events; festivals do not
+  repeat in a leap month) and BR-CAL-05 (Rằm / Mùng Một exist in a leap month too, and only come from
+  the catalogue). Android no longer has any rule of this item (AC3). Resolved 2026-10-15.
+- ~~Fixed list of major festivals `MAJOR_KEYS` (8 keys)~~ → the `is_major` flag from data, 10 initial
+  events (BR-CAL-10) → AC7, AC10, AC11; `MAJOR_KEYS` is deleted, not ported. Resolved 2026-10-15.
+- ~~Show Buddhist events only~~ → the festival calendar shows every group with filter chips; the Home
+  block only the Phật giáo group (BR-CAL-09, BR-CAL-15) → AC10, AC19. Resolved 2026-10-15.
+- ~~Does the festival calendar need sign-in?~~ → public (FR-CAL-001) → AC1; route public in contract
+  2.2.0 → AC28. Resolved 2026-10-15 / 2026-10-17.
+- ~~Which years can be viewed~~ → current year onward, one year at a time, up to 2100 (FR-CAL-004) →
+  AC12, AC13. Resolved 2026-10-15.
+- ~~Does the detail need its own operation?~~ → no, it uses the loaded year (product Appendix A) → AC14.
+  Resolved 2026-10-15.
+- ~~Hosting temples, sutras, reminders~~ → outside v1.0 (§1.2) → AC9, AC17. Resolved 2026-10-15.
+- ~~Copy for out-of-date / offline / failure / retry / empty month / not found~~ → product §3.1.1
+  messages table (v1.2) → Error → UI mapping. Resolved 2026-10-17.
+- ~~"Current month" of the Home block~~ → Vietnam time (BR-CAL-15) → AC19. Resolved 2026-10-17.
+- ~~Does the Home block show a countdown?~~ → no (§3.1.1; FR-CAL-006 no longer cites BR-CAL-13) → AC19.
+  Resolved 2026-10-17.
+- ~~Empty long description~~ → hidden, never replaced by the short one (BR-CAL-14) → AC16. Resolved
+  2026-10-17.
+- ~~Home block when one of two years fails~~ → only that year's months show the failure with retry
+  (BR-CAL-15) → AC27. Resolved 2026-10-17 (the ⚠️ of v1.0 AC27 is now answered by the product spec).
 
-Mặc định Android chọn trong spec này (merge PR = duyệt; còn ghi `⚠️` inline để thấy chỗ áp):
-`year` luôn tường minh (AC2); ảnh mặc định = placeholder hiện có (AC16); mã nhóm `buddhist` (AC19);
-hiện bản trên máy trước rồi làm mới (AC23); thêm các mặc định kỹ thuật ở `design.md` (Room DB riêng,
-thư mục giữ `festivals`, khối tab Chùa).
+Android defaults chosen in this spec (merge of the PR = approval; the `⚠️` stays inline to show where they
+apply): always send an explicit `year` (AC2); default image = existing placeholder (AC16); device copy first, then refresh (AC23); rate-limit message text (AC31); "Quay lại"
+label (Error → UI); extra technical defaults in `design.md` (separate Room DB, folder name kept as
+`festivals`, temple-tab block).
