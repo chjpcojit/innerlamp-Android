@@ -95,4 +95,22 @@ class NetworkErrorMapperTest {
         assertTrue(result is AppError.Unknown)
         assertTrue((result as AppError.Unknown).cause === cause)
     }
+
+    @Test
+    fun http401_withBusinessCode_keepsTheCode() {
+        val body = """{"success":false,"error":{"code":"INVALID_CREDENTIALS","message":"x","type":"auth"}}"""
+        val e = HttpException(Response.error<Any>(401, body.toResponseBody("application/json".toMediaType())))
+
+        val result = mapper.map(e)
+        assertTrue(result is AppError.ApiError)
+        assertEquals("INVALID_CREDENTIALS", (result as AppError.ApiError).code)
+    }
+
+    @Test
+    fun http401_withGenericUnauthorizedCode_mapsToUnauthorized() {
+        val body = """{"success":false,"error":{"code":"UNAUTHORIZED","message":"x","type":"auth"}}"""
+        val e = HttpException(Response.error<Any>(401, body.toResponseBody("application/json".toMediaType())))
+
+        assertEquals(AppError.Unauthorized, mapper.map(e))
+    }
 }

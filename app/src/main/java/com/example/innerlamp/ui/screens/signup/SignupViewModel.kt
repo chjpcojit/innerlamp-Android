@@ -2,10 +2,17 @@ package com.example.innerlamp.ui.screens.signup
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
+import com.example.innerlamp.domain.model.AuthError
 import com.example.innerlamp.domain.model.EmailAddress
 import com.example.innerlamp.domain.model.PasswordStrength
+import com.example.innerlamp.domain.model.RegistrationForm
 import com.example.innerlamp.domain.model.nationalDigits
 import com.example.innerlamp.domain.usecase.SearchTempleOptionsUseCase
+import com.example.innerlamp.domain.usecase.auth.RequestRegistrationCodeUseCase
+import com.example.innerlamp.ui.screens.auth.toAuthError
+import com.example.innerlamp.ui.screens.auth.userMessage
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,12 +28,13 @@ import kotlinx.coroutines.launch
  * - Validate khi bấm "Đăng ký" (như prototype): họ tên bắt buộc, số điện thoại đủ số theo quốc gia,
  *   email đúng định dạng, mật khẩu 8–64 ký tự, đã tick điều khoản. Sửa ô nào thì xoá lỗi ô đó.
  * - Ô "Nơi xuất gia" tìm chùa qua [searchTemples] (debounce 300ms).
- * - Chưa có use case đăng ký (data layer chưa wiring) nên [register] đang giả lập thành công.
+ * - Gửi form qua [RequestRegistrationCodeUseCase]; thành công → mã xác thực được gửi qua email.
  *
  * @author innerlamp
  */
 class SignupViewModel(
     private val searchTemples: SearchTempleOptionsUseCase,
+    private val requestCode: RequestRegistrationCodeUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SignupUiState())
@@ -143,23 +151,17 @@ class SignupViewModel(
 
         _uiState.update { it.copy(errors = SignupErrors(), banner = null, isSubmitting = true) }
         viewModelScope.launch {
-            when (register(s)) {
-                SignupOutcome.OtpSent -> _uiState.update { it.copy(isSubmitting = false, otpSentTo = email) }
-                SignupOutcome.PhoneTaken -> _uiState.update {
-                    it.copy(
-                        isSubmitting = false,
-                        errors = it.errors.copy(phone = "Số điện thoại này đã được đăng ký.", phoneTaken = true),
-                    )
+            requestCode(s.toForm(email))
+                .onSuccess { timing ->
+                    _uiState.update { it.copy(isSubmitting = false, otpSentTo = email, otpTiming = timing) }
                 }
-                SignupOutcome.Network -> _uiState.update { it.copy(isSubmitting = false, banner = SignupBanner.Network) }
-                SignupOutcome.RateLimited -> _uiState.update { it.copy(isSubmitting = false, banner = SignupBanner.RateLimited) }
-            }
+                .onFailure { showError(it.toAuthError()) }
         }
     }
 
     /** Screen đã điều hướng sang OTP — hạ cờ để không điều hướng lặp lại. */
     fun onOtpSentHandled() {
-        _uiState.update { it.copy(otpSentTo = null) }
+        _uiState.update { it.copy(otpSentTo = null, otpTiming = null) }
     }
 
     // ── Private ──────────────────────────────────────────────────────────
@@ -180,15 +182,38 @@ class SignupViewModel(
             .onFailure { updatePicker { it.copy(isLoading = false, loadFailed = true, results = emptyList()) } }
     }
 
-    // TODO(il-data-builder): thay bằng use case đăng ký (gửi mã xác thực qua email) khi AuthRepository
-    // được wiring; map lỗi domain sang [SignupOutcome]. Hiện giả lập thành công sau 900ms.
-    private suspend fun register(form: SignupUiState): SignupOutcome {
-        delay(900)
-        return SignupOutcome.OtpSent
+    private fun SignupUiState.toForm(trimmedEmail: String) = RegistrationForm(
+        email = trimmedEmail,
+        password = password,
+        phoneCountry = country.iso,
+        phoneNumber = country.nationalDigits(phoneRaw),
+        fullName = fullName.trim(),
+        dharmaName = dharmaName.trim().ifEmpty { null },
+        ordinationTempleId = (ordination.selected as? OrdinationChoice.Temple)?.option?.id,
+    )
+
+    private fun showError(error: AuthError) {
+        _uiState.update {
+            val done = it.copy(isSubmitting = false)
+            when (error) {
+                AuthError.PhoneTaken -> done.copy(errors = it.errors.copy(phone = error.userMessage(), phoneTaken = true))
+                AuthError.InvalidPhone -> done.copy(errors = it.errors.copy(phone = error.userMessage()))
+                AuthError.InvalidEmail -> done.copy(errors = it.errors.copy(email = error.userMessage()))
+                AuthError.InvalidPassword -> done.copy(errors = it.errors.copy(password = error.userMessage()))
+                AuthError.InvalidFullName -> done.copy(errors = it.errors.copy(fullName = error.userMessage()))
+                AuthError.NoConnection, AuthError.Timeout -> done.copy(banner = SignupBanner.Network)
+                else -> done.copy(banner = SignupBanner("Chưa đăng ký được", error.userMessage(), retryable = false))
+            }
+        }
     }
 
-    /** Kết quả gọi đăng ký, đã quy về các nhánh UI của prototype. */
-    private enum class SignupOutcome { OtpSent, PhoneTaken, Network, RateLimited }
+    /**
+     * Called when the code screen sends the user back (registration expired, phone taken, temple gone).
+     * Gọi khi màn mã xác thực đưa người dùng về (hết hạn đăng ký, trùng số, chùa không còn).
+     */
+    fun onReturnedFromOtp(error: AuthError?) {
+        if (error != null) showError(error)
+    }
 
     private companion object {
         const val SEARCH_DEBOUNCE_MS = 300L
@@ -203,3 +228,16 @@ private val DharmaNameSuggestions = listOf(
 
 /** Tên mẫu ở vị trí [index] (xoay vòng). */
 internal fun dharmaSuggestion(index: Int): String = DharmaNameSuggestions[index % DharmaNameSuggestions.size]
+
+/** Factory dùng chung cho màn Signup và màn mã xác thực (cùng một ViewModel theo back stack entry). */
+fun signupViewModelFactory(): androidx.lifecycle.ViewModelProvider.Factory =
+    viewModelFactory {
+        initializer {
+            SignupViewModel(
+                searchTemples = SearchTempleOptionsUseCase(
+                    com.example.innerlamp.di.TempleModule.provideTempleOptionRepository(),
+                ),
+                requestCode = com.example.innerlamp.di.AuthModule.provideRequestRegistrationCodeUseCase(),
+            )
+        }
+    }

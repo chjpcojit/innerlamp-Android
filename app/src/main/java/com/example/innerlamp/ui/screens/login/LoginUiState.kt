@@ -57,4 +57,9 @@ sealed interface LoginBanner {
         override val body = "Bạn đã nhập sai nhiều lần. Vui lòng thử lại sau $untilLabel."
         override val retryable = false
     }
+
+    /** Lỗi khác (giới hạn tần suất, lỗi máy chủ…) với nội dung do app sở hữu. */
+    data class Message(override val title: String, override val body: String) : LoginBanner {
+        override val retryable = false
+    }
 }

@@ -7,7 +7,7 @@ import com.example.innerlamp.core.network.NetworkConfig
 import com.example.innerlamp.core.network.NetworkErrorMapper
 import com.example.innerlamp.core.network.RetrofitNetworkClient
 import com.example.innerlamp.core.network.auth.AuthTokenProvider
-import com.example.innerlamp.core.network.auth.InMemoryAuthTokenProvider
+import com.example.innerlamp.core.network.auth.TokenRefreshAuthenticator
 import com.example.innerlamp.core.network.interceptor.AuthInterceptor
 import com.example.innerlamp.core.network.interceptor.CommonHeadersInterceptor
 import com.example.innerlamp.core.network.interceptor.LoggingInterceptor
@@ -17,6 +17,7 @@ import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFact
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 import kotlinx.serialization.json.Json
+import okhttp3.Authenticator
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
@@ -31,7 +32,15 @@ object NetworkModule {
 
     fun provideJson(): Json = JsonProvider.json
 
-    fun provideAuthTokenProvider(): AuthTokenProvider = InMemoryAuthTokenProvider()
+    fun provideAuthTokenProvider(): AuthTokenProvider = AuthModule.tokenCache
+
+    /** Refresh một lần khi 401 rồi retry; xem [TokenRefreshAuthenticator]. */
+    fun provideTokenRefreshAuthenticator(): Authenticator = TokenRefreshAuthenticator(
+        cache = AuthModule.tokenCache,
+        refresher = AuthModule.tokenRefresher,
+        events = AuthModule.sessionEvents,
+        dispatchers = DefaultDispatcherProvider,
+    )
 
     fun provideNetworkErrorMapper(json: Json = provideJson()): NetworkErrorMapper =
         NetworkErrorMapper(json)
@@ -40,6 +49,7 @@ object NetworkModule {
         authTokenProvider: AuthTokenProvider = provideAuthTokenProvider(),
         appVersion: String = BuildConfig.VERSION_NAME,
         locale: String = Locale.getDefault().toLanguageTag(),
+        refreshAuthenticator: Authenticator? = provideTokenRefreshAuthenticator(),
     ): OkHttpClient = OkHttpClient.Builder()
         .connectTimeout(NetworkConfig.connectTimeoutMillis, TimeUnit.MILLISECONDS)
         .readTimeout(NetworkConfig.readTimeoutMillis, TimeUnit.MILLISECONDS)
@@ -47,6 +57,7 @@ object NetworkModule {
         .addInterceptor(CommonHeadersInterceptor(appVersion, locale))
         .addInterceptor(AuthInterceptor(authTokenProvider))
         .addInterceptor(LoggingInterceptor.create(NetworkConfig.isDebugLogging))
+        .apply { refreshAuthenticator?.let { authenticator(it) } }
         .build()
 
     fun provideRetrofit(

@@ -45,11 +45,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.innerlamp.di.TempleModule
+import com.example.innerlamp.domain.model.CodeTiming
 import com.example.innerlamp.domain.model.EmailAddress
-import com.example.innerlamp.domain.usecase.SearchTempleOptionsUseCase
 import com.example.innerlamp.ui.components.IlAuthCta
 import com.example.innerlamp.ui.components.IlBlurHeaderScaffold
 import com.example.innerlamp.ui.components.IlCountryPicker
@@ -89,24 +86,18 @@ fun SignupScreen(
     modifier: Modifier = Modifier,
     onBack: () -> Unit = {},
     onLoginClick: () -> Unit = {},
-    onOtpSent: (email: String) -> Unit = {},
+    onOtpSent: (email: String, timing: CodeTiming) -> Unit = { _, _ -> },
     onAddTemple: () -> Unit = {},
-    viewModel: SignupViewModel = viewModel(
-        factory = viewModelFactory {
-            initializer {
-                SignupViewModel(
-                    searchTemples = SearchTempleOptionsUseCase(TempleModule.provideTempleOptionRepository()),
-                )
-            }
-        },
-    ),
+    viewModel: SignupViewModel = viewModel(factory = signupViewModelFactory()),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     // Gửi mã xong → điều hướng một lần rồi hạ cờ.
     LaunchedEffect(uiState.otpSentTo) {
-        uiState.otpSentTo?.let {
-            onOtpSent(it)
+        val email = uiState.otpSentTo
+        val timing = uiState.otpTiming
+        if (email != null && timing != null) {
+            onOtpSent(email, timing)
             viewModel.onOtpSentHandled()
         }
     }

@@ -32,8 +32,7 @@ class AuthInterceptor(
             request
         }
 
-        // TODO(refresh-token): chừa chỗ cắm refresh khi response 401 ở đây
-        // (thuộc feature auth, chưa implement trong Networking).
+        // 401 được `TokenRefreshAuthenticator` xử lý (refresh một lần rồi retry).
         return chain.proceed(authedRequest)
     }
 }
