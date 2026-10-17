@@ -6,7 +6,7 @@ Nguồn thiết kế: `Docs/InnerLamp icon consistency/InnerLamp Prototype.dc.ht
 |---|---|---|---|
 | 1 | Ảnh tượng Phật là gradient placeholder. Ảnh chùa: xem `Docs/Specs/Temple/`; ảnh bài viết: xem `Docs/Specs/Article/` | Prototype dùng `<image-slot>`, chưa có ảnh thật và app chưa có thư viện tải ảnh | Thêm Coil + asset/API, thay `PlaceholderImage` và nền hero |
 | 2 | Số liệu thực hành (12/20 phút, chuỗi 42 ngày, 7 thanh tuần) và 27 hạt ban đầu là dữ liệu mẫu từ prototype | Chưa có repository thực hành | Nối Room/`SessionRepository`; tràng hạt nên ghi local-first |
-| 3 | Câu kinh lấy từ `HomeSampleData`. Khối chùa nổi bật: xem `Docs/Specs/Temple/` (FR-TPL-001); khối bài viết: xem `Docs/Specs/Article/` (FR-ART-001) | Chưa có backend | Thay bằng repository khi có API |
+| 3 | Verse of the day: see `Docs/Specs/Sutra/` (BR-STR-10, FR-STR-010). Featured temple block: see `Docs/Specs/Temple/` (FR-TPL-001); article block: see `Docs/Specs/Article/` (FR-ART-001) | The temple and article blocks have no backend yet | Replace with repositories when the APIs land |
 | 4 | Tên trong lời chào mặc định "quý Phật tử"; avatar chữ "A" | Chưa có nguồn pháp danh (prefs/auth) | Đọc từ hồ sơ người dùng, truyền vào `HomeUiState.create(displayName=…)` |
 | 6 | Bottom nav (Thư viện, Đèn, Đạo tràng, Tôi) và mọi callback đích của Home là no-op | Các route này chưa tồn tại | Nối vào `HomeCallbacks` khi có route |
 | 7 | Ngày "hôm nay" chốt lúc tạo ViewModel, không tự cập nhật qua nửa đêm (riêng khối Sự kiện Phật giáo: theo `Docs/Specs/Calendar/`, tính lại khi quay lại màn) | Đủ cho bản đầu | Thêm quan sát đổi ngày nếu app hay mở qua đêm |
