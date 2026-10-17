@@ -1,127 +1,178 @@
 # Tasks — Calendar
 
-Version: 1.1
-Last updated: 2026-10-15
-Status: in-progress — lối vào, carousel Home và danh sách theo tháng có trên danh mục cục bộ; domain mới, chi tiết, API + bản trên máy, vector còn `[ ]`; Phase 3 chờ backend calendar v3.0
+Version: 1.2
+Last updated: 2026-10-17
+Status: in-progress — entry points, the Home carousel and the per-month list exist on the local catalogue; the new domain, detail screen, API + device copy and vectors are still `[ ]`; Phase 3 is unblocked (contract 2.2.0 is final, but the backend commit is not pushed yet)
 
 > See `changelog.md` in this folder for the version history of this spec.
 
-Mỗi mục trace về một dòng của bảng **Layers & components** hoặc một Step trong `design.md`.
-`[x]` chỉ khi đã kiểm tra tồn tại **và đúng như product spec v1.1 yêu cầu** trong code ngày 2026-10-15
-(`main` @ bebaa9c); mục có code nhưng lệch product để `[ ]` và ghi "(có code, lệch: …)".
+Each item traces to a row of the **Layers & components** table or a Step in `design.md`.
+`[x]` only when the code was checked on 2026-10-15 (`main` @ bebaa9c) to exist **and** to match what
+product spec v1.2 requires; an item that has code but deviates from the product spec stays `[ ]` with
+"(code exists, deviates: …)". The v1.2 re-sync (2026-10-17) was docs only and did not re-read the code.
 Paths are relative to `app/src/main/java/com/example/innerlamp/`.
 
 ## Phase 1 — Domain
 
-- [ ] `domain/model/CalendarEvent.kt` — `CalendarYear`, `CalendarGroup`, `CalendarEvent` (có `isMajor`,
-      `sortOrder`, `recurrence`), `Recurrence`, `CalendarOccurrence`, `LunarDay` (có `isLeapMonth`),
-      `CalendarYearSource`
-- [ ] `domain/calendar/CalendarCountdown.kt` — BR-CAL-13 (AC21; có code, lệch: logic nằm trong
-      `FestivalsUiState.countdown`, chữ "còn" viết thường)
-- [ ] `domain/calendar/CalendarOrdering.kt` — comparator BR-CAL-12 (AC5)
-- [ ] `domain/calendar/HomeEventBlock.kt` — chọn dòng + "+N" theo BR-CAL-15, `BUDDHIST_GROUP`
-      (AC19; ⚠️ mã nhóm — mặc định `buddhist`)
-- [ ] `domain/calendar/EventContentFormat.kt` — đoạn mô tả, mục lễ nghi theo BR-CAL-14 (AC15)
+- [ ] `domain/model/CalendarEvent.kt` — `CalendarYear`, `CalendarGroup`, `CalendarEvent` (with `isMajor`,
+      `sortOrder`, `recurrence`), `Recurrence` (`Solar`, `Lunar`, `LunarMonthly`, `LunarLastDay`,
+      `SolarTerm`, **`Unknown`** for any value the app does not know — open-ended decode),
+      `CalendarOccurrence`, `LunarDay` (with `isLeapMonth`), `CalendarYearSource`. Mùng 1 / Rằm are
+      recognised by `recurrence == LunarMonthly`, never by comparing `code` or computing locally
+- [ ] `domain/calendar/CalendarCountdown.kt` — BR-CAL-13 (AC21; code exists, deviates: the logic lives in
+      `FestivalsUiState.countdown`, and the word "còn" is lowercase)
+- [ ] `domain/calendar/CalendarOrdering.kt` — comparator of BR-CAL-12 (AC5)
+- [ ] `domain/calendar/HomeEventBlock.kt` — row selection + "+N" per BR-CAL-15, `BUDDHIST_GROUP`
+      (AC19; `buddhist` is a stable code, confirmed by backend 2026-10-17). "Current month" is Vietnam time
+      (`Asia/Ho_Chi_Minh`); the block shows no countdown
+- [ ] `domain/calendar/EventContentFormat.kt` — description paragraphs, ritual items per BR-CAL-14 (AC15).
+      Split on newlines only, never on comma / semicolon: `guidance` line = one numbered action,
+      `long_description` line = one paragraph; an empty long description is hidden, never replaced by the
+      short one
 - [ ] `domain/repository/CalendarEventRepository.kt` (interface: `deviceCopy`, `load`, `cachedInMemory`;
-      `CalendarLoadError.Offline` / `Failed`)
-- [ ] `domain/usecase/LoadCalendarYearUseCase.kt` — năm hiện tại theo `Asia/Ho_Chi_Minh`, giới hạn 2100
-      (AC2, AC12, AC13; Step 1–2)
-- [ ] `domain/usecase/GetHomeEventBlockUseCase.kt` — sáu tháng từ tháng hiện tại, một hoặc hai năm song
-      song, thiếu năm → lỗi theo thẻ (AC19, AC27; ⚠️ product)
-- [ ] `domain/usecase/GetEventOccurrenceUseCase.kt` — tìm `(eventCode, solarDate)` trong năm (AC14, AC18)
-- [ ] Xoá `GetBuddhistEventMonthsUseCase.kt`, `GetFestivalCalendarUseCase.kt` (gồm `MAJOR_KEYS`,
-      `hostsFor`), `domain/model/FestivalCalendar.kt`, `BuddhistEvent`/`EventMonth` trong
-      `HomeContent.kt` — chỉ sau khi Phase 3 thay nguồn (AC3; BR-CAL-05)
-- [ ] `GetUpcomingFastDaysUseCase` đọc `CalendarEventRepository` thay danh mục cục bộ (⚠️ product —
-      mặc định giữ hiển thị hiện tại; xem `design.md`)
+      `CalendarLoadError.Offline` / **`RateLimited(retryAfterSeconds: Int?)`** / `Failed`)
+- [ ] `domain/usecase/LoadCalendarYearUseCase.kt` — current year in `Asia/Ho_Chi_Minh`, cap at 2100
+      (AC2, AC12, AC13; Step 1–2). A year already loaded in the session is never refetched unless the
+      user taps retry (AC31)
+- [ ] `domain/usecase/GetHomeEventBlockUseCase.kt` — six months from the current month, one or two years
+      in parallel, a missing year → an error on its cards only (AC19, AC27)
+- [ ] `domain/usecase/GetEventOccurrenceUseCase.kt` — find `(eventCode, solarDate)` in the year (AC14,
+      AC18)
+- [ ] Public-holiday rule (BR-CAL-11) in the festival list / detail mapping: a public holiday is marked
+      only on the event's own day; never show substitute days off (no nghỉ bù) (AC32)
+- [ ] Delete `GetBuddhistEventMonthsUseCase.kt`, `GetFestivalCalendarUseCase.kt` (including `MAJOR_KEYS` —
+      8 keys, which does not match the 10 of BR-CAL-10, so it is deleted, **not** ported — and
+      `hostsFor`), `domain/model/FestivalCalendar.kt`, `BuddhistEvent`/`EventMonth` in `HomeContent.kt` —
+      only after Phase 3 replaces the source (AC3; BR-CAL-05)
+- [ ] `GetUpcomingFastDaysUseCase` reads `CalendarEventRepository` instead of the local catalogue (⚠️
+      product — default keeps the current display; see `design.md`)
+- [ ] Remove every hard-coded via-date list (dates of Buddhas / Bodhisattvas) in the app: via dates now
+      come only from this calendar (BR-DTY-05). Cross-reference: `docs/Specs/Deity` owns the Deity side
+      and is **not edited here**; track the removal there. The catalogue gained 6 Buddha / Bodhisattva
+      via events (Tỳ Lô Giá Na 15/4, Hư Không Tạng 15/1, Kim Cương Thủ 8/4, Lục Độ Mẫu 8/1, Bạch Độ Mẫu
+      15/10, Kim Cương Tát Đỏa 15/7); their dates come from `phat_botat.json` and are **not yet checked
+      against GHPGVN** (⚠️ Not confirmed)
 
 ## Phase 2 — UI (`il-ui-builder`)
 
-- [x] `FestivalsRoute` + wiring trong `MainActivity.kt`; lối vào từ Trang chủ ("Tất cả", "+N"),
-      tab Chùa ("Lịch lễ", dòng ngày lễ) và chi tiết Phật/Bồ Tát ("Lịch lễ") (AC6 phần lối vào)
-- [x] Không đòi đăng nhập ở lịch lễ và khối Home (AC1 phần truy cập — giữ khi chuyển sang API)
-- [x] Danh sách có tiêu đề "Tháng M, YYYY", mở và đổi chip thì cuộn tới tháng hiện tại (AC6 phần cuộn)
-- [x] Carousel thẻ tháng ở Home: tối đa 3 dòng, "+N sự kiện khác", "Tất cả" → `FestivalsRoute`
-      (AC19 phần bố cục)
-- [ ] Lịch lễ theo năm: năm hiện tại, tải năm sau khi chạm cuối, dừng ở 2100, hàng "Thử lại" (AC6, AC12,
-      AC13; có code, lệch: tải sẵn 3 năm, bỏ tháng trống)
-- [ ] Dòng lịch lễ: ngày âm có "(nhuận)", dấu lễ lớn từ `isMajor`, nhãn nhóm theo `data.groups`, bấm mở
-      chi tiết (AC4, AC7, AC8; có code, lệch: không nhãn nhóm, màu theo `isFestival`, không bấm được)
-- [ ] Bỏ chùa tổ chức (số chùa, chip chùa, `FestivalsCallbacks.onTemple`) và câu giới thiệu về chùa (AC9;
-      có code, lệch: dữ liệu chùa mẫu)
-- [ ] Chip "Tất cả" / "Lễ lớn" / mỗi nhóm kèm số; bỏ "Rằm & Mùng Một"; giữ chip khi nối năm (AC10, AC11;
-      có code, lệch: "Lễ lớn" lọc `isFestival`)
-- [ ] `FestivalsUiState` / `FestivalsViewModel`: `loadState`, `nextYearState`, `CalendarFilter`, factory từ
-      `di/CalendarModule.kt` thay `viewModel()` mặc định; tính lại ở `ON_RESUME` khi đổi ngày (AC20)
-- [ ] Trạng thái đang tải, bản trên máy + câu "có thể chưa cập nhật", lỗi mất mạng / lỗi khác + "Thử lại"
-      với câu ở bảng Error → UI (AC23–AC26; ⚠️ câu chữ product)
-- [ ] `FestivalDetailRoute(eventCode, solarDate)` trong `Routes.kt` + `composable<…>` với transition
-      tường minh trong `MainActivity.kt`; sửa KDoc `FestivalsRoute`
-- [ ] `FestivalDetailScreen` + `FestivalDetailUiState` + `FestivalDetailViewModel`: ảnh (Coil + fallback
-      placeholder), nhóm + lễ lớn, tên, ngày âm, ngày dương + thứ + đếm ngược, mô tả theo đoạn, lễ nghi
-      đánh số, ẩn mục rỗng, không tìm thấy, lỗi tải; không kinh/chùa/nhắc/trước-sau (AC14–AC18; ⚠️ ảnh
-      mặc định)
-- [ ] Khối Home: sáu tháng từ tháng hiện tại, chia tầng qua `GetHomeEventBlockUseCase`, thẻ tháng trống,
-      lỗi thay chỗ thẻ / trên từng thẻ, câu bản trên máy, dòng → `FestivalDetailRoute` (`HomeCallbacks
-      .onEventDetail`) (AC19, AC24, AC25, AC27; có code, lệch: 12 tháng của năm dương, không tầng, dòng
-      mở lịch lễ); dựng lại ở `ON_RESUME` khi sang tháng/ngày mới (AC20)
-- [ ] Tab Chùa: `ChuaViewModel` lấy "Ngày lễ & ngày chay sắp tới" qua use case mới (⚠️ product)
-- [ ] Fake `CalendarEventRepository` (JSON mẫu theo contract + field v3.0, chỉ ở debug/test) cho tới Phase
-      3; ghi ở `design.md` "Deliberately stubbed"
+- [x] `FestivalsRoute` + wiring in `MainActivity.kt`; entry points from Home ("Tất cả", "+N"), the Chùa
+      tab ("Lịch lễ", festival row) and the Buddha/Bodhisattva detail ("Lịch lễ") (AC6, entry-point part)
+- [x] No login required for the festival calendar and the Home block (AC1, access part — keep it when
+      switching to the API)
+- [x] The list has "Tháng M, YYYY" headings; on open and on chip change it scrolls to the current month
+      (AC6, scroll part)
+- [x] Month-card carousel on Home: at most 3 rows, "+N sự kiện khác", "Tất cả" → `FestivalsRoute`
+      (AC19, layout part)
+- [ ] Festival calendar by year: current year, load the next year when the user reaches the end, stop at
+      2100, "Thử lại" row (AC6, AC12, AC13; code exists, deviates: preloads 3 years, drops empty months)
+- [ ] Festival rows: lunar date with "(nhuận)" on the lunar date (not on the event name), major mark from
+      `isMajor`, group label from `data.groups`, tap opens the detail (AC4, AC7, AC8; code exists,
+      deviates: no group label, colour by `isFestival`, not tappable)
+- [ ] Remove the hosting temples (temple count, temple chip, `FestivalsCallbacks.onTemple`) and the
+      sentence about temples (AC9; code exists, deviates: sample temple data)
+- [ ] Chips "Tất cả" / "Lễ lớn" / one per group, each with a count; drop "Rằm & Mùng Một"; keep the chip
+      when the next year is appended (AC10, AC11; code exists, deviates: "Lễ lớn" filters `isFestival`).
+      "Lễ lớn" = `isMajor` (the 10 events of BR-CAL-10)
+- [ ] `FestivalsUiState` / `FestivalsViewModel`: `loadState`, `nextYearState`, `CalendarFilter`, a factory
+      from `di/CalendarModule.kt` instead of the default `viewModel()`; recompute on `ON_RESUME` when the
+      date changes (AC20)
+- [ ] Loading state, device copy + "Dữ liệu có thể chưa được cập nhật.", offline / failure / **rate-limited**
+      errors + "Thử lại" with the strings of the Error → UI table (AC23–AC26, AC28, AC31; copy per product
+      §3.1.1 messages table). On `RateLimited`: show the retry-later message (mentions waiting,
+      `retryAfterSeconds` when present), no automatic retry loop, retry only on user tap (AC31; ⚠️
+      message text is a product default — hand back to `ba-writer`)
+- [ ] `FestivalDetailRoute(eventCode, solarDate)` in `Routes.kt` + `composable<…>` with explicit
+      transitions in `MainActivity.kt`; fix the `FestivalsRoute` KDoc
+- [ ] `FestivalDetailScreen` + `FestivalDetailUiState` + `FestivalDetailViewModel`: image (Coil +
+      placeholder fallback), group + major mark, name, lunar date, solar date + weekday + countdown,
+      description by paragraph (one `long_description` line = one paragraph; hidden when empty), numbered
+      rituals (one `guidance` line = one action), hide empty sections, not found ("Không tìm thấy ngày lễ
+      này."), load error; no sutras / temples / reminder / previous-next (AC14–AC18; ⚠️ default image)
+- [ ] Home block: six months from the current month (Vietnam time), tiered through
+      `GetHomeEventBlockUseCase`, empty-month card ("Tháng này không có ngày lễ Phật giáo."), error in
+      place of the cards / on individual cards, device-copy sentence, row → `FestivalDetailRoute`
+      (`HomeCallbacks.onEventDetail`), name + lunar date only, **no countdown** (AC19, AC24, AC25, AC27;
+      code exists, deviates: 12 solar-year months, no tiers, rows open the festival calendar); rebuild on
+      `ON_RESUME` when a new month / day starts (AC20)
+- [ ] Chùa tab: `ChuaViewModel` takes "Ngày lễ & ngày chay sắp tới" through the new use case (⚠️ product)
+- [ ] Fake `CalendarEventRepository` (sample JSON following the contract 2.2.0 fields, debug / test only)
+      for tests and debugging until Phase 3 lands; record it in `design.md` "Deliberately stubbed"
 
-## Phase 3 — Data (`il-data-builder`, chờ backend)
+## Phase 3 — Data (`il-data-builder`)
 
-- [ ] **Chặn:** backend calendar v3.0 (innerlamp-be `docs/specs/features/calendar/tasks.md` Phase 14–18)
-      đã lên `dev`: `GET /v1/calendar/events` công khai, có `is_major`, `sort_order`, `recurrence`, seed có
-      Rằm / Mùng 1 ở `sort_order` cuối và lễ nghi một việc một dòng; `openapi.yaml` đã cập nhật — đổi dòng
-      `Contract:` của `requirements.md` sang commit đó (hand-off, không làm ở repo này)
-- [x] Contract hiện có `GET /v1/calendar/events` (`calendarEvents`) trong innerlamp-be
-      `docs/specs/api/openapi.yaml` @ 0eb7d1f — cite, không chép schema
-- [ ] `data/remote/api/CalendarApiService.kt` (không `@Authenticated`) + `data/remote/dto/CalendarEventsDto.kt`
-      (AC1, AC2)
-- [ ] `data/mapper/CalendarEventMapper.kt` — nhóm, cờ, `recurrence` lạ, mã nhóm lạ (AC3, AC4)
-- [ ] `core/database/calendar/` — `CalendarCacheDatabase` (`innerlamp_calendar.db`, destructive migration),
-      `CalendarYearCacheEntity`, `CalendarYearCacheDao` (`upsert`, `get`, `deleteBefore`) + schema export
-      (AC22; ⚠️ cách lưu — mặc định đã chọn)
-- [ ] `data/repository/CalendarEventRepositoryImpl.kt` — bộ nhớ → Room → `NetworkClient.safeCall`; ghi Room
-      sau thành công; map `AppError` theo bảng Error → UI (Step-by-step Flow "Tải một năm"; AC22–AC25, AC28)
-- [ ] `di/CalendarModule.kt`; một instance repository giữ ở `InnerLampApplication`; thay fake repository
-      và nguồn cục bộ ở Home, lịch lễ, tab Chùa; rồi làm mục "Xoá" của Phase 1
+Unblocked: `calendarEvents` is final in contract 2.2.0 (public, `is_major`, `sort_order`, `recurrence`,
+429). Items below are still to implement.
+
+- [x] The backend contract is final: `GET /v1/calendar/events` (`calendarEvents`) in innerlamp-be
+      `docs/specs/api/openapi.yaml` `info.version` 2.2.0 — public, `is_major`, `sort_order`, `recurrence`,
+      429 `RATE_LIMITED`, `Cache-Control` public with `year` — commit 3af0844 on branch
+      `feat/calendar-v3-public-major-via`, pushed, innerlamp-be PR #55, not yet merged (re-cite after merge); cite, do not copy the schema.
+      Re-cite the commit after the backend merges (hand-off)
+- [ ] `data/remote/api/CalendarApiService.kt` (not `@Authenticated`; send **no** `Authorization`; **never
+      send `X-API-Key`** — website only, a wrong key gives `401 INVALID_API_KEY`) +
+      `data/remote/dto/CalendarEventsDto.kt` (AC1, AC2)
+- [ ] `data/mapper/CalendarEventMapper.kt` — groups, flags, unknown `recurrence` → `Recurrence.Unknown`,
+      unknown group code (AC3, AC4)
+- [ ] `core/database/calendar/` — `CalendarCacheDatabase` (`innerlamp_calendar.db`, destructive
+      migration), `CalendarYearCacheEntity`, `CalendarYearCacheDao` (`upsert`, `get`, `deleteBefore`) +
+      schema export (AC22; ⚠️ storage approach — default already chosen). Android keeps its own Room cache
+      and uses **no** OkHttp HTTP cache (the response is `public, max-age=86400` with `year`, but the app
+      always sends an explicit year and does not rely on it)
+- [ ] `data/repository/CalendarEventRepositoryImpl.kt` — memory → Room → `NetworkClient.safeCall`; write
+      Room after success; map `AppError` per the Error → UI table, **splitting 429 out of the generic HTTP
+      error** into `CalendarLoadError.RateLimited(retryAfterSeconds)` (read `details.retry_after_seconds`,
+      fall back to the `Retry-After` header, else `null`); a 401 is an unexpected failure and maps to
+      `Failed` (Step-by-step Flow "Load one year"; AC22–AC25, AC28, AC31)
+- [ ] `di/CalendarModule.kt`; one repository instance held in `InnerLampApplication`; replace the fake
+      repository and the local sources in Home, the festival calendar and the Chùa tab; then do the
+      "Delete" item of Phase 1
 
 ## Phase 4 — Tests
 
-- [ ] Script `scripts/sync-product-vectors.sh` (dùng chung với Memorial Phase 5): chép innerlamp-be
-      `docs/product/calendar/rules/{countdown,ordering,home-block}.json` (từ `../innerlamp-be` tại một
-      commit ghi rõ) vào `app/src/test/resources/product/calendar/rules/` kèm file `SOURCE` (commit +
-      `product_spec_version` từng file); bản chép **không bao giờ sửa tay**. Không chép
-      `event-placement.json` (chỉ backend, product §4.1)
-- [ ] `CalendarProductVectorsTest` chạy **mọi case** (AC30): `countdown.json` (5) qua
-      `CalendarCountdown`, `ordering.json` (4) qua `CalendarOrdering`, `home-block.json` (5) qua
-      `HomeEventBlock.select` (`every_lunar_month` ↔ `Recurrence.LunarMonthly`); fail nếu
-      `product_spec_version` khác `SOURCE` (tại 0eb7d1f: countdown `1.0`, ordering `1.1`, home-block `1.1`)
-- [ ] `EventContentFormat`, `CalendarEventMapper` unit tests (BR-CAL-14, field v3.0, mã lạ)
-- [ ] `CalendarEventRepositoryImpl` tests (MockWebServer hoặc fake `NetworkClient` + Room in-memory):
-      thành công ghi Room và xoá năm cũ; mỗi dòng Error → UI; có/không có bản trên máy; 401 không đụng phiên
-- [ ] Use case + ViewModel tests (`kotlinx-coroutines-test`, Turbine, MockK): bản trên máy rồi làm mới,
-      tải năm sau / 2100 / thử lại, chip + số, chi tiết không tìm thấy, Home hai năm thiếu một, đổi ngày
-- [ ] Viết lại `FestivalsViewModelTest`, `HomeViewModelTest`; xoá `GetBuddhistEventMonthsUseCaseTest` cùng
-      use case (giữ `LunarCalendarTest` — Sổ giỗ, Lịch âm dùng)
-- [ ] Unit test task: `./gradlew testDevDebugUnitTest` (người dùng tự chạy; có flavor nên không phải
-      `testDebugUnitTest`)
-- [ ] QA trên máy: khách mở lịch lễ (không mời đăng nhập), chế độ máy bay có/không có bản trên máy, Home
-      offline, 2 s trên 4G / 0,5 s từ bản trên máy (AC29, NFR-CAL-03), so với prototype `festVals`,
-      `festDetail`
+- [ ] Script `scripts/sync-product-vectors.sh` (shared with Memorial Phase 5): copy innerlamp-be
+      `docs/product/calendar/rules/{countdown,ordering,home-block}.json` (from `../innerlamp-be` at a
+      stated commit) into `app/src/test/resources/product/calendar/rules/` with a `SOURCE` file (commit +
+      each file's `product_spec_version`); the copies are **never edited by hand**. Do not copy
+      `event-placement.json` (backend only, product §4.1)
+- [ ] `CalendarProductVectorsTest` runs **every case** (AC30): `countdown.json` (5) through
+      `CalendarCountdown`, `ordering.json` (4) through `CalendarOrdering`, `home-block.json` (5) through
+      `HomeEventBlock.select` (`every_lunar_month` ↔ `Recurrence.LunarMonthly`); fail when a
+      `product_spec_version` differs from `SOURCE` (at 0eb7d1f: countdown `1.0`, ordering `1.1`,
+      home-block `1.1`; ⚠️ re-check the versions when `SOURCE` moves to the v1.2 commit)
+- [ ] `EventContentFormat`, `CalendarEventMapper` unit tests (BR-CAL-14: newline-only split, empty long
+      description hidden; contract 2.2.0 fields; unknown `recurrence` → `Unknown`; unknown group code)
+- [ ] BR-CAL-11 test (AC32): an event flagged as public holiday is marked only on its own day; no
+      substitute-day row or mark is produced
+- [ ] `CalendarEventRepositoryImpl` tests (MockWebServer or fake `NetworkClient` + in-memory Room):
+      success writes Room and deletes older years; each Error → UI row; with / without device copy; a 401
+      does not touch the session and maps to `Failed`; **429 `RATE_LIMITED` maps to
+      `RateLimited(retry_after_seconds)`, header fallback, `null` when neither is present, with no
+      automatic retry** (AC31); the request carries no `Authorization` and no `X-API-Key`
+- [ ] Use case + ViewModel tests (`kotlinx-coroutines-test`, Turbine, MockK): device copy then refresh,
+      next-year load / 2100 / retry, chips + counts, detail not found, Home with two years where one
+      fails, date change, a loaded year is not refetched in the session without a retry tap (AC31),
+      rate-limited state shows the retry-later message and waits for the user
+- [ ] Rewrite `FestivalsViewModelTest`, `HomeViewModelTest`; delete `GetBuddhistEventMonthsUseCaseTest`
+      together with the use case (keep `LunarCalendarTest` — used by Sổ giỗ and Lịch âm)
+- [ ] Unit test task: `./gradlew testDevDebugUnitTest` (the user runs it; the project has flavors, so it
+      is not `testDebugUnitTest`)
+- [ ] On-device QA: a guest opens the festival calendar (no login prompt), airplane mode with / without
+      device copy, Home offline, 2 s on 4G / 0.5 s from device copy (AC29, NFR-CAL-03), compare with the
+      `festVals` and `festDetail` prototype screens
 
 ## Phase 5 — Documentation
 
-- [ ] Báo trạng thái cột Android của product §4.2 cho `ba-writer` (skill này không sửa repo backend)
-- [x] Xoá `Docs/home_assumptions.md` mục #11 (đã bị product spec thay thế; bước dọn tài liệu cũ, 2026-10-15)
-- [ ] OKF concept qua `il-okf-writer` khi feature đã kiểm chứng end-to-end
+- [ ] Report the Android column status of product §4.2 to `ba-writer` (this skill does not edit the
+      backend repo). v1.2 already sets BR-CAL-11 and BR-CAL-14 to `planned` for Android
+- [x] Delete `Docs/home_assumptions.md` item #11 (superseded by the product spec; old-doc cleanup,
+      2026-10-15)
+- [ ] OKF concept through `il-okf-writer` once the feature is verified end to end
 
 ## Deferred (not blocking Calendar)
 
-- Đổi tên package `ui/screens/festivals/` → tên theo slug `calendar` (vướng `ui/screens/calendar/` của
-  Lịch âm).
-- Sự kiện trước/sau trên chi tiết (FR-CAL-009 — website; Android có thể thêm sau, §3.6).
-- HTTP cache của OkHttp cho `Cache-Control: public`.
-- Ảnh sự kiện thật + ảnh mặc định chung (khi product cung cấp, §2.7).
+- Rename the package `ui/screens/festivals/` to the `calendar` slug (clashes with `ui/screens/calendar/`
+  of Lịch âm).
+- Previous / next event on the detail (FR-CAL-009 — website; Android may add it later, §3.6).
+- OkHttp HTTP cache for `Cache-Control: public` (the app uses its own Room cache; not needed while the
+  app always sends an explicit year).
+- Real event images + a shared default image (when product supplies them, §2.7).
