@@ -3,6 +3,11 @@
 Tracks version history for `requirements.md`, `design.md`, and `tasks.md` in this folder. All three
 files share one changelog since they change together as one spec unit. Newest version first.
 
+## v1.1 (2026-10-17)
+
+- `requirements.md`, `design.md`, `tasks.md`: the centre lamp button now opens Thắp đèn (see `../LightLamp/`) instead of the meditation setup screen; `SetupRoute` stays reachable from Home and the Meditation area. Only the lamp-button lines changed; the rest of the files is untouched.
+- Reason: product spec `docs/product/lamp/product.md` v1.0 (decision of 2026-10-16) and the merged `LightLamp` spec. The edit is surgical and the older Vietnamese prose is not translated yet (no translation-only change).
+
 ## v1.0 (2026-09-25)
 
 - `requirements.md`: khởi tạo (mode **mixed**) — user story (lớp điều hướng type-safe + hệ transition

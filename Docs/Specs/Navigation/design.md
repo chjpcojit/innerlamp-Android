@@ -1,7 +1,7 @@
 # Design — Navigation
 
-Version: 1.0
-Last updated: 2026-09-25
+Version: 1.1
+Last updated: 2026-10-17
 Status: in-progress — type-safe navigation + transition đã có; bottom-nav shell, route đầy đủ, modal còn thiếu
 
 > See `changelog.md` in this folder for the version history of this spec.
@@ -27,8 +27,8 @@ Dùng **Navigation Compose type-safe** (`androidx.navigation.compose`) + một "
 | ui/navigation | `ui/navigation/Routes.kt` | Tập trung route type-safe (`@Serializable object/data class`). Hiện có `SplashRoute`, `OnboardingRoute`; sẽ thêm Login/Signup/OTP + 5 tab gốc + màn con. |
 | ui/navigation | `ui/navigation/AppNavHost.kt` | `NavHost` chính: global default crossfade (enter/exit/popEnter/popExit) + extension `ilComposable(screen, content)` tự đọc `screen.transitions`. |
 | app / host | `MainActivity.kt` | Dựng `rememberNavController()` + `AppNavHost(startDestination = SplashRoute)`, nối Splash → Onboarding. **Sửa file** (thêm route mới). |
-| ui/components | `ui/components/IlBottomNav.kt` | Component bottom nav 5 tab (`IlBottomTab`: Home/Lib/Lamp/Sangha/Me) + nút đèn nổi, `hidden` trượt xuống. Chỉ là UI; **chưa nối** vào nav. |
-| ui/navigation | `ui/navigation/BottomNavShell.kt` (mới) | **Shell bottom nav**: 5 graph tab (mỗi tab một `navigation(...)`), `saveState`/`restoreState`, `popUpTo` gốc khi bấm lại tab, nút đèn → màn chuẩn bị thiền. |
+| ui/components | `ui/components/IlBottomNav.kt` | Component bottom nav 5 tab (`IlBottomTab`: Home/Lib/Lamp/Sangha/Me) + nút đèn nổi (mở Thắp đèn, xem `../LightLamp/`), `hidden` trượt xuống. Chỉ là UI; **chưa nối** vào nav. |
+| ui/navigation | `ui/navigation/BottomNavShell.kt` (mới) | **Shell bottom nav**: 5 graph tab (mỗi tab một `navigation(...)`), `saveState`/`restoreState`, `popUpTo` gốc khi bấm lại tab, nút đèn → Thắp đèn (`../LightLamp/`). |
 | ui/navigation | `ui/navigation/ModalDestination.kt` (mới) | Cơ chế trình bày modal slide-up (dialog destination / `composable(dialog = true)`) cho paywall/ghi danh/viết bài/chia sẻ. |
 
 ## Navigation flow
@@ -42,7 +42,7 @@ MainActivity (FragmentActivity)
        └─ [prospective] BottomNavShell — 5 tab gốc (Home / Lib / Lamp / Sangha / Me)
              ├─ Trang chủ   (HomeRoute)
              ├─ Thư viện    (LibraryRoute)
-             ├─ Đèn         (SetupRoute — nút đèn giữa)
+             ├─ Đèn         (LampRoute — nút đèn giữa, xem ../LightLamp/)
              ├─ Đạo tràng   (SanghaRoute)
              └─ Tôi         (MeRoute)
 ```
@@ -101,7 +101,7 @@ BottomNavShell
        └─ NavHost
             ├─ navigation("home", start = HomeRoute) { ... }      // saveState/restoreState
             ├─ navigation("lib",  start = LibraryRoute) { ... }
-            ├─ navigation("lamp", start = SetupRoute) { ... }
+            ├─ navigation("lamp", start = LampRoute) { ... }
             ├─ navigation("sangha", start = SanghaRoute) { ... }
             └─ navigation("me",   start = MeRoute) { ... }
 ```
@@ -109,7 +109,7 @@ BottomNavShell
 - Chuyển tab: `navigate(tabGraph) { popUpTo(graphStart) { saveState = true }; launchSingleTop = true;
   restoreState = true }` → giữ back stack + scroll của từng tab.
 - Bấm lại tab đang active → `popBackStack(graphStart, inclusive = false)` để về gốc tab.
-- Nút đèn (Lamp) → `SetupRoute` (màn chuẩn bị thiền, thuộc feature thiền).
+- Nút đèn (Lamp) → màn Thắp đèn (`../LightLamp/`); thiền vào được từ Home và khu Thiền (`SetupRoute`).
 - Bottom nav chỉ hiện ở 5 tab gốc; ẩn ở splash/onboarding/login/signup/modal.
 
 > ⚠️ Not confirmed: mô hình back-stack của bottom nav — dùng **single `NavHost` + `saveState`/

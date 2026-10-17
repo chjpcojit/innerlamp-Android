@@ -1,7 +1,7 @@
 # Tasks — Navigation
 
-Version: 1.0
-Last updated: 2026-09-25
+Version: 1.1
+Last updated: 2026-10-17
 Status: in-progress — phần đã có (retroactive) đánh `[x]`; bottom-nav shell/route/modal còn `[ ]`
 
 > See `changelog.md` in this folder for the version history of this spec.
@@ -37,7 +37,7 @@ trong `design.md`. Phần đã implement được đánh `[x]` (đã kiểm tra 
 - [ ] Nối `IlBottomNav.onNav` → `navigate(...)` với `popUpTo(graphStart){saveState}` +
       `launchSingleTop` + `restoreState`; `active` tính theo route hiện tại.
 - [ ] Bấm lại tab đang active → `popBackStack(graphStart, inclusive = false)` (về gốc tab).
-- [ ] Nút đèn (Lamp) → `SetupRoute` (màn chuẩn bị thiền, phối hợp feature thiền).
+- [ ] Nút đèn (Lamp) → màn Thắp đèn (`../LightLamp/`); thiền vào được từ Home và khu Thiền.
 - [ ] Ẩn bottom nav ở splash/onboarding/login/signup/modal (chỉ hiện ở 5 tab gốc).
 - [ ] Xác nhận giữ back stack + scroll state khi chuyển tab và xoay màn hình (state restore).
 
