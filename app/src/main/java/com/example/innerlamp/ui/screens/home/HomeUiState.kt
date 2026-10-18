@@ -4,9 +4,10 @@ import com.example.innerlamp.domain.calendar.LunarCalendar
 import com.example.innerlamp.domain.calendar.LunarDate
 import com.example.innerlamp.domain.model.Article
 import com.example.innerlamp.domain.model.BuddhaFigure
-import com.example.innerlamp.domain.model.EventMonth
 import com.example.innerlamp.domain.model.Temple
 import com.example.innerlamp.domain.model.Verse
+import com.example.innerlamp.domain.usecase.HomeMonthCard
+import com.example.innerlamp.domain.usecase.HomeMonthOutcome
 import java.time.DayOfWeek
 import java.time.LocalDate
 
@@ -51,7 +52,10 @@ data class HomeUiState(
     val weekPages: List<WeekPage>,
     val selectedLunar: LunarDate,
     val verse: Verse,
-    val eventMonths: List<EventMonth>,
+    /** Six month cards of "Sự kiện Phật giáo" from the calendar (AC19); empty until loaded. */
+    val eventCards: List<HomeMonthCard> = emptyList(),
+    /** `true` while the cards load and none is shown yet. */
+    val eventsLoading: Boolean = false,
     val photoMore: Int = HomeSampleData.PHOTO_MORE,
     val temples: List<Temple> = HomeSampleData.temples,
     val buddhas: List<BuddhaFigure> = HomeSampleData.buddhas,
@@ -69,6 +73,10 @@ data class HomeUiState(
     /** Tên hiển thị trong lời chào. */
     val greetingLine: String get() = "$greeting, ${displayName?.takeIf { it.isNotBlank() } ?: "quý Phật tử"}"
 
+    /** The device copy stands in for at least one card ("Dữ liệu có thể chưa được cập nhật.", AC24). */
+    val eventsMayBeOutOfDate: Boolean
+        get() = eventCards.any { (it.outcome as? HomeMonthOutcome.Loaded)?.mayBeOutOfDate == true }
+
     /** Chữ cái trên avatar. */
     val avatarInitial: String get() = displayName?.trim()?.firstOrNull()?.uppercase() ?: "A"
 
@@ -85,7 +93,7 @@ data class HomeUiState(
         fun create(
             today: LocalDate,
             hour: Int,
-            eventMonths: List<EventMonth>,
+            eventCards: List<HomeMonthCard> = emptyList(),
             displayName: String? = null,
         ): HomeUiState = HomeUiState(
             displayName = displayName,
@@ -95,7 +103,7 @@ data class HomeUiState(
             weekPages = buildWeekPages(today),
             selectedLunar = LunarCalendar.toLunar(today),
             verse = verseFor(LunarCalendar.toLunar(today)),
-            eventMonths = eventMonths,
+            eventCards = eventCards,
         )
 
         fun greetingFor(hour: Int): String = when {

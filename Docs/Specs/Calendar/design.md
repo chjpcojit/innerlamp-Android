@@ -3,7 +3,7 @@
 Version: 1.1
 Last updated: 2026-10-17
 Product spec: `innerlamp-be` `docs/product/calendar/product.md` v1.2
-Contract: `innerlamp-be` `docs/specs/api/openapi.yaml` info.version 2.2.0 (`calendarEvents`, final and public; commit 3af0844, pushed in innerlamp-be PR #55, not yet merged on branch `feat/calendar-v3-public-major-via`)
+Contract: `innerlamp-be` `docs/specs/api/openapi.yaml` info.version 2.2.0 (`calendarEvents`, final and public; commit 3af0844, merged to main as 80de1da via innerlamp-be PR #55, from branch `feat/calendar-v3-public-major-via`)
 Status: in-progress — the festival calendar and the Home block still run on the local catalogue; the new domain, the detail screen and the data layer (API + Room) and the vectors do not exist yet; the contract is now final, so Phase 3 is unblocked (still to implement)
 
 > See `changelog.md` in this folder for the version history of this spec.

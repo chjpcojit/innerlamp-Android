@@ -35,7 +35,7 @@ data class FeaturedEvent(
 /**
  * Một sự kiện / khóa học trong danh sách.
  *
- * Khác với [BuddhistEvent] (sự kiện lễ vía/trai giới ở trang chủ): đây là các
+ * Khác với [CalendarEvent] (sự kiện lễ vía/trai giới của lịch lễ): đây là các
  * hoạt động của đạo tràng — tụng kinh, pháp thoại, khóa học nhiều buổi — mà
  * người dùng có thể ghi danh tham dự.
  */

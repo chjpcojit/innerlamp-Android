@@ -92,12 +92,26 @@ object LibraryRoute : IlDestination
 object EventsRoute : IlDestination
 
 /**
- * Lịch lễ Phật giáo — toàn bộ lễ vía + Mùng Một/Rằm từ tháng 1 năm hiện tại đến hết 2 năm kế tiếp,
- * kèm chùa tổ chức. Vào từ Trang chủ (khối "Sự kiện Phật giáo" → "Tất cả") và Chi tiết Phật/Bồ Tát
- * ("Lịch lễ"). Dùng transition mặc định (crossfade).
+ * Lịch lễ Phật giáo — lịch lễ theo năm lấy từ API (năm hiện tại theo giờ Việt Nam, tải thêm năm kế tiếp
+ * khi cuộn tới cuối, dừng ở 2100). Không cần đăng nhập. Vào từ Trang chủ (khối "Sự kiện Phật giáo" →
+ * "Tất cả" / "+N"), tab Chùa ("Lịch lễ") và Chi tiết Phật/Bồ Tát ("Lịch lễ"). Dùng transition mặc định
+ * (crossfade).
  */
 @Serializable
 object FestivalsRoute : IlDestination
+
+/**
+ * Chi tiết ngày lễ — một lần diễn ra của một sự kiện lịch lễ. [eventCode] là mã sự kiện, [solarDate] là
+ * ngày dương dạng ISO `YYYY-MM-DD` (để `toRoute()` không cần type map cho `LocalDate`). Vào từ Trang chủ
+ * (hàng sự kiện) và Lịch lễ (hàng ngày lễ). Chuyển trang trượt ngang (xem `MainActivity`).
+ *
+ * Là route có tham số nên không có instance singleton — đăng ký graph bằng
+ * `composable<FestivalDetailRoute>(...)` với transition tường minh [transitions] thay vì `ilComposable(screen)`.
+ */
+@Serializable
+data class FestivalDetailRoute(val eventCode: String, val solarDate: String) : IlDestination {
+    override val transitions: NavTransitionSpec get() = NavTransitionSpec.SlideHorizontal
+}
 
 /**
  * Chuông mõ — màn thực hành (nhịp mõ + thỉnh chuông). Vào từ Trang chủ (thẻ "Chuông mõ").

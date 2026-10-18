@@ -72,8 +72,10 @@ import androidx.compose.ui.unit.sp
 import com.example.innerlamp.domain.calendar.LunarDate
 import com.example.innerlamp.domain.model.Article
 import com.example.innerlamp.domain.model.BuddhaFigure
-import com.example.innerlamp.domain.model.BuddhistEvent
-import com.example.innerlamp.domain.model.EventMonth
+import com.example.innerlamp.domain.model.EventOccurrence
+import com.example.innerlamp.domain.usecase.HomeMonthCard
+import com.example.innerlamp.domain.usecase.HomeMonthOutcome
+import com.example.innerlamp.ui.screens.festivals.CalendarText
 import com.example.innerlamp.domain.model.Temple
 import com.example.innerlamp.domain.model.Verse
 import com.example.innerlamp.ui.components.IlRow
@@ -519,85 +521,137 @@ private fun MoonPhaseIcon(modifier: Modifier = Modifier) {
 
 // ── Sự kiện Phật giáo ────────────────────────────────────────────────────────
 
-/** Carousel sự kiện theo tháng (snap, thấy ~1.2 thẻ) + chấm chỉ tháng. */
+/**
+ * Month-card carousel of the calendar (AC19): six months from the current Vietnam-time month, a card
+ * per month with at most 3 rows (name + lunar date, no countdown), "+N sự kiện khác", an empty-month
+ * card, and a failure on the card of the failing year only (AC27). /
+ * Carousel sự kiện theo tháng: sáu tháng từ tháng hiện tại (giờ VN), mỗi thẻ tối đa 3 dòng (tên + ngày
+ * âm, không đếm ngược), "+N sự kiện khác", thẻ tháng rỗng, và lỗi chỉ hiện ở thẻ của năm bị lỗi.
+ */
 @Composable
 internal fun EventsSection(
-    months: List<EventMonth>,
-    /** Tháng (1–12) hiển thị lần đầu — thường là tháng hiện tại. */
-    initialMonth: Int,
+    cards: List<HomeMonthCard>,
+    isLoading: Boolean,
+    mayBeOutOfDate: Boolean,
     onAllClick: () -> Unit,
+    onEventClick: (eventCode: String, solarDate: LocalDate) -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalIlColors.current
-    val listState = rememberLazyListState(
-        initialFirstVisibleItemIndex = months.indexOfFirst { it.month == initialMonth }.coerceAtLeast(0),
-    )
+    val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
-    val page by remember { derivedStateOf { listState.firstVisibleItemIndex.coerceIn(0, months.lastIndex) } }
+    val page by remember(cards.size) { derivedStateOf { listState.firstVisibleItemIndex.coerceIn(0, (cards.size - 1).coerceAtLeast(0)) } }
 
     Column(modifier) {
         SectionHeader("Sự kiện Phật giáo", "Tất cả", onAllClick)
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 12.dp)) {
-            val cardWidth = (maxWidth - Gutter * 2) * 0.84f
-            // LazyRow không stretch được như flex của prototype: đồng bộ chiều cao theo thẻ cao nhất đã đo.
-            var tallestPx by remember { mutableIntStateOf(0) }
-            val tallest = with(LocalDensity.current) { tallestPx.toDp() }
-            LazyRow(
-                state = listState,
-                flingBehavior = rememberSnapFlingBehavior(listState),
-                contentPadding = PaddingValues(horizontal = Gutter),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+        if (cards.isEmpty()) {
+            EventStatusCard(
+                text = if (isLoading) "Đang tải sự kiện…" else CalendarText.FAILED,
+                actionLabel = if (isLoading) null else CalendarText.RETRY,
+                onAction = onRetry,
+                modifier = Modifier.padding(start = Gutter, end = Gutter, top = 12.dp),
+            )
+        } else {
+            BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 12.dp)) {
+                val cardWidth = (maxWidth - Gutter * 2) * 0.84f
+                // LazyRow không stretch được như flex của prototype: đồng bộ chiều cao theo thẻ cao nhất đã đo.
+                var tallestPx by remember { mutableIntStateOf(0) }
+                val tallest = with(LocalDensity.current) { tallestPx.toDp() }
+                LazyRow(
+                    state = listState,
+                    flingBehavior = rememberSnapFlingBehavior(listState),
+                    contentPadding = PaddingValues(horizontal = Gutter),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    itemsIndexed(cards, key = { _, c -> c.month.year * 100 + c.month.monthValue }) { _, card ->
+                        EventMonthCard(
+                            card = card,
+                            onAllClick = onAllClick,
+                            onEventClick = onEventClick,
+                            onRetry = onRetry,
+                            modifier = Modifier
+                                .width(cardWidth)
+                                .heightIn(min = tallest)
+                                .onSizeChanged { if (it.height > tallestPx) tallestPx = it.height },
+                        )
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 11.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                itemsIndexed(months, key = { _, m -> m.year * 100 + m.month }) { _, month ->
-                    EventMonthCard(
-                        month = month,
-                        onClick = onAllClick,
-                        modifier = Modifier
-                            .width(cardWidth)
-                            .heightIn(min = tallest)
-                            .onSizeChanged { if (it.height > tallestPx) tallestPx = it.height },
+                cards.indices.forEach { i ->
+                    val active = i == page
+                    val width by animateDpAsState(if (active) 16.dp else 5.dp, tween(200), label = "dotWidth")
+                    val dotColor by animateColorAsState(
+                        if (active) colors.link else colors.ink.copy(alpha = 0.16f),
+                        tween(200),
+                        label = "dotColor",
+                    )
+                    Box(
+                        Modifier
+                            .height(5.dp)
+                            .width(width)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(dotColor)
+                            .tappable(onClickLabel = "Tháng ${cards[i].month.monthValue}") {
+                                scope.launch { listState.animateScrollToItem(i) }
+                            },
                     )
                 }
             }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(top = 11.dp),
-            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            months.indices.forEach { i ->
-                val active = i == page
-                val width by animateDpAsState(if (active) 16.dp else 5.dp, tween(200), label = "dotWidth")
-                val dotColor by animateColorAsState(
-                    if (active) colors.link else colors.ink.copy(alpha = 0.16f),
-                    tween(200),
-                    label = "dotColor",
-                )
-                Box(
-                    Modifier
-                        .height(5.dp)
-                        .width(width)
-                        .clip(RoundedCornerShape(3.dp))
-                        .background(dotColor)
-                        .tappable(onClickLabel = "Tháng ${months[i].month}") {
-                            scope.launch { listState.animateScrollToItem(i) }
-                        },
+            if (mayBeOutOfDate) {
+                Text(
+                    text = CalendarText.STALE,
+                    modifier = Modifier.fillMaxWidth().padding(start = Gutter, end = Gutter, top = 10.dp),
+                    style = sans(11f, colors.ink.copy(alpha = 0.50f)),
                 )
             }
         }
     }
 }
 
+/** A single-line status card (loading / failure with "Thử lại"). / Thẻ trạng thái một dòng. */
 @Composable
-private fun EventMonthCard(
-    month: EventMonth,
-    onClick: () -> Unit,
+private fun EventStatusCard(
+    text: String,
+    actionLabel: String?,
+    onAction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalIlColors.current
     val shape = RoundedCornerShape(22.dp)
-    val shown = month.events.take(3)
-    val extra = month.events.size - shown.size
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(colors.card)
+            .border(1.dp, colors.ink.copy(alpha = 0.08f), shape)
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(text, modifier = Modifier.weight(1f), style = sans(12.5f, colors.ink.copy(alpha = 0.55f), lineHeight = 18.sp))
+        if (actionLabel != null) {
+            Text(actionLabel, modifier = Modifier.tappable(onClick = onAction), style = sans(12.5f, colors.link, FontWeight.Medium))
+        }
+    }
+}
+
+@Composable
+private fun EventMonthCard(
+    card: HomeMonthCard,
+    onAllClick: () -> Unit,
+    onEventClick: (String, LocalDate) -> Unit,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalIlColors.current
+    val shape = RoundedCornerShape(22.dp)
+    val outcome = card.outcome
     Column(
         modifier = modifier
             .clip(shape)
@@ -606,31 +660,62 @@ private fun EventMonthCard(
             .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 14.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Tháng ${month.month}, ${month.year}", style = sans(12.5f, colors.ink, FontWeight.Medium))
-            Text("${month.events.size} sự kiện", style = sans(10.5f, colors.ink.copy(alpha = 0.42f)))
-        }
-        Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            shown.forEachIndexed { index, event ->
-                EventRow(event = event, showDivider = index > 0, onClick = onClick)
+            Text("Tháng ${card.month.monthValue}, ${card.month.year}", style = sans(12.5f, colors.ink, FontWeight.Medium))
+            if (outcome is HomeMonthOutcome.Loaded && outcome.shown.isNotEmpty()) {
+                Text("${outcome.shown.size + outcome.more} sự kiện", style = sans(10.5f, colors.ink.copy(alpha = 0.42f)))
             }
         }
-        if (extra > 0) {
-            Column(Modifier.padding(top = 8.dp)) {
-                Box(Modifier.fillMaxWidth().height(1.dp).background(colors.ink.copy(alpha = 0.08f)))
+        when (outcome) {
+            is HomeMonthOutcome.Failed -> Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "+$extra sự kiện khác",
-                    modifier = Modifier.padding(top = 10.dp).tappable(onClick = onClick),
-                    style = sans(11.5f, colors.link, FontWeight.Medium),
+                    CalendarText.message(outcome.error),
+                    style = sans(12.5f, colors.ink.copy(alpha = 0.55f), lineHeight = 18.sp),
                 )
+                Text(
+                    CalendarText.RETRY,
+                    modifier = Modifier.tappable(onClick = onRetry),
+                    style = sans(12.5f, colors.link, FontWeight.Medium),
+                )
+            }
+            is HomeMonthOutcome.Loaded -> {
+                if (outcome.shown.isEmpty()) {
+                    Text(
+                        CalendarText.EMPTY_MONTH,
+                        modifier = Modifier.padding(top = 10.dp),
+                        style = sans(12.5f, colors.ink.copy(alpha = 0.55f), lineHeight = 18.sp),
+                    )
+                } else {
+                    Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        outcome.shown.forEachIndexed { index, entry ->
+                            EventRow(
+                                entry = entry,
+                                showDivider = index > 0,
+                                onClick = { onEventClick(entry.event.code, entry.occurrence.solarDate) },
+                            )
+                        }
+                    }
+                }
+                if (outcome.more > 0) {
+                    Column(Modifier.padding(top = 8.dp)) {
+                        Box(Modifier.fillMaxWidth().height(1.dp).background(colors.ink.copy(alpha = 0.08f)))
+                        Text(
+                            text = "+${outcome.more} sự kiện khác",
+                            modifier = Modifier.padding(top = 10.dp).tappable(onClick = onAllClick),
+                            style = sans(11.5f, colors.link, FontWeight.Medium),
+                        )
+                    }
+                }
             }
         }
     }
 }
 
+/** One event row: day + weekday, name, lunar date. No countdown (FR-CAL-006). / Một dòng sự kiện, không đếm ngược. */
 @Composable
-private fun EventRow(event: BuddhistEvent, showDivider: Boolean, onClick: () -> Unit) {
+private fun EventRow(entry: EventOccurrence, showDivider: Boolean, onClick: () -> Unit) {
     val colors = LocalIlColors.current
-    Column(Modifier.fillMaxWidth().tappable(onClick = onClick)) {
+    val date = entry.occurrence.solarDate
+    Column(Modifier.fillMaxWidth().tappable(onClickLabel = entry.event.name, onClick = onClick)) {
         Box(
             Modifier
                 .fillMaxWidth()
@@ -644,24 +729,24 @@ private fun EventRow(event: BuddhistEvent, showDivider: Boolean, onClick: () -> 
         ) {
             Column(Modifier.width(40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = "%02d".format(event.date.dayOfMonth),
+                    text = "%02d".format(date.dayOfMonth),
                     style = sans(
                         16f,
-                        if (event.isFestival) colors.link else colors.ink,
+                        if (entry.event.isMajor) colors.link else colors.ink,
                         FontWeight.Medium,
                         lineHeight = 16.sp,
                     ),
                 )
                 Text(
-                    text = event.date.weekdayShort(),
+                    text = date.weekdayShort(),
                     modifier = Modifier.padding(top = 2.dp),
                     style = sans(9.5f, colors.ink.copy(alpha = 0.42f)),
                 )
             }
             Column(Modifier.weight(1f)) {
-                Text(event.title, style = sans(13.5f, colors.ink, lineHeight = 18.2f.sp))
+                Text(entry.event.name, style = sans(13.5f, colors.ink, lineHeight = 18.2f.sp))
                 Text(
-                    text = event.lunarLabel,
+                    text = CalendarText.lunarLabel(entry.occurrence.lunar),
                     modifier = Modifier.padding(top = 3.dp),
                     style = sans(10.5f, colors.ink.copy(alpha = 0.45f)),
                 )

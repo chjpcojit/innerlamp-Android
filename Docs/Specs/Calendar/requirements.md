@@ -5,7 +5,7 @@ Last updated: 2026-10-17
 Status: in-progress — the "Lịch lễ Phật giáo" screen (`ui/screens/festivals/`) and the "Sự kiện Phật giáo" block on Home are running, but they compute dates from a catalogue that lives in the app (drift from BR-CAL-01…07, BR-CAL-05); no backend call yet, no detail screen, no offline copy, no next-year loading, no filtering by group / major event from data. The backend contract is now final (2.2.0), so the work is no longer blocked.
 Feature folder: `app/src/main/java/com/example/innerlamp/ui/screens/festivals/` (old name `festivals`, product §1.5; `ui/screens/calendar/` is the lunar calendar screen and is not part of this spec)
 Product spec: innerlamp-be `docs/product/calendar/product.md` @ v1.2
-Contract: innerlamp-be `docs/specs/api/openapi.yaml` @ info.version 2.2.0 (commit 3af0844 on branch `feat/calendar-v3-public-major-via`, pushed in innerlamp-be PR #55, not yet merged (re-cite after merge); `calendarEvents` is final: public, with `is_major` / `sort_order` / `recurrence`). Backend feature spec: innerlamp-be `docs/specs/features/calendar/` @ v3.2 (same commit).
+Contract: innerlamp-be `docs/specs/api/openapi.yaml` @ info.version 2.2.0 (commit 3af0844 on branch `feat/calendar-v3-public-major-via`, merged to main as 80de1da (innerlamp-be PR #55); `calendarEvents` is final: public, with `is_major` / `sort_order` / `recurrence`). Backend feature spec: innerlamp-be `docs/specs/features/calendar/` @ v3.2 (same commit).
 Implements: BR-CAL-01, BR-CAL-02, BR-CAL-03, BR-CAL-04, BR-CAL-05, BR-CAL-06, BR-CAL-07 (Android: drop local computation, show the dates the server returns), BR-CAL-08, BR-CAL-09, BR-CAL-10, BR-CAL-11, BR-CAL-12, BR-CAL-13, BR-CAL-14, BR-CAL-15, FR-CAL-001, FR-CAL-002, FR-CAL-003, FR-CAL-004, FR-CAL-005, FR-CAL-006, FR-CAL-007, FR-CAL-008, NFR-CAL-03
 
 > See `changelog.md` in this folder for the version history of this spec.
@@ -265,7 +265,7 @@ copied here.
 
 | Operation | Operation (openapi) | Auth | Local storage | Note |
 |---|---|---|---|---|
-| Load one year | `GET /v1/calendar/events?year=YYYY` (`calendarEvents`) | public — no Bearer, no `X-API-Key` | Room: the copy of that year (full replace) | Final since 2.2.0 (commit 3af0844, innerlamp-be PR #55 not yet merged). `year` always explicit (AC2). Per-IP limit → `429 RATE_LIMITED` (AC31) |
+| Load one year | `GET /v1/calendar/events?year=YYYY` (`calendarEvents`) | public — no Bearer, no `X-API-Key` | Room: the copy of that year (full replace) | Final since 2.2.0 (commit 3af0844, merged as 80de1da (innerlamp-be PR #55)). `year` always explicit (AC2). Per-IP limit → `429 RATE_LIMITED` (AC31) |
 | Major flag, display order, rule kind | `events[].is_major`, `sort_order`, `recurrence` | — | inside the copy of the year | Required fields since 2.2.0. `recurrence` decoded open-ended (unknown → `Recurrence.Unknown`). Rằm / Mùng Một = `lunar_monthly` |
 | Content lines | `events[].long_description`, `events[].guidance` | — | inside the copy of the year | One paragraph / action per `\n`-separated line (AC15) |
 | Detail | — (uses the loaded year) | — | reads the copy of the year | No separate operation (product Appendix A) |

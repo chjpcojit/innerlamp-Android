@@ -2,6 +2,7 @@ package com.example.innerlamp.ui.screens.chua
 
 import com.example.innerlamp.domain.model.ChuaEvent
 import com.example.innerlamp.domain.model.ChuaFastDay
+import com.example.innerlamp.domain.repository.CalendarLoadError
 import com.example.innerlamp.domain.model.ChuaNews
 import com.example.innerlamp.domain.model.ChuaOnlineSession
 import com.example.innerlamp.domain.model.ChuaRetreat
@@ -45,7 +46,11 @@ data class ChuaUiState(
     val remindedEvents: Set<String> = emptySet(),
     val online: List<ChuaOnlineSession>,
     val retreats: List<ChuaRetreat>,
-    val fastDays: List<ChuaFastDay>,
+    val fastDays: List<ChuaFastDay> = emptyList(),
+    /** `true` while "Ngày lễ & ngày chay sắp tới" is loading from the calendar and nothing is shown yet. */
+    val fastDaysLoading: Boolean = false,
+    /** Why the block is empty (offline / rate limited / failed), shown with "Thử lại". */
+    val fastDaysError: CalendarLoadError? = null,
     val remindedDays: Set<LocalDate> = emptySet(),
     val peerCount: Int = 0,
 ) {
