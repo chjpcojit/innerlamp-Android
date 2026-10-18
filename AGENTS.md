@@ -81,6 +81,15 @@ It is **mid-migration**, not a blank scaffold and not a finished app:
 
 There is **no git repository** in this directory: `git status`/`diff`/`log` will fail. Don't rely on history.
 
+## Backend session (API contract)
+
+- Backend session title: `[BE]-InnerLamp` (cwd: `/Users/chjpcoj/Documents/Programming/Go/workspaces/src/innerlamp`).
+- Message that session for contract questions, `openapi.yaml` changes, bugs or mismatches in an
+  endpoint, and product-spec gaps. Find its id with `list_sessions` by exact title; never guess an id.
+- Make the message self-contained: endpoint, contract version cited, observed vs expected, and what is needed.
+- Sibling clients: `[Android]-InnerLamp` (this repo), `[iOS]-InnerLamp`, `[Website]-InnerLamp`. The Justo
+  sessions belong to another project; do not mix them up.
+
 ## Commands
 
 Always use the wrapper (`./gradlew`), never a global `gradle`.
