@@ -1,24 +1,5 @@
 package com.example.innerlamp.domain.model
 
-import java.time.LocalDate
-
-/** Sự kiện Phật giáo trong tháng (lễ vía hoặc ngày trai giới Mùng Một/Rằm). */
-data class BuddhistEvent(
-    val date: LocalDate,
-    val title: String,
-    /** Ngày âm dạng "15/7 âm lịch". */
-    val lunarLabel: String,
-    /** `true` = lễ vía/đại lễ (tô màu nhấn), `false` = chỉ là ngày trai giới. */
-    val isFestival: Boolean,
-)
-
-/** Các sự kiện của một tháng dương lịch. */
-data class EventMonth(
-    val year: Int,
-    val month: Int,
-    val events: List<BuddhistEvent>,
-)
-
 /** Câu kinh hiển thị trên thẻ lịch âm ở trang chủ. */
 data class Verse(
     val lines: List<String>,

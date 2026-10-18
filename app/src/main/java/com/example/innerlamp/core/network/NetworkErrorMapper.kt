@@ -27,6 +27,8 @@ class NetworkErrorMapper(private val json: Json) {
         val body = runCatching { e.response()?.errorBody()?.string() }.getOrNull()
         val envelope = body?.let(::parseEnvelope)
         val detail = envelope?.error
+        // Retry-After (giây) cho 429; dạng HTTP-date bị bỏ qua. / Retry-After seconds; HTTP-date form ignored.
+        val retryAfter = e.response()?.headers()?.get("Retry-After")?.trim()?.toIntOrNull()
         // 401 chung (token hết hạn) → Unauthorized; 401 có mã nghiệp vụ riêng
         // (vd INVALID_CREDENTIALS, REFRESH_TOKEN_INVALID) giữ lại mã để caller phân biệt.
         if (e.code() == 401 && (detail == null || detail.code == UNAUTHORIZED_CODE)) {
@@ -38,9 +40,10 @@ class NetworkErrorMapper(private val json: Json) {
                 message = detail.message,
                 type = detail.type,
                 details = envelope.details,
+                retryAfterSeconds = retryAfter,
             )
         } else {
-            AppError.HttpError(e.code(), e.message())
+            AppError.HttpError(e.code(), e.message(), retryAfter)
         }
     }
 

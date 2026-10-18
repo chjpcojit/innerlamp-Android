@@ -28,6 +28,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
@@ -35,10 +37,12 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.innerlamp.di.DatabaseModule
 import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
 import com.example.innerlamp.domain.calendar.LunarCalendar
-import com.example.innerlamp.domain.usecase.GetBuddhistEventMonthsUseCase
+import com.example.innerlamp.InnerLampApplication
+import com.example.innerlamp.di.CalendarModule
 import com.example.innerlamp.ui.components.IlBlurHeaderScaffold
 import com.example.innerlamp.ui.components.IlBottomNav
 import com.example.innerlamp.ui.components.IlBottomTab
+import com.example.innerlamp.ui.screens.festivals.CalendarPreviewData
 import com.example.innerlamp.ui.theme.BeVietnamPro
 import com.example.innerlamp.ui.theme.IlGoldBright
 import com.example.innerlamp.ui.theme.InnerLampTheme
@@ -57,7 +61,10 @@ class HomeCallbacks(
     val onCalendar: () -> Unit = {},
     val onGio: () -> Unit = {},
     val onLunarDetail: (LocalDate) -> Unit = {},
+    /** "Tất cả" / "+N sự kiện khác" → the festival calendar. */
     val onEvents: () -> Unit = {},
+    /** A row of the event block → the festival detail of `(eventCode, solarDate)`. */
+    val onEventDetail: (eventCode: String, solarDate: LocalDate) -> Unit = { _, _ -> },
     val onPhotos: () -> Unit = {},
     val onTemple: (templeId: String) -> Unit = {},
     val onAllTemples: () -> Unit = {},
@@ -96,6 +103,9 @@ fun HomeScreen(
         factory = viewModelFactory {
             initializer {
                 HomeViewModel(
+                    getHomeEventBlock = CalendarModule.provideGetHomeEventBlockUseCase(
+                        (this[APPLICATION_KEY] as InnerLampApplication).calendarEventRepository,
+                    ),
                     quotes = DatabaseModule.provideSutraQuoteUseCase(this[APPLICATION_KEY]!!),
                     contentLoader = HomeSampleData::load,
                 )
@@ -104,11 +114,15 @@ fun HomeScreen(
     ),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    // A new day / month rebuilds the event block when the app returns to the foreground (AC20).
+    // Sang ngày / tháng mới thì dựng lại khối sự kiện khi app quay lại foreground.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.onResume() }
     HomeContent(
         state = state,
         callbacks = callbacks,
         onDateSelected = viewModel::onDateSelected,
         onReload = viewModel::onReload,
+        onReloadEvents = viewModel::onReloadEvents,
         modifier = modifier,
     )
 }
@@ -120,6 +134,7 @@ internal fun HomeContent(
     callbacks: HomeCallbacks,
     onDateSelected: (LocalDate) -> Unit,
     onReload: () -> Unit,
+    onReloadEvents: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalIlColors.current
@@ -158,9 +173,12 @@ internal fun HomeContent(
 
             Spacer(Modifier.height(24.dp))
             EventsSection(
-                months = state.eventMonths,
-                initialMonth = state.today.monthValue,
+                cards = state.eventCards,
+                isLoading = state.eventsLoading,
+                mayBeOutOfDate = state.eventsMayBeOutOfDate,
                 onAllClick = callbacks.onEvents,
+                onEventClick = callbacks.onEventDetail,
+                onRetry = onReloadEvents,
             )
 
             Spacer(Modifier.height(24.dp))
@@ -349,6 +367,7 @@ private fun HomePreview() {
             callbacks = HomeCallbacks(),
             onDateSelected = {},
             onReload = {},
+            onReloadEvents = {},
         )
     }
 }
@@ -362,6 +381,7 @@ private fun HomePreviewDark() {
             callbacks = HomeCallbacks(),
             onDateSelected = {},
             onReload = {},
+            onReloadEvents = {},
         )
     }
 }
@@ -371,7 +391,7 @@ private fun previewState(): HomeUiState {
     return HomeUiState.create(
         today = today,
         hour = 9,
-        eventMonths = GetBuddhistEventMonthsUseCase().forYear(today.year),
+        eventCards = CalendarPreviewData.homeCards(),
         displayName = "Diệu Tâm",
     )
 }

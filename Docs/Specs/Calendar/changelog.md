@@ -13,7 +13,7 @@ files share one changelog since they change together as one spec unit. Newest ve
   what Android relies on, not the number. Pending on ba-writer: product.md still says 51 events and its
   changelog omits the 6 new via events; 429 message and "Quay lại" label.
 - Re-sync to product spec v1.2 and contract `openapi.yaml` `info.version` 2.2.0 (innerlamp-be commit
-  3af0844 on branch `feat/calendar-v3-public-major-via`, pushed, innerlamp-be PR #55, not yet merged; re-cite after merge). Docs only; the code
+  3af0844 on branch `feat/calendar-v3-public-major-via`, merged to main as 80de1da (innerlamp-be PR #55)). Docs only; the code
   was not re-read.
 - `calendarEvents` is final: public, no longer "before v3.0" / "pending backend". The "blocked by
   backend" wording is removed; Phase 3 of `tasks.md` is unblocked (items still `[ ]` to implement). The

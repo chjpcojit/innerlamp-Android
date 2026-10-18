@@ -1,6 +1,9 @@
 package com.example.innerlamp.ui.screens.chua
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.innerlamp.domain.repository.CalendarLoadError
+import kotlinx.coroutines.launch
 import com.example.innerlamp.domain.model.ChuaTemple
 import com.example.innerlamp.domain.usecase.GetUpcomingFastDaysUseCase
 import com.example.innerlamp.ui.screens.templelist.foldVietnamese
@@ -22,8 +25,8 @@ import kotlinx.coroutines.flow.update
  * @author innerlamp
  */
 class ChuaViewModel(
-    getUpcomingFastDays: GetUpcomingFastDaysUseCase = GetUpcomingFastDaysUseCase(),
-    clock: () -> LocalDateTime = { LocalDateTime.now() },
+    private val getUpcomingFastDays: GetUpcomingFastDaysUseCase? = null,
+    private val clock: () -> LocalDateTime = { LocalDateTime.now() },
 ) : ViewModel() {
 
     private val _uiState: MutableStateFlow<ChuaUiState>
@@ -41,13 +44,46 @@ class ChuaViewModel(
                 events = ChuaSampleData.events,
                 online = ChuaSampleData.online,
                 retreats = ChuaSampleData.retreats,
-                fastDays = getUpcomingFastDays(now.toLocalDate()),
+                fastDaysLoading = getUpcomingFastDays != null,
                 peerCount = ChuaSampleData.peerCount(mine),
             ),
         )
     }
 
     val uiState: StateFlow<ChuaUiState> = _uiState.asStateFlow()
+
+    init {
+        loadFastDays()
+    }
+
+    /** "Thử lại" of the fast-days block (user tap only; never retried automatically). */
+    fun onRetryFastDays() {
+        if (_uiState.value.fastDaysLoading) return
+        _uiState.update { it.copy(fastDaysLoading = true, fastDaysError = null) }
+        loadFastDays()
+    }
+
+    /**
+     * "Ngày lễ & ngày chay sắp tới" from the calendar: the device copy first, then the refreshed list.
+     * / Lấy từ lịch lễ: bản trên máy trước, rồi danh sách mới.
+     */
+    private fun loadFastDays() {
+        val useCase = getUpcomingFastDays ?: return
+        val today = clock().toLocalDate()
+        viewModelScope.launch {
+            useCase.fromDeviceCopy(today)?.takeIf { it.isNotEmpty() }?.let { copy ->
+                _uiState.update { it.copy(fastDays = copy) }
+            }
+            useCase(today).fold(
+                onSuccess = { days -> _uiState.update { it.copy(fastDays = days, fastDaysLoading = false, fastDaysError = null) } },
+                onFailure = { e ->
+                    _uiState.update {
+                        it.copy(fastDaysLoading = false, fastDaysError = e as? CalendarLoadError ?: CalendarLoadError.Failed)
+                    }
+                },
+            )
+        }
+    }
 
     /** "Đổi chùa": về trạng thái chưa có chùa, nhớ chùa cũ để hủy đổi. */
     fun onChangeTemple() = _uiState.update {

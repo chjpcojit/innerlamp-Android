@@ -5,9 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.example.innerlamp.domain.model.toVerse
 import com.example.innerlamp.domain.usecase.SutraQuoteUseCase
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import com.example.innerlamp.domain.calendar.LunarCalendar
-import com.example.innerlamp.domain.usecase.GetBuddhistEventMonthsUseCase
+import com.example.innerlamp.domain.usecase.GetHomeEventBlockUseCase
 import java.time.Clock
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -27,18 +28,61 @@ import kotlinx.coroutines.flow.update
  * @param clock đồng hồ hệ thống — inject để test cố định "hôm nay".
  */
 class HomeViewModel(
-    clock: Clock = Clock.systemDefaultZone(),
-    getEventMonths: GetBuddhistEventMonthsUseCase = GetBuddhistEventMonthsUseCase(),
+    private val clock: Clock = Clock.systemDefaultZone(),
+    private val getHomeEventBlock: GetHomeEventBlockUseCase? = null,
     private val quotes: SutraQuoteUseCase? = null,
     private val contentLoader: (suspend () -> HomeSectionsContent)? = null,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(initialState(clock, getEventMonths, loading = contentLoader != null))
+    private val _uiState = MutableStateFlow(initialState(clock, loading = contentLoader != null, eventsLoading = getHomeEventBlock != null))
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    private var eventsJob: Job? = null
 
     init {
         loadRandomVerse()
         loadContent()
+        loadEvents()
+    }
+
+    /**
+     * ON_RESUME: when a new day has started, move "today" and rebuild the event block (AC20). /
+     * ON_RESUME: sang ngày mới thì đổi "hôm nay" và dựng lại khối sự kiện.
+     */
+    fun onResume() {
+        val now = LocalDateTime.now(clock)
+        val today = now.toLocalDate()
+        val state = _uiState.value
+        if (today == state.today) return
+        _uiState.update {
+            it.copy(
+                today = today,
+                greeting = HomeUiState.greetingFor(now.hour),
+                weekPages = HomeUiState.buildWeekPages(today),
+                selectedDate = if (it.selectedDate == it.today) today else it.selectedDate,
+            )
+        }
+        loadEvents()
+    }
+
+    /** "Thử lại" on a month card: reload the missing year(s) (user tap only). / Thử lại ở thẻ tháng. */
+    fun onReloadEvents() {
+        if (_uiState.value.eventsLoading) return
+        _uiState.update { it.copy(eventsLoading = true) }
+        loadEvents()
+    }
+
+    /** Device copy first (when every needed year is on the device), then the loaded cards (AC19, AC23). */
+    private fun loadEvents() {
+        val useCase = getHomeEventBlock ?: return
+        eventsJob?.cancel()
+        eventsJob = viewModelScope.launch {
+            useCase.fromDeviceCopy()?.let { copy ->
+                _uiState.update { it.copy(eventCards = copy) }
+            }
+            val cards = useCase()
+            _uiState.update { it.copy(eventCards = cards, eventsLoading = false) }
+        }
     }
 
     /** Chọn một ngày ở dải tuần → cập nhật thẻ âm lịch + câu kinh (random). */
@@ -93,14 +137,15 @@ class HomeViewModel(
     }
 
     private companion object {
-        fun initialState(clock: Clock, getEventMonths: GetBuddhistEventMonthsUseCase, loading: Boolean): HomeUiState {
+        fun initialState(clock: Clock, loading: Boolean, eventsLoading: Boolean): HomeUiState {
             val now = LocalDateTime.now(clock)
             return HomeUiState.create(
                 today = now.toLocalDate(),
                 hour = now.hour,
-                eventMonths = getEventMonths.forYear(now.year),
             ).let { state ->
-                if (loading) state.copy(isContentLoading = true, temples = emptyList(), buddhas = emptyList(), articles = emptyList()) else state
+                state.copy(eventsLoading = eventsLoading).let {
+                    if (loading) it.copy(isContentLoading = true, temples = emptyList(), buddhas = emptyList(), articles = emptyList()) else it
+                }
             }
         }
     }

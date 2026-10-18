@@ -42,6 +42,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.innerlamp.di.CalendarModule
+import com.example.innerlamp.ui.screens.festivals.CalendarText
 import com.example.innerlamp.domain.model.ChuaEvent
 import com.example.innerlamp.domain.model.ChuaEventAction
 import com.example.innerlamp.domain.model.ChuaFastDay
@@ -96,7 +98,7 @@ class ChuaCallbacks(
 fun ChuaScreen(
     modifier: Modifier = Modifier,
     callbacks: ChuaCallbacks = ChuaCallbacks(),
-    viewModel: ChuaViewModel = viewModel(),
+    viewModel: ChuaViewModel = viewModel(factory = CalendarModule.chuaViewModelFactory()),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     ChuaContent(
@@ -112,6 +114,7 @@ fun ChuaScreen(
             onCancelProposal = viewModel::onCancelProposal,
             onProposalChange = viewModel::onProposalChange,
             onSubmitProposal = viewModel::onSubmitProposal,
+            onRetryFastDays = viewModel::onRetryFastDays,
         ),
         callbacks = callbacks,
         modifier = modifier,
@@ -131,6 +134,7 @@ internal class ChuaActions(
     val onCancelProposal: () -> Unit = {},
     val onProposalChange: ((ChuaProposal) -> ChuaProposal) -> Unit = {},
     val onSubmitProposal: () -> Unit = {},
+    val onRetryFastDays: () -> Unit = {},
 )
 
 /** Phần stateless của [ChuaScreen] — dùng cho preview và test. */
@@ -787,6 +791,31 @@ private fun FastDaysSection(
     val colors = LocalIlColors.current
     SectionTitle("Ngày lễ & ngày chay sắp tới", topPadding = 24.dp, trailing = "Lịch lễ", onTrailing = onFestivals)
     CardList(modifier = Modifier.padding(top = 12.dp)) {
+        if (state.fastDays.isEmpty()) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                val error = state.fastDaysError
+                Text(
+                    text = when {
+                        state.fastDaysLoading -> "Đang tải ngày lễ…"
+                        error != null -> CalendarText.message(error)
+                        else -> "Chưa có ngày lễ sắp tới."
+                    },
+                    modifier = Modifier.weight(1f),
+                    style = sans(12.5f, colors.ink.copy(alpha = 0.55f), lineHeight = 18.sp),
+                )
+                if (error != null && !state.fastDaysLoading) {
+                    Text(
+                        CalendarText.RETRY,
+                        modifier = Modifier.tappable(onClick = actions.onRetryFastDays),
+                        style = sans(12.5f, colors.link, FontWeight.Medium),
+                    )
+                }
+            }
+        }
         state.fastDays.forEachIndexed { i, d ->
             if (i > 0) Divider()
             val on = d.date in state.remindedDays
@@ -928,7 +957,10 @@ private fun previewState(hasTemple: Boolean): ChuaUiState {
         events = ChuaSampleData.events,
         online = ChuaSampleData.online,
         retreats = ChuaSampleData.retreats,
-        fastDays = com.example.innerlamp.domain.usecase.GetUpcomingFastDaysUseCase()(LocalDate.now()),
+        fastDays = listOf(
+            ChuaFastDay(LocalDate.of(2026, 10, 25), "Tết Trung thu", 15, "Tám", 8, isFestival = false, suggestion = "Gợi ý: ăn chay, tụng Kinh Phổ Môn"),
+            ChuaFastDay(LocalDate.of(2026, 11, 3), "Lễ Vu Lan", 15, "Bảy", 17, isFestival = true, suggestion = "Gợi ý: tụng kinh và hồi hướng công đức"),
+        ),
         peerCount = ChuaSampleData.peerCount(mine),
     )
 }

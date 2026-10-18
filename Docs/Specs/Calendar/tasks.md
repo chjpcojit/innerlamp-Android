@@ -106,7 +106,7 @@ Unblocked: `calendarEvents` is final in contract 2.2.0 (public, `is_major`, `sor
 - [x] The backend contract is final: `GET /v1/calendar/events` (`calendarEvents`) in innerlamp-be
       `docs/specs/api/openapi.yaml` `info.version` 2.2.0 — public, `is_major`, `sort_order`, `recurrence`,
       429 `RATE_LIMITED`, `Cache-Control` public with `year` — commit 3af0844 on branch
-      `feat/calendar-v3-public-major-via`, pushed, innerlamp-be PR #55, not yet merged (re-cite after merge); cite, do not copy the schema.
+      `feat/calendar-v3-public-major-via`, merged to main as 80de1da (innerlamp-be PR #55); cite, do not copy the schema.
       Re-cite the commit after the backend merges (hand-off)
 - [ ] `data/remote/api/CalendarApiService.kt` (not `@Authenticated`; send **no** `Authorization`; **never
       send `X-API-Key`** — website only, a wrong key gives `401 INVALID_API_KEY`) +

@@ -3,7 +3,18 @@ package com.example.innerlamp.ui.screens.home
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.CompletableDeferred
+import com.example.innerlamp.domain.calendar.FakeCalendarEventRepository
+import com.example.innerlamp.domain.calendar.event
+import com.example.innerlamp.domain.calendar.network
+import com.example.innerlamp.domain.model.CalendarGroup
+import com.example.innerlamp.domain.model.CalendarOccurrence
+import com.example.innerlamp.domain.model.CalendarYear
+import com.example.innerlamp.domain.model.LunarDay
+import com.example.innerlamp.domain.repository.CalendarLoadError
+import com.example.innerlamp.domain.usecase.GetHomeEventBlockUseCase
+import com.example.innerlamp.domain.usecase.HomeMonthOutcome
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.setMain
@@ -37,7 +48,8 @@ class HomeViewModelTest {
         // 25/9/2026 = Rằm tháng Tám âm lịch (Trung thu).
         assertEquals(15, s.selectedLunar.day)
         assertEquals(8, s.selectedLunar.month)
-        assertEquals(12, s.eventMonths.size)
+        // Without the calendar use case the block stays empty (no local catalogue any more).
+        assertTrue(s.eventCards.isEmpty())
     }
 
     @Test
@@ -127,5 +139,112 @@ class HomeViewModelTest {
         dispatcher.scheduler.runCurrent()
         assertFalse(vm.uiState.value.isContentLoading)
         assertEquals(HomeSampleData.temples, vm.uiState.value.temples)
+    }
+
+    // ── Khối "Sự kiện Phật giáo" từ lịch lễ ────────────────────────────────
+
+    private fun calendarYear(y: Int, vararg dates: String) = CalendarYear(
+        y,
+        listOf(CalendarGroup("buddhist", "Phật giáo")),
+        dates.indices.map { event("e$it", sortOrder = it + 1, isMajor = it == 0) },
+        dates.mapIndexed { i, d -> CalendarOccurrence("e$i", LocalDate.parse(d), LunarDay(1, 1, y, false)) },
+    )
+
+    private fun eventsViewModel(repo: FakeCalendarEventRepository): HomeViewModel {
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        return HomeViewModel(clock = clock, getHomeEventBlock = GetHomeEventBlockUseCase(repo, clock))
+    }
+
+    @Test
+    fun home_block_has_six_months_from_the_current_one_with_empty_month_and_no_more() {
+        val repo = FakeCalendarEventRepository(
+            loads = mutableMapOf(
+                2026 to network(calendarYear(2026, "2026-09-28", "2026-12-02")),
+                2027 to network(calendarYear(2027)),
+            ),
+        )
+        val s = eventsViewModel(repo).uiState.value
+        assertFalse(s.eventsLoading)
+        assertEquals(listOf(9, 10, 11, 12, 1, 2), s.eventCards.map { it.month.monthValue })
+        val sep = s.eventCards[0].outcome as HomeMonthOutcome.Loaded
+        assertEquals(1, sep.shown.size)
+        val oct = s.eventCards[1].outcome as HomeMonthOutcome.Loaded
+        assertTrue(oct.shown.isEmpty()) // empty month card, not an error
+        assertEquals(0, oct.more)
+    }
+
+    @Test
+    fun a_failing_year_only_fails_its_own_months() {
+        val repo = FakeCalendarEventRepository(
+            loads = mutableMapOf(
+                2026 to network(calendarYear(2026, "2026-09-28")),
+                2027 to Result.failure(CalendarLoadError.Offline),
+            ),
+        )
+        val cards = eventsViewModel(repo).uiState.value.eventCards
+        assertTrue(cards.take(4).all { it.outcome is HomeMonthOutcome.Loaded })
+        assertEquals(HomeMonthOutcome.Failed(CalendarLoadError.Offline), cards[4].outcome)
+        assertEquals(HomeMonthOutcome.Failed(CalendarLoadError.Offline), cards[5].outcome)
+    }
+
+    @Test
+    fun rate_limited_card_waits_for_a_user_retry() {
+        val limited = CalendarLoadError.RateLimited(20)
+        val repo = FakeCalendarEventRepository(
+            loads = mutableMapOf(2026 to Result.failure(limited), 2027 to Result.failure(limited)),
+        )
+        val vm = eventsViewModel(repo)
+        assertEquals(HomeMonthOutcome.Failed(limited), vm.uiState.value.eventCards.first().outcome)
+        assertEquals(2, repo.loadCalls.size) // two years once, no loop
+
+        repo.loads[2026] = network(calendarYear(2026, "2026-09-28"))
+        repo.loads[2027] = network(calendarYear(2027))
+        vm.onReloadEvents()
+        assertTrue(vm.uiState.value.eventCards.first().outcome is HomeMonthOutcome.Loaded)
+        assertEquals(4, repo.loadCalls.size)
+    }
+
+    @Test
+    fun device_copy_shows_first_then_the_loaded_cards() {
+        val gate = CompletableDeferred<Unit>()
+        val repo = FakeCalendarEventRepository(
+            copies = mutableMapOf(2026 to calendarYear(2026, "2026-09-28"), 2027 to calendarYear(2027)),
+            loads = mutableMapOf(
+                2026 to network(calendarYear(2026, "2026-09-28", "2026-09-29")),
+                2027 to network(calendarYear(2027)),
+            ),
+            gates = mutableMapOf(2026 to gate),
+        )
+        val vm = eventsViewModel(repo)
+        val first = vm.uiState.value.eventCards.first().outcome as HomeMonthOutcome.Loaded
+        assertEquals(1, first.shown.size)
+        assertTrue(vm.uiState.value.eventsLoading)
+        gate.complete(Unit)
+        val final = vm.uiState.value.eventCards.first().outcome as HomeMonthOutcome.Loaded
+        assertEquals(2, final.shown.size)
+        assertFalse(vm.uiState.value.eventsLoading)
+    }
+
+    @Test
+    fun resume_on_a_new_day_moves_today_and_rebuilds_the_block() {
+        val repo = FakeCalendarEventRepository(
+            loads = mutableMapOf(2026 to network(calendarYear(2026)), 2027 to network(calendarYear(2027))),
+        )
+        var now = clock
+        val moving = object : Clock() {
+            override fun getZone() = now.zone
+            override fun withZone(zone: ZoneId) = now.withZone(zone)
+            override fun instant() = now.instant()
+        }
+        Dispatchers.setMain(UnconfinedTestDispatcher())
+        val vm = HomeViewModel(clock = moving, getHomeEventBlock = GetHomeEventBlockUseCase(repo, moving))
+        assertEquals(2, repo.loadCalls.size)
+        vm.onResume() // same day: nothing
+        assertEquals(2, repo.loadCalls.size)
+
+        now = Clock.fixed(now.instant().plusSeconds(24 * 3600), now.zone)
+        vm.onResume()
+        assertEquals(LocalDate.of(2026, 9, 26), vm.uiState.value.today)
+        assertEquals(4, repo.loadCalls.size)
     }
 }

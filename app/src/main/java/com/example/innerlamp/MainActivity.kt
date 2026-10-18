@@ -35,6 +35,7 @@ import com.example.innerlamp.ui.navigation.BuddhaRoute
 import com.example.innerlamp.ui.navigation.CalRoute
 import com.example.innerlamp.ui.navigation.ChuaRoute
 import com.example.innerlamp.ui.navigation.EventsRoute
+import com.example.innerlamp.ui.navigation.FestivalDetailRoute
 import com.example.innerlamp.ui.navigation.FestivalsRoute
 import com.example.innerlamp.ui.navigation.GioEditRoute
 import com.example.innerlamp.ui.navigation.GioRoute
@@ -71,6 +72,7 @@ import com.example.innerlamp.ui.screens.chua.ChuaCallbacks
 import com.example.innerlamp.ui.screens.chua.ChuaScreen
 import com.example.innerlamp.ui.screens.events.EventsCallbacks
 import com.example.innerlamp.ui.screens.events.EventsScreen
+import com.example.innerlamp.ui.screens.festivals.FestivalDetailScreen
 import com.example.innerlamp.ui.screens.festivals.FestivalsCallbacks
 import com.example.innerlamp.ui.screens.festivals.FestivalsScreen
 import com.example.innerlamp.ui.screens.gio.GioCallbacks
@@ -236,6 +238,9 @@ class MainActivity : FragmentActivity() {
                                     onBell = { navController.navigate(BellRoute) },
                                     onSetup = { navController.navigate(SetupRoute) },
                                     onEvents = { navController.navigate(FestivalsRoute) },
+                                    onEventDetail = { code, date ->
+                                        navController.navigate(FestivalDetailRoute(code, date.toString()))
+                                    },
                                     onCalendar = { navController.navigate(CalRoute) },
                                     onGio = { navController.navigate(GioRoute) },
                                     onLunarDetail = { date -> navController.navigate(LunarDetailRoute(date.toEpochDay())) },
@@ -356,8 +361,18 @@ class MainActivity : FragmentActivity() {
                             FestivalsScreen(
                                 callbacks = FestivalsCallbacks(
                                     onBack = { navController.popBackStack() },
-                                    onTemple = { id -> navController.navigate(TempleRoute(id)) },
+                                    onEventDetail = { code, date ->
+                                        navController.navigate(FestivalDetailRoute(code, date.toString()))
+                                    },
                                 ),
+                            )
+                        }
+                        ilComposable(FestivalDetailRoute(eventCode = "", solarDate = "")) { entry ->
+                            val route = entry.toRoute<FestivalDetailRoute>()
+                            FestivalDetailScreen(
+                                eventCode = route.eventCode,
+                                solarDate = route.solarDate,
+                                onBack = { navController.popBackStack() },
                             )
                         }
                         ilComposable(CalRoute) {

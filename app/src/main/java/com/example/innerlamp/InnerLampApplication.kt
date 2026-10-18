@@ -4,7 +4,9 @@ import android.app.Application
 import android.util.Log
 import com.example.innerlamp.core.database.InnerLampDatabase
 import com.example.innerlamp.di.AuthModule
+import com.example.innerlamp.di.CalendarModule
 import com.example.innerlamp.di.DatabaseModule
+import com.example.innerlamp.domain.repository.CalendarEventRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -13,6 +15,14 @@ import kotlinx.coroutines.launch
 class InnerLampApplication : Application() {
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /**
+     * The ONE calendar repository of the app (it owns the in-memory year cache). /
+     * Repository lịch lễ DUY NHẤT của app (giữ cache năm trong bộ nhớ).
+     */
+    val calendarEventRepository: CalendarEventRepository by lazy {
+        CalendarModule.provideCalendarEventRepository(this)
+    }
 
     override fun onCreate() {
         super.onCreate()
