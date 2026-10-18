@@ -89,6 +89,10 @@ There is **no git repository** in this directory: `git status`/`diff`/`log` will
 - Make the message self-contained: endpoint, contract version cited, observed vs expected, and what is needed.
 - Sibling clients: `[Android]-InnerLamp` (this repo), `[iOS]-InnerLamp`, `[Website]-InnerLamp`. The Justo
   sessions belong to another project; do not mix them up.
+- Reporting rule: when `[BE]-InnerLamp` assigns work (e.g. "update to the new API"), message it when
+  that work is done or blocked. Keep the report short and self-contained: what was done, the openapi
+  contract version now targeted, commit/PR, test status, and any mismatch still open. Work started
+  on our own needs no report.
 
 ## Commands
 
