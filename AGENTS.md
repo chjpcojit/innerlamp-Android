@@ -63,6 +63,14 @@ Define success criteria, then verify them.
 - **Verification here is static** (see Hard rules): write the tests and check compile-correctness by
   reading code; do not run tests or the app. Ask the user to run them.
 
+### 5. Reporting style
+Replies to the user are short and definitive.
+- State the status of each task explicitly: **done** or **not done**, then the reason in one line
+  (e.g. "Task A: done — tests written, compile-checked by reading." / "Task B: not done — blocked by X").
+- Add detailed explanation only when it is relevant (a blocker, a risk, a decision the user must make,
+  an unverified claim). No preamble, no recap of what the user already knows.
+- Say plainly what is unverified instead of hedging.
+
 ## Current state (read this first)
 
 InnerLamp is a native Android app (Kotlin + Jetpack Compose, single Gradle module `:app`).
