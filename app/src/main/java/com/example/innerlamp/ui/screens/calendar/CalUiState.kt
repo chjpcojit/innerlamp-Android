@@ -1,6 +1,7 @@
 package com.example.innerlamp.ui.screens.calendar
 
 import com.example.innerlamp.domain.calendar.LunarCalendar
+import com.example.innerlamp.domain.model.CalendarDayImage
 import com.example.innerlamp.domain.model.LunarMonthPage
 import java.time.LocalDate
 
@@ -19,6 +20,8 @@ data class CalUiState(
     /** Tiêu đề / đoạn giới thiệu hôm nay (dữ liệu biên tập mẫu — xem [CalSampleData]). */
     val todayTitle: String,
     val todayBody: String,
+    /** Ảnh Phật của [selectedDate] (API `calendarImage`). */
+    val dayImage: DayImageUiState = DayImageUiState.Loading,
 ) {
     companion object {
         /** Dựng state ban đầu cho [today]; ngày đang chọn = hôm nay. */
@@ -34,4 +37,21 @@ data class CalUiState(
             )
         }
     }
+}
+
+/**
+ * Trạng thái ảnh Phật của ngày đang chọn. / Buddha image state of the selected day.
+ */
+sealed interface DayImageUiState {
+    /** Đang tải. / Loading. */
+    data object Loading : DayImageUiState
+
+    /** Có ảnh; tác giả + giấy phép phải hiện trên màn (CC BY / CC BY-SA). / Image ready. */
+    data class Loaded(val image: CalendarDayImage) : DayImageUiState
+
+    /** Không có mạng. / Offline. */
+    data object Offline : DayImageUiState
+
+    /** Lỗi khác (kể cả ngày ngoài 1900..2100). / Any other failure. */
+    data object Failed : DayImageUiState
 }

@@ -1,7 +1,7 @@
 # Tasks — Calendar
 
-Version: 1.2
-Last updated: 2026-10-17
+Version: 1.3
+Last updated: 2026-10-20
 Status: in-progress — entry points, the Home carousel and the per-month list exist on the local catalogue; the new domain, detail screen, API + device copy and vectors are still `[ ]`; Phase 3 is unblocked (contract 2.2.0 is final, but the backend commit is not pushed yet)
 
 > See `changelog.md` in this folder for the version history of this spec.
@@ -52,6 +52,18 @@ Paths are relative to `app/src/main/java/com/example/innerlamp/`.
       via events (Tỳ Lô Giá Na 15/4, Hư Không Tạng 15/1, Kim Cương Thủ 8/4, Lục Độ Mẫu 8/1, Bạch Độ Mẫu
       15/10, Kim Cương Tát Đỏa 15/7); their dates come from `phat_botat.json` and are **not yet checked
       against GHPGVN** (⚠️ Not confirmed)
+
+## Daily Buddha image (v1.3, Android-only; ⚠️ no product ID, see requirements.md)
+
+- [x] `domain/model/CalendarDayImage.kt`, `domain/repository/CalendarImageRepository.kt`,
+      `domain/usecase/GetCalendarDayImageUseCase.kt`
+- [x] `CalendarApiService.getImage`, `CalendarImageDto`, `CalendarImageMapper`,
+      `CalendarImageRepositoryImpl`, DI in `CalendarModule` + `InnerLampApplication`
+- [x] `CalUiState.dayImage`, `CalViewModel` (load on select, cancel, retry), `DayImageCard` with
+      loading / error + "Thử lại" / attribution (AC-IMG-1…6)
+- [x] Tests written (not run, per AGENTS.md): `CalendarImageRepositoryImplTest`,
+      `GetCalendarDayImageUseCaseTest`, `CalViewModelTest`
+- [ ] Verify on a device against the real endpoint (not done: no run in this task)
 
 ## Phase 2 — UI (`il-ui-builder`)
 

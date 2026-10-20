@@ -13,12 +13,16 @@ import com.example.innerlamp.core.util.DefaultDispatcherProvider
 import com.example.innerlamp.core.util.DispatcherProvider
 import com.example.innerlamp.data.remote.api.CalendarApiService
 import com.example.innerlamp.data.repository.CalendarEventRepositoryImpl
+import com.example.innerlamp.data.repository.CalendarImageRepositoryImpl
 import com.example.innerlamp.domain.repository.CalendarEventRepository
+import com.example.innerlamp.domain.repository.CalendarImageRepository
+import com.example.innerlamp.domain.usecase.GetCalendarDayImageUseCase
 import com.example.innerlamp.domain.usecase.GetEventOccurrenceUseCase
 import com.example.innerlamp.domain.usecase.GetHomeEventBlockUseCase
 import com.example.innerlamp.InnerLampApplication
 import com.example.innerlamp.domain.usecase.GetUpcomingFastDaysUseCase
 import com.example.innerlamp.domain.usecase.LoadCalendarYearUseCase
+import com.example.innerlamp.ui.screens.calendar.CalViewModel
 import com.example.innerlamp.ui.screens.chua.ChuaViewModel
 import com.example.innerlamp.ui.screens.festivals.FestivalDetailViewModel
 import com.example.innerlamp.ui.screens.festivals.FestivalsViewModel
@@ -61,6 +65,19 @@ object CalendarModule {
         logger = { message, cause -> Log.w("InnerLampCalendar", message, cause) },
     )
 
+    /** One instance per app (memory cache): `InnerLampApplication.calendarImageRepository`. / Một instance cho app. */
+    fun provideCalendarImageRepository(
+        networkClient: NetworkClient = NetworkModule.provideNetworkClient(),
+        dispatchers: DispatcherProvider = DefaultDispatcherProvider,
+    ): CalendarImageRepository = CalendarImageRepositoryImpl(
+        api = provideApiService(networkClient),
+        networkClient = networkClient,
+        dispatchers = dispatchers,
+    )
+
+    fun provideGetCalendarDayImageUseCase(repository: CalendarImageRepository) =
+        GetCalendarDayImageUseCase(repository)
+
     fun provideLoadCalendarYearUseCase(
         repository: CalendarEventRepository,
         clock: Clock = Clock.systemUTC(),
@@ -82,6 +99,16 @@ object CalendarModule {
 
     private fun androidx.lifecycle.viewmodel.CreationExtras.repository(): CalendarEventRepository =
         (this[APPLICATION_KEY] as InnerLampApplication).calendarEventRepository
+
+    fun calViewModelFactory(): ViewModelProvider.Factory = viewModelFactory {
+        initializer {
+            val app = this[APPLICATION_KEY] as InnerLampApplication
+            CalViewModel(
+                quotes = DatabaseModule.provideSutraQuoteUseCase(app),
+                getDayImage = provideGetCalendarDayImageUseCase(app.calendarImageRepository),
+            )
+        }
+    }
 
     fun festivalsViewModelFactory(): ViewModelProvider.Factory = viewModelFactory {
         initializer { FestivalsViewModel(provideLoadCalendarYearUseCase(repository())) }
