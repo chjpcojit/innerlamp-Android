@@ -3,6 +3,13 @@
 Tracks version history for `requirements.md`, `design.md`, and `tasks.md` in this folder. All three
 files share one changelog since they change together as one spec unit. Newest version first.
 
+## v1.3 (2026-10-20)
+
+- Added the daily Buddha image on the lunar Calendar screen from `GET /v1/calendar/image` (contract
+  2.2.0, `calendarImage`): AC-IMG-1…6 in `requirements.md`, a design section and tasks. Android-only: no
+  product ID yet (⚠️ Not confirmed, hand back to `ba-writer`). Unconfirmed: JSON type of `id`, empty
+  author/license behaviour, `thumbnail_url`. Other sections unchanged.
+
 ## v1.2 (2026-10-17)
 
 - Backend answers (2026-10-17): group code `buddhist` is stable (AC19 resolved). The IP rate limit

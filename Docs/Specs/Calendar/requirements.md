@@ -1,7 +1,7 @@
 # Requirements — Calendar
 
-Version: 1.2
-Last updated: 2026-10-17
+Version: 1.3
+Last updated: 2026-10-20
 Status: in-progress — the "Lịch lễ Phật giáo" screen (`ui/screens/festivals/`) and the "Sự kiện Phật giáo" block on Home are running, but they compute dates from a catalogue that lives in the app (drift from BR-CAL-01…07, BR-CAL-05); no backend call yet, no detail screen, no offline copy, no next-year loading, no filtering by group / major event from data. The backend contract is now final (2.2.0), so the work is no longer blocked.
 Feature folder: `app/src/main/java/com/example/innerlamp/ui/screens/festivals/` (old name `festivals`, product §1.5; `ui/screens/calendar/` is the lunar calendar screen and is not part of this spec)
 Product spec: innerlamp-be `docs/product/calendar/product.md` @ v1.2
@@ -295,6 +295,33 @@ The Vietnamese strings are the shared copy of product spec v1.2 §3.1.1 (message
 
 `400 INVALID_YEAR` cannot happen (the app only sends the current year → 2100); if it does, handle it like
 any other failure.
+
+## Daily Buddha image on the lunar Calendar screen (added in v1.3)
+
+Android-only addendum for `ui/screens/calendar/`. ⚠️ Not confirmed (product): `product.md` v1.2 has no
+BR / FR ID for this image, so none is cited here; hand back to `ba-writer` in innerlamp-be. Contract:
+`openapi.yaml` v2.2.0, operation `calendarImage` (`GET /v1/calendar/image?date=YYYY-MM-DD`, public, no
+auth). The schema is not copied here.
+
+- **AC-IMG-1** WHEN the Calendar screen opens, THE app SHALL request the image of today's date
+  (device date) and show it in a card above the "Hôm nay" card. WHEN the user selects another day, THE
+  app SHALL request the image of that day and cancel the earlier request.
+- **AC-IMG-2** THE app SHALL always send an explicit `date` (`YYYY-MM-DD`); the response is cacheable
+  (`Cache-Control: public, max-age=86400`) only then. A date already loaded in the session SHALL NOT be
+  fetched again (the same date always gives the same image).
+- **AC-IMG-3** WHILE the image is loading, THE card SHALL show a progress indicator.
+- **AC-IMG-4** WHEN the image is shown, THE app SHALL show the author and the license name on screen
+  (CC BY / CC BY-SA obligation); the license name SHALL be a link to `license_url` when present.
+- **AC-IMG-5** IF the request fails with no connection / timeout, THEN THE card SHALL show "Không có
+  kết nối mạng. Vui lòng kiểm tra và thử lại." and "Thử lại"; IF it fails otherwise (including
+  `400 INVALID_DATE`, 5xx, parse error), THEN "Không tải được ảnh." and "Thử lại". No automatic retry.
+- **AC-IMG-6** A date outside 1900..2100 SHALL fail locally without a call (the server returns 400).
+- Result of a request for a day that is no longer selected SHALL be ignored.
+
+⚠️ Not confirmed (backend): the JSON type of `id` (the DTO accepts string or number); behaviour when
+`license` / `author` are empty for a public-domain image (the app hides the attribution line when both
+are blank); `thumbnail_url` (not in 2.2.0, the full `image_url` is loaded); the Vietnamese strings
+above are Android defaults (product §3.1.1 has none for the image).
 
 ## Out of scope
 

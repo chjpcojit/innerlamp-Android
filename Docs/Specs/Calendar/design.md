@@ -1,7 +1,7 @@
 # Design — Calendar
 
-Version: 1.1
-Last updated: 2026-10-17
+Version: 1.3
+Last updated: 2026-10-20
 Product spec: `innerlamp-be` `docs/product/calendar/product.md` v1.2
 Contract: `innerlamp-be` `docs/specs/api/openapi.yaml` info.version 2.2.0 (`calendarEvents`, final and public; commit 3af0844, merged to main as 80de1da via innerlamp-be PR #55, from branch `feat/calendar-v3-public-major-via`)
 Status: in-progress — the festival calendar and the Home block still run on the local catalogue; the new domain, the detail screen and the data layer (API + Room) and the vectors do not exist yet; the contract is now final, so Phase 3 is unblocked (still to implement)
@@ -230,6 +230,24 @@ every platform) unless marked ⚠️.
 - **Countdown string**: "Còn n ngày" per BR-CAL-13 (the code currently writes a lowercase "còn").
 - **Language**: the app is Vietnamese only; no language parameter is sent (the server uses
   `calendar.default_language`).
+
+## Daily Buddha image (added in v1.3)
+
+Layers (`ui → domain ← data → core/network`):
+
+| Layer | File | Role |
+|---|---|---|
+| domain | `domain/model/CalendarDayImage.kt` | image + attribution (`hasAttribution`) |
+| domain | `domain/repository/CalendarImageRepository.kt` | `load(date)`; `CalendarImageError` = `Offline` / `InvalidDate` / `Failed` |
+| domain | `domain/usecase/GetCalendarDayImageUseCase.kt` | rejects years outside 1900..2100 without a call |
+| data | `data/remote/api/CalendarApiService.kt` `getImage(date)`, `data/remote/dto/CalendarImageDto.kt`, `data/mapper/CalendarImageMapper.kt` | public endpoint, lenient DTO |
+| data | `data/repository/CalendarImageRepositoryImpl.kt` | memory cache per date → `NetworkClient.safeCall`; `DispatcherProvider` injected; `INVALID_DATE` split from other API errors |
+| di | `CalendarModule.provideCalendarImageRepository`, `calViewModelFactory`; one instance in `InnerLampApplication.calendarImageRepository` | manual DI |
+| ui | `CalUiState.dayImage: DayImageUiState` (`Loading` / `Loaded` / `Offline` / `Failed`), `CalViewModel.onDateSelected` / `retryImage`, `DayImageCard` in `CalScreen.kt` | Coil `AsyncImage`, attribution line with a `LinkAnnotation.Url` |
+
+Flow: selected date changes → ViewModel cancels the previous job, sets `Loading`, calls the use case →
+state `Loaded` / `Offline` / `Failed`; a result for a date that is no longer selected is dropped. No Room
+copy: the image URL is cached by Coil's own disk/memory cache; the metadata is cached in memory only.
 
 ## Deliberately stubbed for now
 

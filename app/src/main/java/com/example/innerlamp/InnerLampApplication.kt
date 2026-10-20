@@ -7,6 +7,7 @@ import com.example.innerlamp.di.AuthModule
 import com.example.innerlamp.di.CalendarModule
 import com.example.innerlamp.di.DatabaseModule
 import com.example.innerlamp.domain.repository.CalendarEventRepository
+import com.example.innerlamp.domain.repository.CalendarImageRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,6 +23,11 @@ class InnerLampApplication : Application() {
      */
     val calendarEventRepository: CalendarEventRepository by lazy {
         CalendarModule.provideCalendarEventRepository(this)
+    }
+
+    /** The ONE daily-image repository (memory cache per date). / Repository ảnh theo ngày DUY NHẤT. */
+    val calendarImageRepository: CalendarImageRepository by lazy {
+        CalendarModule.provideCalendarImageRepository()
     }
 
     override fun onCreate() {

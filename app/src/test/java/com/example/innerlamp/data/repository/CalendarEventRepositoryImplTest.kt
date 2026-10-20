@@ -77,6 +77,8 @@ class CalendarEventRepositoryImplTest {
             years += year
             return ApiResponse(true, data = page(year))
         }
+
+        override suspend fun getImage(date: String) = error("unused")
     }
 
     private companion object {

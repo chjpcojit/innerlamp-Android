@@ -32,6 +32,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
+import coil3.compose.AsyncImage
+import com.example.innerlamp.domain.model.CalendarDayImage
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -54,10 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
-import com.example.innerlamp.di.DatabaseModule
-import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import com.example.innerlamp.di.CalendarModule
 import com.example.innerlamp.domain.model.LunarDayCell
 import com.example.innerlamp.domain.model.LunarMonthPage
 import com.example.innerlamp.domain.usecase.GetLunarMonthPagesUseCase
@@ -100,11 +107,7 @@ fun CalScreen(
     modifier: Modifier = Modifier,
     onClose: () -> Unit = {},
     onTemple: () -> Unit = {},
-    viewModel: CalViewModel = viewModel(
-        factory = viewModelFactory {
-            initializer { CalViewModel(quotes = DatabaseModule.provideSutraQuoteUseCase(this[APPLICATION_KEY]!!)) }
-        },
-    ),
+    viewModel: CalViewModel = viewModel(factory = CalendarModule.calViewModelFactory()),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     CalContent(
@@ -112,6 +115,7 @@ fun CalScreen(
         onClose = onClose,
         onTemple = onTemple,
         onDateSelected = viewModel::onDateSelected,
+        onRetryImage = viewModel::retryImage,
         modifier = modifier,
     )
 }
@@ -124,6 +128,7 @@ internal fun CalContent(
     onTemple: () -> Unit,
     onDateSelected: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
+    onRetryImage: () -> Unit = {},
 ) {
     val colors = LocalIlColors.current
     val pagerState = rememberPagerState(pageCount = { state.months.size })
@@ -176,6 +181,12 @@ internal fun CalContent(
                 pagerState = pagerState,
                 onDateSelected = onDateSelected,
                 modifier = Modifier.padding(top = 14.dp),
+            )
+
+            DayImageCard(
+                state = state.dayImage,
+                onRetry = onRetryImage,
+                modifier = Modifier.padding(top = 20.dp),
             )
 
             TodayCard(state = state, modifier = Modifier.padding(top = 20.dp))
@@ -405,6 +416,107 @@ private fun DayCell(
             ),
         )
     }
+}
+
+/**
+ * Thẻ ảnh Phật của ngày đang chọn: đang tải / lỗi (+ Thử lại) / ảnh + tác giả + giấy phép.
+ * CC BY / CC BY-SA bắt buộc hiện tác giả + giấy phép (giấy phép là link tới `license_url`).
+ */
+@Composable
+private fun DayImageCard(
+    state: DayImageUiState,
+    onRetry: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = LocalIlColors.current
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(4f / 3f)
+                .clip(RoundedCornerShape(20.dp))
+                .background(colors.sunk2),
+            contentAlignment = Alignment.Center,
+        ) {
+            when (state) {
+                DayImageUiState.Loading -> CircularProgressIndicator(
+                    modifier = Modifier.size(28.dp),
+                    color = colors.mid,
+                    strokeWidth = 2.dp,
+                )
+                is DayImageUiState.Loaded -> AsyncImage(
+                    model = state.image.imageUrl,
+                    contentDescription = "Ảnh Phật ngày ${state.image.date}",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                DayImageUiState.Offline, DayImageUiState.Failed -> Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(16.dp),
+                ) {
+                    Text(
+                        text = if (state == DayImageUiState.Offline) {
+                            "Không có kết nối mạng. Vui lòng kiểm tra và thử lại."
+                        } else {
+                            "Không tải được ảnh."
+                        },
+                        style = TextStyle(
+                            fontFamily = BeVietnamPro,
+                            fontSize = 12.5.sp,
+                            lineHeight = 20.sp,
+                            color = colors.mid,
+                        ),
+                    )
+                    Text(
+                        text = "Thử lại",
+                        modifier = Modifier
+                            .padding(top = 8.dp)
+                            .clickable(role = Role.Button, onClick = onRetry)
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        style = TextStyle(
+                            fontFamily = BeVietnamPro,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.5.sp,
+                            color = colors.link,
+                        ),
+                    )
+                }
+            }
+        }
+        if (state is DayImageUiState.Loaded && state.image.hasAttribution) {
+            ImageAttribution(state.image, Modifier.padding(top = 8.dp))
+        }
+    }
+}
+
+/** Dòng "Ảnh: {tác giả} · {giấy phép}"; giấy phép là link khi có `license_url`. */
+@Composable
+private fun ImageAttribution(image: CalendarDayImage, modifier: Modifier = Modifier) {
+    val colors = LocalIlColors.current
+    val base = TextStyle(fontFamily = BeVietnamPro, fontSize = 11.sp, lineHeight = 16.sp, color = colors.mid)
+    val text = buildAnnotatedString {
+        append("Ảnh")
+        if (image.author.isNotBlank()) append(": ${image.author}")
+        if (image.license.isNotBlank()) {
+            append(" · ")
+            val url = image.licenseUrl
+            if (url != null) {
+                withLink(
+                    LinkAnnotation.Url(
+                        url = url,
+                        styles = TextLinkStyles(SpanStyle(color = colors.link, textDecoration = TextDecoration.Underline)),
+                    ),
+                ) { append(image.license) }
+            } else {
+                append(image.license)
+            }
+        }
+    }
+    Text(text = text, style = base, modifier = modifier)
 }
 
 /** Thẻ "Hôm nay" — luôn tối (nền gradient cố định) với kicker + tiêu đề + đoạn giới thiệu. */
