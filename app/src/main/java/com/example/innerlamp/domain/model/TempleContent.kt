@@ -1,54 +1,41 @@
 package com.example.innerlamp.domain.model
 
 /**
- * Các kiểu dữ liệu cho màn "Trang chùa" (`temple`).
- *
- * Chỉ chứa hình dạng thuần Kotlin — không import Android/Compose/Room. Tầng UI tự ánh
- * xạ [TempleTone]/[TempleGlyph] sang bộ màu + hình tượng của mình (xem `TempleScreen`).
- */
-
-/** Tông màu của một thời khóa (được UI ánh xạ sang `IlTone`). */
-enum class TempleTone { Gold, Green, Rose, Ink }
-
-/** Hình tượng của một thời khóa (được UI ánh xạ sang `IlRowGlyph`). */
-enum class TempleGlyph { Leaf, Book, Circle, Dot }
-
-/**
- * Một thời khóa sắp tới của chùa (khối "Thời khóa sắp tới").
- *
- * [trailing] là trạng thái ghi danh ở bên phải hàng, vd `"Đã ghi danh"` / `"Ghi danh"`.
- */
-data class TempleSchedule(
-    val id: String,
-    val title: String,
-    /** Phụ đề (thời gian · địa điểm / người hướng dẫn). */
-    val sub: String,
-    val trailing: String,
-    val tone: TempleTone,
-    val glyph: TempleGlyph,
-)
-
-/** Một cột trong khối thống kê 3 cột ("Phật tử / Thời khóa / Năm lập"). */
-data class TempleStat(
-    val value: String,
-    val label: String,
-)
-
-/**
- * Toàn bộ nội dung một trang chùa (màn `temple`).
- *
- * Khác với [Temple] (bản tóm tắt trong carousel "Chùa Việt Nam" ở Trang chủ): đây là
- * trang chi tiết đầy đủ — hero, thống kê, giới thiệu, thời khóa sắp tới và địa chỉ.
+ * Content of the "Trang chùa" screen, read from `GET /v1/temples/{id}` (contract 3.0.0). Pure Kotlin;
+ * an empty contract string is `null` here, an empty array is an empty list. /
+ * Nội dung màn "Trang chùa", đọc từ `GET /v1/temples/{id}`. Thuần Kotlin; chuỗi rỗng của contract là
+ * `null`, mảng rỗng là danh sách rỗng.
  */
 data class TempleDetail(
     val id: String,
     val name: String,
-    /** Địa chỉ ngắn, vd `"Q. Bình Thạnh, TP.HCM"`. */
+    /** Province (`location.province`), e.g. `"Ninh Bình"`. / Tỉnh/thành. */
     val place: String,
-    /** Hệ phái, vd `"Hệ phái Bắc tông"`. */
-    val sect: String,
-    val stats: List<TempleStat>,
-    val description: String,
+    /** Display labels of `region`, `type`, `sect`, `heritage_rank`. / Nhãn hiển thị của các mã. */
+    val region: String?,
+    val type: String?,
+    val sect: String?,
+    val heritageRank: String?,
+    val establishedYear: Int?,
+    val imageUrl: String?,
     val address: String,
-    val upcoming: List<TempleSchedule>,
+    val lat: Double,
+    val lng: Double,
+    val aliases: List<String>,
+    val founder: String?,
+    val currentAbbot: String?,
+    /** Raw `operating_hours`, e.g. `"07:00 - 18:00"`. / Giờ mở cửa nguyên văn. */
+    val operatingHours: String?,
+    val amenities: TempleAmenities,
+    val introduction: String?,
+    val architectureHeritage: String?,
+    val visitingNotes: List<String>,
+)
+
+/** `amenities` of the temple page. / Tiện ích của chùa. */
+data class TempleAmenities(
+    val parkingCar: Boolean,
+    val parkingMotorcycle: Boolean,
+    val vegetarianMeals: Boolean,
+    val summerRetreat: Boolean,
 )

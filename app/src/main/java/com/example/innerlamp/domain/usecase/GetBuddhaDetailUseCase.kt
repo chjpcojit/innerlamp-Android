@@ -2,34 +2,36 @@ package com.example.innerlamp.domain.usecase
 
 import com.example.innerlamp.domain.calendar.LunarCalendar
 import com.example.innerlamp.domain.model.BuddhaDetail
-import com.example.innerlamp.domain.model.BuddhaProfile
+import com.example.innerlamp.domain.model.BuddhaViaDay
+import com.example.innerlamp.domain.repository.DeityRepository
 import java.time.Clock
 import java.time.LocalDate
 
 /**
- * Trả về nội dung màn `buddha` (Chi tiết Phật / Bồ Tát): hồ sơ của vị được chọn kèm ngày dương lịch
- * của lần vía kế tiếp (tìm trong 400 ngày tới, bỏ qua tháng nhuận — như prototype `buddhaVals`).
+ * Content of the `buddha` screen: the profile from the backend plus the solar date of the next main via
+ * (searched in the next 400 days, leap months skipped). The contract has no `next_via` yet, so the app
+ * computes it from `lunar_memorial_days`. /
+ * Nội dung màn `buddha`: hồ sơ từ backend + ngày dương của lần vía chính kế tiếp (tìm trong 400 ngày tới,
+ * bỏ tháng nhuận). Contract chưa có `next_via` nên app tự tính từ `lunar_memorial_days`.
  *
- * @param clock đồng hồ hệ thống — inject để test cố định "hôm nay".
+ * @param clock inject để test cố định "hôm nay".
  */
 class GetBuddhaDetailUseCase(
-    private val getProfiles: GetBuddhaProfilesUseCase = GetBuddhaProfilesUseCase(),
+    private val repository: DeityRepository,
     private val clock: Clock = Clock.systemDefaultZone(),
 ) {
 
-    /** Id không khớp (route sai/preview) thì dùng vị đầu tiên, giống `list[0]` của prototype. */
-    operator fun invoke(buddhaId: String): BuddhaDetail {
-        val profiles = getProfiles()
-        val profile = profiles.firstOrNull { it.id == buddhaId } ?: profiles.first()
-        return BuddhaDetail(profile = profile, nextVia = nextVia(profile, LocalDate.now(clock)))
-    }
+    suspend operator fun invoke(buddhaId: String): Result<BuddhaDetail> =
+        repository.getProfile(buddhaId).map { profile ->
+            BuddhaDetail(profile = profile, nextVia = profile.mainVia?.let { nextVia(it, LocalDate.now(clock)) })
+        }
 
-    private fun nextVia(profile: BuddhaProfile, from: LocalDate): LocalDate? =
+    internal fun nextVia(via: BuddhaViaDay, from: LocalDate): LocalDate? =
         (0 until SEARCH_DAYS).asSequence()
             .map { from.plusDays(it.toLong()) }
             .firstOrNull { date ->
                 val lunar = LunarCalendar.toLunar(date)
-                lunar.day == profile.viaDay && lunar.month == profile.viaMonth && !lunar.isLeapMonth
+                lunar.day == via.day && lunar.month == via.month && !lunar.isLeapMonth
             }
 
     private companion object {

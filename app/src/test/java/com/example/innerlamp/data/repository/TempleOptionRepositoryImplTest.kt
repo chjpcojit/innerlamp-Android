@@ -6,8 +6,11 @@ import com.example.innerlamp.core.network.NetworkClient
 import com.example.innerlamp.core.network.NetworkException
 import com.example.innerlamp.core.network.NetworkResult
 import com.example.innerlamp.data.remote.api.TempleApiService
+import com.example.innerlamp.data.remote.dto.TempleDetailDto
+import com.example.innerlamp.data.remote.dto.TempleItemsDto
 import com.example.innerlamp.data.remote.dto.TempleOptionDto
 import com.example.innerlamp.data.remote.dto.TempleOptionPageDto
+import com.example.innerlamp.data.remote.dto.TemplePageDto
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -44,6 +47,12 @@ class TempleOptionRepositoryImplTest {
                 ),
             )
         }
+
+        override suspend fun getTop(): ApiResponse<TempleItemsDto> = error("không dùng")
+
+        override suspend fun getList(page: Int): ApiResponse<TemplePageDto> = error("không dùng")
+
+        override suspend fun getDetail(id: String): ApiResponse<TempleDetailDto> = error("không dùng")
     }
 
     @Test

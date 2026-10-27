@@ -483,13 +483,6 @@ class MainActivity : FragmentActivity() {
                             TempleScreen(
                                 callbacks = TempleCallbacks(
                                     onBack = { navController.popBackStack() },
-                                    // TODO(navigation): nối sang màn Cúng dường (`OfferRoute`) khi màn đó có.
-                                    onOffer = {},
-                                    // TODO(navigation): nối sang màn Tụng kinh / Chuẩn bị thiền theo
-                                    // từng thời khóa khi các màn đó có.
-                                    onSchedule = {},
-                                    // TODO(navigation): mở bản đồ chỉ đường (intent) khi có tiện ích.
-                                    onDirections = {},
                                 ),
                             )
                         }

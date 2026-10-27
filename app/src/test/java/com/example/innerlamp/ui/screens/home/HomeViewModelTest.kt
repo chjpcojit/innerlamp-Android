@@ -9,7 +9,11 @@ import com.example.innerlamp.domain.calendar.network
 import com.example.innerlamp.domain.model.CalendarGroup
 import com.example.innerlamp.domain.model.CalendarOccurrence
 import com.example.innerlamp.domain.model.CalendarYear
+import com.example.innerlamp.domain.model.DeitySummary
+import com.example.innerlamp.domain.model.DeityType
+import com.example.innerlamp.domain.model.HomePhotos
 import com.example.innerlamp.domain.model.LunarDay
+import com.example.innerlamp.domain.model.Temple
 import com.example.innerlamp.domain.repository.CalendarLoadError
 import com.example.innerlamp.domain.usecase.GetHomeEventBlockUseCase
 import com.example.innerlamp.domain.usecase.HomeMonthOutcome
@@ -38,6 +42,10 @@ class HomeViewModelTest {
     )
 
     private fun viewModel() = HomeViewModel(clock = clock)
+
+    private val temples = listOf(Temple("t1", "Chùa Bái Đính", "Ninh Bình", "Miền Bắc", "Di tích quốc gia"))
+    private val buddhas = listOf(DeitySummary("quanam", DeityType.Bodhisattva, "Quán Thế Âm", null, null, null, null, "Đại Bi", null))
+    private val content = HomeSectionsContent(temples, buddhas, HomeSampleData.articles, HomePhotos(emptyList(), total = 12))
 
     @Test
     fun initial_state_uses_today_and_morning_greeting() {
@@ -105,13 +113,15 @@ class HomeViewModelTest {
         assertTrue(loading.isContentLoading)
         assertTrue(loading.temples.isEmpty() && loading.buddhas.isEmpty() && loading.articles.isEmpty())
 
-        gate.complete(HomeSectionsContent(HomeSampleData.temples, HomeSampleData.buddhas, HomeSampleData.articles))
+        gate.complete(content)
         dispatcher.scheduler.runCurrent()
 
         val loaded = vm.uiState.value
         assertFalse(loaded.isContentLoading)
-        assertEquals(HomeSampleData.temples, loaded.temples)
+        assertEquals(temples, loaded.temples)
+        assertEquals(buddhas, loaded.buddhas)
         assertEquals(HomeSampleData.articles, loaded.articles)
+        assertEquals(12, loaded.photos?.more)
     }
 
     @Test
@@ -127,7 +137,7 @@ class HomeViewModelTest {
     fun content_is_empty_when_loader_fails_and_reload_recovers() {
         var fail = true
         val vm = loadingViewModel {
-            if (fail) error("network") else HomeSectionsContent(HomeSampleData.temples, HomeSampleData.buddhas, HomeSampleData.articles)
+            if (fail) error("network") else content
         }
         dispatcher.scheduler.runCurrent()
         assertFalse(vm.uiState.value.isContentLoading)
@@ -138,7 +148,7 @@ class HomeViewModelTest {
         assertTrue(vm.uiState.value.isContentLoading)
         dispatcher.scheduler.runCurrent()
         assertFalse(vm.uiState.value.isContentLoading)
-        assertEquals(HomeSampleData.temples, vm.uiState.value.temples)
+        assertEquals(temples, vm.uiState.value.temples)
     }
 
     // ── Khối "Sự kiện Phật giáo" từ lịch lễ ────────────────────────────────

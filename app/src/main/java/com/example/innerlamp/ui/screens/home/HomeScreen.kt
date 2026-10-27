@@ -107,7 +107,7 @@ fun HomeScreen(
                         (this[APPLICATION_KEY] as InnerLampApplication).calendarEventRepository,
                     ),
                     quotes = DatabaseModule.provideSutraQuoteUseCase(this[APPLICATION_KEY]!!),
-                    contentLoader = HomeSampleData::load,
+                    contentLoader = HomeContentLoader()::load,
                 )
             }
         },
@@ -183,7 +183,7 @@ internal fun HomeContent(
 
             Spacer(Modifier.height(24.dp))
             PhotosSection(
-                photoMore = state.photoMore,
+                photos = state.photos,
                 onClick = callbacks.onPhotos,
             )
 

@@ -131,6 +131,7 @@ class HomeViewModel(
                     temples = content?.temples.orEmpty(),
                     buddhas = content?.buddhas.orEmpty(),
                     articles = content?.articles.orEmpty(),
+                    photos = content?.photos,
                 )
             }
         }

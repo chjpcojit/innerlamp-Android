@@ -55,6 +55,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
@@ -69,9 +70,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import com.example.innerlamp.domain.calendar.LunarDate
 import com.example.innerlamp.domain.model.Article
-import com.example.innerlamp.domain.model.BuddhaFigure
+import com.example.innerlamp.domain.model.DeitySummary
+import com.example.innerlamp.domain.model.HomePhotos
 import com.example.innerlamp.domain.model.EventOccurrence
 import com.example.innerlamp.domain.usecase.HomeMonthCard
 import com.example.innerlamp.domain.usecase.HomeMonthOutcome
@@ -162,15 +165,24 @@ internal fun Modifier.tappable(onClickLabel: String? = null, onClick: () -> Unit
     )
 
 /**
- * Chỗ đặt ảnh. Prototype dùng `<image-slot>`; app chưa có thư viện tải ảnh và chưa có ảnh thật,
- * nên vẽ nền gradient `sunk2 → tint`.
- *
- * TODO(il-data-builder): thay bằng ảnh thật (Coil/`painterResource`) khi có asset/API.
+ * Image slot: the `sunk2 → tint` gradient, with the remote image [url] (Coil) on top when there is one;
+ * the gradient stays visible while it loads or when it fails. /
+ * Chỗ đặt ảnh: nền gradient `sunk2 → tint`, có [url] thì ảnh từ server (Coil) phủ lên; gradient vẫn hiện
+ * khi đang tải hoặc tải lỗi.
  */
 @Composable
-private fun PlaceholderImage(modifier: Modifier = Modifier) {
+private fun PlaceholderImage(modifier: Modifier = Modifier, url: String? = null) {
     val colors = LocalIlColors.current
-    Box(modifier.background(Brush.verticalGradient(listOf(colors.sunk2, colors.tint))))
+    Box(modifier.background(Brush.verticalGradient(listOf(colors.sunk2, colors.tint)))) {
+        if (url != null) {
+            AsyncImage(
+                model = url,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
 }
 
 /** Tiêu đề khối + link hành động bên phải ("Tất cả", "Xem tất cả"...). */
@@ -757,13 +769,20 @@ private fun EventRow(entry: EventOccurrence, showDivider: Boolean, onClick: () -
 
 // ── Ảnh chùa đẹp ─────────────────────────────────────────────────────────────
 
-/** Lưới ảnh: 1 ảnh lớn + 2 ảnh nhỏ, ảnh cuối phủ "+N ảnh". */
+/**
+ * Photo grid: 1 large + 2 small tiles from `/v1/gallery`; the last one shows "+N ảnh" when more exist.
+ * [photos] `null` (loading / error) keeps plain placeholders. /
+ * Lưới ảnh: 1 ảnh lớn + 2 ảnh nhỏ từ `/v1/gallery`; ô cuối phủ "+N ảnh" khi còn ảnh. `null` → nền
+ * placeholder.
+ */
 @Composable
 internal fun PhotosSection(
-    photoMore: Int,
+    photos: HomePhotos?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val urls = photos?.photos.orEmpty().map { it.thumbnailUrl ?: it.imageUrl }
+    val more = photos?.more ?: 0
     Column(modifier) {
         SectionHeader("Ảnh chùa đẹp", "Xem tất cả", onClick)
         Row(
@@ -779,6 +798,7 @@ internal fun PhotosSection(
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(IlRadius.Card))
                     .tappable(onClick = onClick),
+                url = urls.getOrNull(0),
             )
             Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 PlaceholderImage(
@@ -787,6 +807,7 @@ internal fun PhotosSection(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
                         .tappable(onClick = onClick),
+                    url = urls.getOrNull(1),
                 )
                 Box(
                     Modifier
@@ -795,18 +816,20 @@ internal fun PhotosSection(
                         .clip(RoundedCornerShape(16.dp))
                         .tappable(onClick = onClick),
                 ) {
-                    PlaceholderImage(Modifier.fillMaxSize())
-                    Column(
-                        modifier = Modifier.fillMaxSize().background(Color(0x85140F0D)),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        Text("+$photoMore", style = serif(22f, HeroInk))
-                        Text(
-                            text = "ảnh",
-                            modifier = Modifier.padding(top = 2.dp),
-                            style = sans(11f, HeroInk.copy(alpha = 0.8f)),
-                        )
+                    PlaceholderImage(Modifier.fillMaxSize(), url = urls.getOrNull(2))
+                    if (more > 0) {
+                        Column(
+                            modifier = Modifier.fillMaxSize().background(Color(0x85140F0D)),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Text("+$more", style = serif(22f, HeroInk))
+                            Text(
+                                text = "ảnh",
+                                modifier = Modifier.padding(top = 2.dp),
+                                style = sans(11f, HeroInk.copy(alpha = 0.8f)),
+                            )
+                        }
                     }
                 }
             }
@@ -869,7 +892,7 @@ private fun TempleCard(temple: Temple, onClick: () -> Unit, modifier: Modifier =
             .tappable(onClickLabel = temple.name, onClick = onClick),
     ) {
         Box(Modifier.fillMaxWidth().height(150.dp)) {
-            PlaceholderImage(Modifier.fillMaxSize())
+            PlaceholderImage(Modifier.fillMaxSize(), url = temple.imageUrl)
             Text(
                 text = temple.region,
                 modifier = Modifier
@@ -886,21 +909,23 @@ private fun TempleCard(temple: Temple, onClick: () -> Unit, modifier: Modifier =
                 modifier = Modifier.padding(top = 3.dp),
                 style = sans(11.5f, colors.ink.copy(alpha = 0.50f)),
             )
-            Text(
-                text = temple.note,
-                modifier = Modifier.padding(top = 8.dp),
-                style = sans(11f, colors.ink.copy(alpha = 0.45f)),
-            )
+            if (temple.note.isNotEmpty()) {
+                Text(
+                    text = temple.note,
+                    modifier = Modifier.padding(top = 8.dp),
+                    style = sans(11f, colors.ink.copy(alpha = 0.45f)),
+                )
+            }
         }
     }
 }
 
 // ── Thư viện Phật & Bồ Tát ───────────────────────────────────────────────────
 
-/** Carousel Phật/Bồ Tát (9 vị, khớp `bdList` của prototype). */
+/** Carousel of `/v1/deities/top`. / Carousel chư Phật & Bồ Tát nổi bật. */
 @Composable
 internal fun BuddhasSection(
-    buddhas: List<BuddhaFigure>,
+    buddhas: List<DeitySummary>,
     isLoading: Boolean,
     onBuddhaClick: (String) -> Unit,
     onAllClick: () -> Unit,
@@ -937,10 +962,10 @@ internal fun BuddhasSection(
 }
 
 @Composable
-private fun BuddhaCard(buddha: BuddhaFigure, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun BuddhaCard(buddha: DeitySummary, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = LocalIlColors.current
     val shape = RoundedCornerShape(IlRadius.Row)
-    Column(modifier.width(124.dp).tappable(onClickLabel = buddha.shortName, onClick = onClick)) {
+    Column(modifier.width(124.dp).tappable(onClickLabel = buddha.nameVi, onClick = onClick)) {
         Box(
             Modifier
                 .fillMaxWidth()
@@ -949,26 +974,32 @@ private fun BuddhaCard(buddha: BuddhaFigure, onClick: () -> Unit, modifier: Modi
                 .background(colors.card)
                 .border(1.dp, colors.ink.copy(alpha = 0.08f), shape),
         ) {
-            PlaceholderImage(Modifier.fillMaxSize())
-            Text(
-                text = buddha.kind,
-                modifier = Modifier
-                    .padding(8.dp)
-                    .background(Color(0x99140F0D), RoundedCornerShape(IlRadius.Pill))
-                    .padding(horizontal = 8.dp, vertical = 3.dp),
-                style = sans(9.5f, HeroInk, FontWeight.Medium),
-            )
+            PlaceholderImage(Modifier.fillMaxSize(), url = buddha.thumbnailUrl ?: buddha.imageUrl)
+            buddha.kindLabel?.let { kind ->
+                Text(
+                    text = kind,
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .background(Color(0x99140F0D), RoundedCornerShape(IlRadius.Pill))
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                    style = sans(9.5f, HeroInk, FontWeight.Medium),
+                )
+            }
         }
         Text(
-            text = buddha.shortName,
+            text = buddha.nameVi,
             modifier = Modifier.padding(top = 8.dp),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
             style = serif(14f, colors.ink, lineHeight = 18.2f.sp),
         )
-        Text(
-            text = "Vía ${buddha.viaLabel} âm lịch",
-            modifier = Modifier.padding(top = 2.dp),
-            style = sans(10.5f, colors.ink.copy(alpha = 0.45f)),
-        )
+        buddha.shortVirtue?.let { virtue ->
+            Text(
+                text = virtue,
+                modifier = Modifier.padding(top = 2.dp),
+                style = sans(10.5f, colors.ink.copy(alpha = 0.45f)),
+            )
+        }
     }
 }
 

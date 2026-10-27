@@ -3,24 +3,20 @@ package com.example.innerlamp.domain.model
 import java.time.LocalDate
 
 /**
- * Các kiểu dữ liệu của màn "Chư Phật & Bồ Tát" (`buddhas`) và "Chi tiết Phật / Bồ Tát" (`buddha`).
- *
- * Pure Kotlin — không phụ thuộc Android/Compose/Room. Khác với [BuddhaFigure] (chỉ là thẻ tóm tắt
- * trong carousel ở Trang chủ), đây là hồ sơ đầy đủ: tiểu sử, đại nguyện, thần chú, kinh liên quan.
+ * Types of the "Chi tiết Phật / Bồ Tát" (`buddha`) screen, mapped from `GET /v1/deities/{id}` (contract
+ * 3.0.0). Pure Kotlin. /
+ * Các kiểu của màn "Chi tiết Phật / Bồ Tát", map từ `GET /v1/deities/{id}`. Thuần Kotlin.
  */
-
-/** Nhóm của một vị — quyết định chip lọc ở màn danh sách (prototype `cat`: 1 = Phật, 2 = Bồ Tát). */
-enum class BuddhaCategory { Buddha, Bodhisattva }
 
 /** Một câu danh hiệu / tâm chú kèm lời chú thích (khối "Thần chú & danh hiệu"). */
 data class BuddhaMantra(
-    /** Nhãn in hoa (vd "DANH HIỆU", "TÂM CHÚ"). */
+    /** Nhãn in hoa (vd "TÂM CHÚ", "ĐÀ LA NI"). */
     val label: String,
     /** Câu niệm bằng tiếng Việt / phiên âm. */
     val text: String,
     /** Nguyên văn Sanskrit (nếu có). */
     val sanskrit: String? = null,
-    /** Lời chú thích cách dùng. */
+    /** Lời chú thích / đoạn trích. */
     val note: String,
 )
 
@@ -32,45 +28,48 @@ data class BuddhaSutraRef(
     val sub: String,
 )
 
-/** Hồ sơ đầy đủ của một vị Phật / Bồ Tát. */
+/** One lunar commemoration day (`lunar_memorial_days[]`). / Một ngày vía âm lịch. */
+data class BuddhaViaDay(
+    val day: Int,
+    val month: Int,
+    val name: String,
+) {
+    /** "dd/MM", e.g. "19/02". */
+    val label: String get() = "%02d/%02d".format(day, month)
+}
+
+/** Full profile of one deity. / Hồ sơ đầy đủ của một vị Phật / Bồ Tát. */
 data class BuddhaProfile(
     val id: String,
-    /** Tên đầy đủ (vd "Đức Phật Thích Ca Mâu Ni"). */
+    /** Honorific title (`title_honorific`, else `name_vi`). / Danh hiệu tôn xưng. */
     val name: String,
-    /** Tên ngắn (vd "Phật Thích Ca") — dùng cho ô ảnh và tiêu đề header khi cuộn. */
+    /** `name_vi` — header title while scrolling. / Tên tiếng Việt. */
     val shortName: String,
-    /** Tên Sanskrit / Pāli. */
-    val sanskrit: String,
-    val category: BuddhaCategory,
-    /** Nhãn pill trên ảnh: "Phật", "Phật tương lai", "Bồ Tát". */
-    val kindLabel: String,
-    /** Cõi / nơi trú (vd "Tây Phương Cực Lạc"). */
-    val realm: String,
-    /** Mô tả một câu về vai trò. */
-    val role: String,
-    /** Ngày vía chính (âm lịch). */
-    val viaDay: Int,
-    val viaMonth: Int,
-    val viaName: String,
-    /** Ghi chú các ngày vía còn lại (nếu có). */
-    val extraVia: String? = null,
-    val bio: String,
-    val vowIntro: String,
+    val sanskrit: String?,
+    val type: DeityType,
+    /** Hero pill ("Phật", "Bồ Tát", "Thiên"); `null` when the type is unknown. / Nhãn pill. */
+    val kindLabel: String?,
+    /** `pure_land`. / Cõi / nơi trú. */
+    val realm: String?,
+    /** `core_virtue`. / Hạnh nguyện cốt lõi. */
+    val role: String?,
+    val imageUrl: String?,
+    /** Lunar days in contract order; the first one is the main via. / Ngày vía, vị đầu là ngày chính. */
+    val viaDays: List<BuddhaViaDay>,
+    /** `biography_summary`. */
+    val bio: String?,
+    /** `canonical_source`. / Kinh điển gốc. */
+    val canonicalSource: String?,
     val vows: List<String>,
-    /** Đơn vị đếm đại nguyện (vd "12 đại nguyện", "hạnh nguyện"). */
-    val vowUnit: String,
-    /** Tổng số đại nguyện khi danh sách `vows` chỉ là phần trích (vd 48 của Phật A Di Đà). */
-    val vowTotal: Int? = null,
     val mantras: List<BuddhaMantra>,
     val sutras: List<BuddhaSutraRef>,
 ) {
-    /** Ngày vía dạng "dd/MM" (vd "19/02"). */
-    val viaLabel: String get() = "%02d/%02d".format(viaDay, viaMonth)
+    val mainVia: BuddhaViaDay? get() = viaDays.firstOrNull()
 }
 
 /** Nội dung màn Chi tiết: hồ sơ + lần vía kế tiếp tính từ ngày hiện tại. */
 data class BuddhaDetail(
     val profile: BuddhaProfile,
-    /** Ngày dương lịch của lần vía kế tiếp; `null` nếu không tìm thấy trong 400 ngày tới. */
+    /** Ngày dương lịch của lần vía kế tiếp; `null` nếu không có ngày vía / không tìm thấy trong 400 ngày tới. */
     val nextVia: LocalDate?,
 )

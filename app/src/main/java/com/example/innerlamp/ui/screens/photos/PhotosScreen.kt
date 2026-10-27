@@ -25,9 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,18 +33,23 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
+import com.example.innerlamp.di.GalleryModule
 import com.example.innerlamp.domain.model.PhotoCategory
 import com.example.innerlamp.domain.model.TemplePhoto
-import com.example.innerlamp.domain.usecase.GetTemplePhotosUseCase
+import com.example.innerlamp.ui.components.ContentStatus
 import com.example.innerlamp.ui.components.IlChip
+import com.example.innerlamp.ui.components.IlContentError
+import com.example.innerlamp.ui.components.IlContentLoading
 import com.example.innerlamp.ui.components.IlNavBar
 import com.example.innerlamp.ui.theme.BeVietnamPro
 import com.example.innerlamp.ui.theme.IlDarkBgBottom
@@ -86,21 +89,21 @@ class PhotosCallbacks(
 fun PhotosScreen(
     modifier: Modifier = Modifier,
     callbacks: PhotosCallbacks = PhotosCallbacks(),
-    viewModel: PhotosViewModel = viewModel(),
+    viewModel: PhotosViewModel = viewModel(factory = GalleryModule.photosViewModelFactory()),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var selectedPhoto by remember { mutableStateOf<TemplePhoto?>(null) }
 
     Box(modifier = modifier.fillMaxSize()) {
         PhotosContent(
             state = state,
             callbacks = callbacks,
             onCategorySelected = viewModel::onCategorySelected,
-            onPhotoClick = { selectedPhoto = it },
+            onPhotoClick = viewModel::onPhotoOpened,
+            onRetry = viewModel::onRetry,
         )
 
-        selectedPhoto?.let { photo ->
-            PhotoLightbox(photo = photo, onDismiss = { selectedPhoto = null })
+        state.viewing?.let { photo ->
+            PhotoLightbox(photo = photo, creditLine = state.creditLine, onDismiss = viewModel::onLightboxDismissed)
         }
     }
 }
@@ -113,6 +116,7 @@ internal fun PhotosContent(
     onCategorySelected: (PhotoCategory?) -> Unit,
     onPhotoClick: (TemplePhoto) -> Unit,
     modifier: Modifier = Modifier,
+    onRetry: () -> Unit = {},
 ) {
     val colors = LocalIlColors.current
     Column(
@@ -135,7 +139,15 @@ internal fun PhotosContent(
                 .padding(horizontal = 20.dp),
         ) {
             Spacer(Modifier.height(16.dp))
-            PhotoGrid(photos = state.filteredPhotos, onPhotoClick = onPhotoClick)
+            when (state.status) {
+                ContentStatus.Loading -> IlContentLoading()
+                ContentStatus.Loaded -> if (state.filteredPhotos.isEmpty()) {
+                    EmptyCategory(label = state.selectedCategory?.label)
+                } else {
+                    PhotoGrid(photos = state.filteredPhotos, onPhotoClick = onPhotoClick)
+                }
+                else -> IlContentError(status = state.status, onRetry = onRetry)
+            }
             Spacer(Modifier.height(20.dp))
         }
     }
@@ -184,6 +196,21 @@ private fun PhotosHeader(
     }
 }
 
+/** Empty filter result. / Bộ lọc không có ảnh nào. */
+@Composable
+private fun EmptyCategory(label: String?, modifier: Modifier = Modifier) {
+    Text(
+        text = if (label != null) "Chưa có ảnh nào ở mục $label." else "Chưa có ảnh nào.",
+        modifier = modifier.fillMaxWidth().padding(vertical = 48.dp),
+        textAlign = TextAlign.Center,
+        style = TextStyle(
+            fontFamily = BeVietnamPro,
+            fontSize = 13.sp,
+            color = LocalIlColors.current.ink.copy(alpha = 0.55f),
+        ),
+    )
+}
+
 /** Lưới masonry 2 cột: chia ảnh xen kẽ vào hai cột (giữ chiều cao từng ô khác nhau). */
 @Composable
 private fun PhotoGrid(
@@ -207,7 +234,10 @@ private fun PhotoGrid(
     }
 }
 
-/** Một ô ảnh: ảnh placeholder (bo 18dp) + tiêu đề Lora + địa điểm. */
+/**
+ * One tile: thumbnail (radius 18dp, gradient + category label underneath as placeholder) + Lora title +
+ * place. / Một ô ảnh: thumbnail (bo 18dp, nền gradient + nhãn danh mục làm placeholder) + tiêu đề + địa điểm.
+ */
 @Composable
 private fun PhotoTile(
     photo: TemplePhoto,
@@ -216,9 +246,6 @@ private fun PhotoTile(
 ) {
     val colors = LocalIlColors.current
     Column(modifier.fillMaxWidth()) {
-        // Chỗ đặt ảnh. Prototype dùng `<image-slot>`; app chưa có ảnh thật nên vẽ
-        // gradient `sunk2 → tint` + nhãn danh mục.
-        // TODO(il-data-builder): thay bằng ảnh thật (Coil/`painterResource`) khi có asset/API.
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -228,15 +255,23 @@ private fun PhotoTile(
                 .ilTap(onClick = { onClick(photo) }),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                text = photo.category.label,
-                style = TextStyle(
-                    fontFamily = BeVietnamPro,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 11.sp,
-                    letterSpacing = 1.2.sp,
-                    color = colors.ink.copy(alpha = 0.45f),
-                ),
+            photo.category?.let { category ->
+                Text(
+                    text = category.label,
+                    style = TextStyle(
+                        fontFamily = BeVietnamPro,
+                        fontWeight = FontWeight.Medium,
+                        fontSize = 11.sp,
+                        letterSpacing = 1.2.sp,
+                        color = colors.ink.copy(alpha = 0.45f),
+                    ),
+                )
+            }
+            AsyncImage(
+                model = photo.thumbnailUrl ?: photo.imageUrl,
+                contentDescription = photo.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
             )
         }
         Text(
@@ -264,12 +299,15 @@ private fun PhotoTile(
 }
 
 /**
- * Lightbox toàn màn xem một ảnh (nền tối). Chạm bất kỳ đâu (hoặc nút ✕) để đóng.
- * Nội dung ảnh vẫn là placeholder — TODO(il-data-builder): hiển thị ảnh thật.
+ * Full-screen lightbox (dark): full image (`image_url`), title, place and the credit line once loaded
+ * (CC BY / BY-SA require it). Tap anywhere (or ✕) to close. /
+ * Lightbox toàn màn (nền tối): ảnh gốc, tiêu đề, địa điểm và dòng ghi công khi tải xong (CC BY / BY-SA
+ * bắt buộc ghi công). Chạm bất kỳ đâu (hoặc nút ✕) để đóng.
  */
 @Composable
 private fun PhotoLightbox(
     photo: TemplePhoto,
+    creditLine: String?,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -294,15 +332,11 @@ private fun PhotoLightbox(
                     .background(Brush.verticalGradient(listOf(IlDarkBgTop, IlDarkBgBottom))),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(
-                    text = photo.category.label,
-                    style = TextStyle(
-                        fontFamily = BeVietnamPro,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 13.sp,
-                        letterSpacing = 1.6.sp,
-                        color = IlDarkInkSoft.copy(alpha = 0.6f),
-                    ),
+                AsyncImage(
+                    model = photo.imageUrl ?: photo.thumbnailUrl,
+                    contentDescription = photo.title,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
             Text(
@@ -326,6 +360,18 @@ private fun PhotoLightbox(
                     color = IlDarkInkSoft.copy(alpha = 0.7f),
                 ),
             )
+            creditLine?.let { line ->
+                Text(
+                    text = line,
+                    modifier = Modifier.padding(top = 6.dp),
+                    textAlign = TextAlign.Center,
+                    style = TextStyle(
+                        fontFamily = BeVietnamPro,
+                        fontSize = 11.sp,
+                        color = IlDarkInkSoft.copy(alpha = 0.55f),
+                    ),
+                )
+            }
         }
         Box(
             modifier = Modifier
@@ -390,4 +436,15 @@ private fun PhotosPreviewDark() {
     }
 }
 
-private fun previewState(): PhotosUiState = PhotosUiState.from(GetTemplePhotosUseCase()())
+private fun previewState(): PhotosUiState = PhotosUiState(
+    photos = List(6) { i ->
+        TemplePhoto(
+            id = "p$i",
+            category = PhotoCategory.entries[i % PhotoCategory.entries.size],
+            title = "Chánh điện lúc bình minh",
+            place = "Chùa Bái Đính · Ninh Bình",
+            heightDp = listOf(200, 150, 180)[i % 3],
+        )
+    },
+    status = ContentStatus.Loaded,
+)

@@ -1,35 +1,17 @@
 package com.example.innerlamp.ui.screens.home
 
 import com.example.innerlamp.domain.model.Article
-import com.example.innerlamp.domain.model.BuddhaFigure
-import com.example.innerlamp.domain.model.Temple
 import com.example.innerlamp.domain.model.Verse
-import com.example.innerlamp.domain.usecase.GetTemplesUseCase
-import kotlinx.coroutines.delay
 
 /**
- * Dữ liệu mẫu lấy từ prototype cho các khối nội dung của trang chủ.
+ * Sample data of the home blocks that have no API wiring yet (articles, fallback verses). Temples,
+ * deities and photos are loaded by [HomeContentLoader]. /
+ * Dữ liệu mẫu của các khối trang chủ chưa nối API (bài viết, câu kinh dự phòng). Chùa, chư Phật và ảnh
+ * do [HomeContentLoader] tải.
  *
- * TODO(il-data-builder): thay bằng repository/API khi backend có (chùa, bài viết,
- * câu kinh theo ngày, ảnh chùa). Giữ ở đây để UI dựng được độc lập.
+ * TODO(il-data-builder): bài viết → `/v1/articles/top`.
  */
 internal object HomeSampleData {
-
-    /**
-     * Giả lập lần gọi API lấy nội dung 3 khối (có độ trễ để thấy skeleton).
-     *
-     * TODO(il-data-builder): thay bằng repository thật; lỗi mạng thì ném exception để
-     * ViewModel hiện trạng thái rỗng.
-     */
-    suspend fun load(): HomeSectionsContent {
-        delay(LOAD_DELAY_MS)
-        return HomeSectionsContent(temples = temples, buddhas = buddhas, articles = articles)
-    }
-
-    private const val LOAD_DELAY_MS = 900L
-
-    /** Số ảnh còn lại hiển thị ở ô "+N ảnh" (prototype: 12 ảnh − 3). */
-    const val PHOTO_MORE = 9
 
     val verses = listOf(
         Verse(
@@ -50,26 +32,11 @@ internal object HomeSampleData {
         ),
     )
 
-    val temples = GetTemplesUseCase()()
-
     val articles = listOf(
         Article("art-1", "Giáo lý căn bản", "Tứ Diệu Đế: bốn sự thật cho người mới bắt đầu", "Thầy Minh Đạo", "6 phút đọc"),
         Article("art-2", "Thực hành", "Chánh niệm trong từng việc nhỏ: rửa chén cũng là thiền", "Sư cô Tâm Nguyện", "4 phút đọc"),
         Article("art-3", "Lễ hội", "Ý nghĩa mùa Vu Lan và bông hồng cài áo", "Ban biên tập InnerLamp", "5 phút đọc"),
         Article("art-4", "Tâm lý & đời sống", "Buông bỏ không phải là từ bỏ", "Thầy Minh Đạo", "5 phút đọc"),
         Article("art-5", "Lịch sử", "Vua Trần Nhân Tông và thiền phái Trúc Lâm", "Ban biên tập InnerLamp", "7 phút đọc"),
-    )
-
-    /** Khối "Thư viện Phật & Bồ Tát" — 9 vị, khớp `BUDDHAS` của prototype. */
-    val buddhas = listOf(
-        BuddhaFigure("thichca", "Phật", "Phật Thích Ca", "15/04"),
-        BuddhaFigure("adida", "Phật", "Phật A Di Đà", "17/11"),
-        BuddhaFigure("duocsu", "Phật", "Phật Dược Sư", "30/09"),
-        BuddhaFigure("dilac", "Phật tương lai", "Phật Di Lặc", "01/01"),
-        BuddhaFigure("quanam", "Bồ Tát", "Quán Thế Âm", "19/02"),
-        BuddhaFigure("diatang", "Bồ Tát", "Địa Tạng Vương", "30/07"),
-        BuddhaFigure("vanthu", "Bồ Tát", "Văn Thù", "04/04"),
-        BuddhaFigure("phohien", "Bồ Tát", "Phổ Hiền", "21/02"),
-        BuddhaFigure("daithechi", "Bồ Tát", "Đại Thế Chí", "13/07"),
     )
 }

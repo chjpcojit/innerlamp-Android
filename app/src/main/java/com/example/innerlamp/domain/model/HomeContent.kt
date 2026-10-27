@@ -13,6 +13,8 @@ data class Temple(
     val place: String,
     val region: String,
     val note: String,
+    /** Card image (`thumbnail_url`); `null` → placeholder. / Ảnh thẻ; `null` → nền placeholder. */
+    val imageUrl: String? = null,
 )
 
 /** Bài viết Phật pháp biên tập ở trang chủ. */
@@ -22,15 +24,4 @@ data class Article(
     val title: String,
     val author: String,
     val readTime: String,
-)
-
-/** Một vị Phật/Bồ Tát trong khối "Thư viện Phật & Bồ Tát" ở trang chủ. */
-data class BuddhaFigure(
-    val id: String,
-    /** Nhãn pill trên ảnh: "Phật", "Bồ Tát", "Phật tương lai". */
-    val kind: String,
-    /** Tên ngắn hiển thị dưới ảnh, vd "Phật Thích Ca". */
-    val shortName: String,
-    /** Ngày vía âm lịch dạng "dd/mm". */
-    val viaLabel: String,
 )

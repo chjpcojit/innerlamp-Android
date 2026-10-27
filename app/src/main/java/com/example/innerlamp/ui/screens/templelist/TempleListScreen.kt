@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -40,7 +41,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
+import com.example.innerlamp.di.TempleModule
 import com.example.innerlamp.domain.usecase.GetTemplesUseCase
+import com.example.innerlamp.ui.components.ContentStatus
+import com.example.innerlamp.ui.components.IlContentError
+import com.example.innerlamp.ui.components.IlContentLoading
 import com.example.innerlamp.ui.components.IlChip
 import com.example.innerlamp.ui.components.IlBlurHeaderScaffold
 import com.example.innerlamp.ui.components.IlNavBar
@@ -67,7 +73,7 @@ class TempleListCallbacks(
 fun TempleListScreen(
     modifier: Modifier = Modifier,
     callbacks: TempleListCallbacks = TempleListCallbacks(),
-    viewModel: TempleListViewModel = viewModel(),
+    viewModel: TempleListViewModel = viewModel(factory = TempleModule.templeListViewModelFactory()),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     TempleListContent(
@@ -75,6 +81,7 @@ fun TempleListScreen(
         callbacks = callbacks,
         onQueryChange = viewModel::onQueryChange,
         onRegionSelected = viewModel::onRegionSelected,
+        onRetry = viewModel::onRetry,
         modifier = modifier,
     )
 }
@@ -86,6 +93,7 @@ internal fun TempleListContent(
     callbacks: TempleListCallbacks,
     onQueryChange: (String) -> Unit,
     onRegionSelected: (String?) -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalIlColors.current
@@ -128,7 +136,12 @@ internal fun TempleListContent(
                 .padding(horizontal = 20.dp),
         ) {
             Spacer(Modifier.height(headerHeight + 6.dp))
-            Column(
+            when (state.status) {
+                ContentStatus.Loading -> IlContentLoading()
+                ContentStatus.Loaded -> Unit
+                else -> IlContentError(status = state.status, onRetry = onRetry)
+            }
+            if (state.status == ContentStatus.Loaded) Column(
                 Modifier
                     .fillMaxWidth()
                     .clip(shape)
@@ -144,18 +157,37 @@ internal fun TempleListContent(
                 }
                 results.forEachIndexed { index, temple ->
                     if (index > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(colors.ink.copy(alpha = 0.07f)))
-                    Column(
+                    Row(
                         Modifier
                             .fillMaxWidth()
                             .tappable(onClickLabel = temple.name, onClick = { callbacks.onTemple(temple.id) })
                             .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
-                        Text(temple.name, style = sans(14f, colors.ink, FontWeight.Medium))
-                        Text(
-                            text = "${temple.place} · ${temple.region}",
-                            modifier = Modifier.padding(top = 3.dp),
-                            style = sans(11.5f, colors.ink.copy(alpha = 0.50f)),
-                        )
+                        Box(
+                            Modifier
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(colors.sunk2),
+                        ) {
+                            temple.imageUrl?.let { url ->
+                                AsyncImage(
+                                    model = url,
+                                    contentDescription = null,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text(temple.name, style = sans(14f, colors.ink, FontWeight.Medium))
+                            Text(
+                                text = listOf(temple.place, temple.region).filter { it.isNotBlank() }.joinToString(" · "),
+                                modifier = Modifier.padding(top = 3.dp),
+                                style = sans(11.5f, colors.ink.copy(alpha = 0.50f)),
+                            )
+                        }
                     }
                 }
             }
@@ -228,10 +260,11 @@ private fun sans(
 private fun TempleListPreview() {
     InnerLampTheme {
         TempleListContent(
-            state = TempleListUiState(temples = GetTemplesUseCase()()),
+            state = TempleListUiState(temples = GetTemplesUseCase()(), status = ContentStatus.Loaded),
             callbacks = TempleListCallbacks(),
             onQueryChange = {},
             onRegionSelected = {},
+            onRetry = {},
         )
     }
 }

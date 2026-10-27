@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -26,6 +27,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,10 +39,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
@@ -47,16 +53,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
+import com.example.innerlamp.di.TempleModule
+import com.example.innerlamp.domain.model.TempleAmenities
 import com.example.innerlamp.domain.model.TempleDetail
-import com.example.innerlamp.domain.model.TempleGlyph
-import com.example.innerlamp.domain.model.TempleSchedule
-import com.example.innerlamp.domain.model.TempleStat
-import com.example.innerlamp.domain.model.TempleTone
-import com.example.innerlamp.domain.usecase.GetTempleDetailUseCase
+import com.example.innerlamp.ui.components.ContentStatus
+import com.example.innerlamp.ui.components.ContentText
+import com.example.innerlamp.ui.components.IlContentError
+import com.example.innerlamp.ui.components.IlContentLoading
 import com.example.innerlamp.ui.components.IlNavBar
-import com.example.innerlamp.ui.components.IlRow
-import com.example.innerlamp.ui.components.IlRowGlyph
-import com.example.innerlamp.ui.components.IlTone
 import com.example.innerlamp.ui.theme.BeVietnamPro
 import com.example.innerlamp.ui.theme.IlGoldBright
 import com.example.innerlamp.ui.theme.IlGoldBright2
@@ -76,42 +81,41 @@ import com.example.innerlamp.ui.theme.ThemeMode
 /** Chiều cao hero `--il-th-bg` (290dp) + phần nút nhô xuống (28dp). */
 private val HeroHeight = 290.dp
 
-/** Chiều cao nút "Theo dõi" / "Cúng dường" (prototype `height:46px`). */
+/** Chiều cao nút "Chỉ đường" (prototype `height:46px`). */
 private val PillHeight = 46.dp
 
+/** Lines of the introduction while collapsed. / Số dòng giới thiệu khi thu gọn. */
+private const val IntroCollapsedLines = 5
+
 /**
- * Các điểm điều hướng đi ra khỏi màn "Trang chùa". Màn không giữ `NavController`: mọi
- * điều hướng đi qua callback; route chưa có thì để mặc định no-op.
+ * Exits of the "Trang chùa" screen. Directions open the maps app from the screen itself. /
+ * Các điểm thoát của màn "Trang chùa". Chỉ đường do màn tự mở app bản đồ.
  */
 @Immutable
 class TempleCallbacks(
     val onBack: () -> Unit = {},
-    val onOffer: () -> Unit = {},
-    val onSchedule: (TempleSchedule) -> Unit = {},
-    val onDirections: () -> Unit = {},
 )
 
 /**
- * Màn hình "Trang chùa" — trang chi tiết một ngôi chùa.
- *
- * Bố cục (trên → dưới): hero gradient (quầng sáng + hai ngọn lửa + tên chùa + phụ đề,
- * tan vào `canvas`) → 2 nút "Theo dõi" / "Cúng dường" (nhô lên chồm hero) → thống kê
- * 3 cột → giới thiệu → "Thời khóa sắp tới" → địa chỉ. Header back trong suốt nằm đè
- * trên hero.
- *
- * @author innerlamp
+ * "Trang chùa" — one temple from `GET /v1/temples/{id}`: hero (image + name), "Chỉ đường", three stats,
+ * introduction, architecture & heritage, visiting notes, info, amenities and the address. /
+ * Màn "Trang chùa" đọc từ `GET /v1/temples/{id}`: hero (ảnh + tên), "Chỉ đường", thống kê 3 cột, giới
+ * thiệu, kiến trúc & di sản, lưu ý khi viếng, thông tin, tiện ích và địa chỉ.
  */
 @Composable
 fun TempleScreen(
     modifier: Modifier = Modifier,
     callbacks: TempleCallbacks = TempleCallbacks(),
-    viewModel: TempleViewModel = viewModel(),
+    viewModel: TempleViewModel = viewModel(factory = TempleModule.templeViewModelFactory()),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     TempleContent(
         state = state,
         callbacks = callbacks,
-        onToggleFollow = viewModel::toggleFollow,
+        onRetry = viewModel::onRetry,
+        onToggleIntro = viewModel::toggleIntro,
+        onDirections = { detail -> TempleIntents.openDirections(context, detail) },
         modifier = modifier,
     )
 }
@@ -121,87 +125,30 @@ fun TempleScreen(
 internal fun TempleContent(
     state: TempleUiState,
     callbacks: TempleCallbacks,
-    onToggleFollow: () -> Unit,
+    onRetry: () -> Unit,
+    onToggleIntro: () -> Unit,
+    onDirections: (TempleDetail) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalIlColors.current
+    val detail = state.detail
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(colors.canvas),
     ) {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-            // Hero + 2 nút: nút nhô 28dp xuống dưới hero (chồm lên hero 18dp).
-            Box(Modifier.fillMaxWidth().height(HeroHeight + 28.dp)) {
-                TempleHero(
-                    detail = state.detail,
-                    modifier = Modifier.fillMaxWidth().height(HeroHeight),
-                )
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    TemplePillButton(
-                        label = state.followLabel,
-                        primary = true,
-                        onClick = onToggleFollow,
-                        modifier = Modifier.weight(1f),
-                    )
-                    TemplePillButton(
-                        label = "Cúng dường",
-                        primary = false,
-                        onClick = callbacks.onOffer,
-                        modifier = Modifier.weight(1f),
-                    )
+        if (detail == null) {
+            Column(
+                Modifier.fillMaxSize().statusBarsPadding().padding(top = 64.dp, start = 20.dp, end = 20.dp),
+            ) {
+                if (state.status == ContentStatus.Loading) {
+                    IlContentLoading()
+                } else {
+                    IlContentError(status = state.status, onRetry = onRetry, notFoundTitle = "Không tìm thấy chùa này.")
                 }
             }
-
-            Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
-                Spacer(Modifier.height(18.dp))
-                TempleStats(stats = state.detail.stats)
-
-                Spacer(Modifier.height(20.dp))
-                Text(
-                    text = state.detail.description,
-                    style = TextStyle(
-                        fontFamily = Lora,
-                        fontWeight = FontWeight.Normal,
-                        fontSize = 14.sp,
-                        lineHeight = 23.8f.sp,
-                        color = colors.ink.copy(alpha = 0.72f),
-                    ),
-                )
-
-                Spacer(Modifier.height(22.dp))
-                Text(
-                    text = "Thời khóa sắp tới",
-                    style = sans(13.5f, colors.ink, FontWeight.Medium),
-                )
-
-                Spacer(Modifier.height(12.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    state.detail.upcoming.forEach { schedule ->
-                        IlRow(
-                            title = schedule.title,
-                            sub = schedule.sub,
-                            trailing = schedule.trailing,
-                            tone = schedule.tone.toIlTone(),
-                            glyph = schedule.glyph.toIlRowGlyph(),
-                            onClick = { callbacks.onSchedule(schedule) },
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(18.dp))
-                TempleAddress(
-                    address = state.detail.address,
-                    onClick = callbacks.onDirections,
-                )
-            }
-            Spacer(Modifier.height(30.dp))
+        } else {
+            TempleBody(state = state, detail = detail, onToggleIntro = onToggleIntro, onDirections = onDirections)
         }
 
         // Header trong suốt đè lên hero (chỉ chip back), luôn ghim trên cùng khi cuộn.
@@ -218,34 +165,190 @@ internal fun TempleContent(
     }
 }
 
+@Composable
+private fun TempleBody(
+    state: TempleUiState,
+    detail: TempleDetail,
+    onToggleIntro: () -> Unit,
+    onDirections: (TempleDetail) -> Unit,
+) {
+    val colors = LocalIlColors.current
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        // Hero + nút "Chỉ đường" nhô 28dp xuống dưới hero.
+        Box(Modifier.fillMaxWidth().height(HeroHeight + 28.dp)) {
+            TempleHero(
+                name = detail.name,
+                subtitle = state.subtitle,
+                imageUrl = detail.imageUrl,
+                modifier = Modifier.fillMaxWidth().height(HeroHeight),
+            )
+            TemplePillButton(
+                label = "Chỉ đường",
+                primary = true,
+                onClick = { onDirections(detail) },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp),
+            )
+        }
+
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+            Spacer(Modifier.height(18.dp))
+            TempleStats(stats = state.stats)
+
+            Section("Giới thiệu") {
+                val intro = detail.introduction
+                if (intro == null) {
+                    BodyText(ContentText.UPDATING)
+                } else {
+                    var overflows by remember(intro) { mutableStateOf(false) }
+                    Text(
+                        text = intro,
+                        maxLines = if (state.introExpanded) Int.MAX_VALUE else IntroCollapsedLines,
+                        overflow = TextOverflow.Ellipsis,
+                        onTextLayout = { if (!state.introExpanded) overflows = it.hasVisualOverflow },
+                        style = bodyStyle(colors.ink.copy(alpha = 0.72f)),
+                    )
+                    if (overflows || state.introExpanded) {
+                        Text(
+                            text = if (state.introExpanded) "Thu gọn" else "Đọc thêm",
+                            modifier = Modifier.padding(top = 6.dp).tappable(onClick = onToggleIntro),
+                            style = sans(12.5f, colors.link, FontWeight.Medium),
+                        )
+                    }
+                }
+            }
+
+            Section("Kiến trúc & di sản") {
+                BodyText(detail.architectureHeritage ?: ContentText.UPDATING)
+            }
+
+            if (detail.visitingNotes.isNotEmpty()) {
+                Section("Lưu ý khi viếng chùa") {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        detail.visitingNotes.forEachIndexed { index, note ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Text("%02d".format(index + 1), style = sans(12f, colors.link, FontWeight.Medium))
+                                Text(note, modifier = Modifier.weight(1f), style = sans(13f, colors.ink.copy(alpha = 0.72f), lineHeight = 20.sp))
+                            }
+                        }
+                    }
+                }
+            }
+
+            Section("Thông tin") {
+                InfoCard(rows = state.infoRows)
+            }
+
+            Section("Tiện ích") {
+                BodyText(state.amenityLabels.takeIf { it.isNotEmpty() }?.joinToString(" · ") ?: ContentText.UPDATING)
+            }
+
+            Spacer(Modifier.height(18.dp))
+            if (detail.address.isNotBlank()) {
+                TempleAddress(
+                    address = detail.address,
+                    onClick = { onDirections(detail) },
+                )
+            }
+        }
+        Spacer(Modifier.navigationBarsPadding().height(30.dp))
+    }
+}
+
+/** Section title + content, 22dp above. / Tiêu đề mục + nội dung, cách trên 22dp. */
+@Composable
+private fun Section(title: String, content: @Composable () -> Unit) {
+    val colors = LocalIlColors.current
+    Spacer(Modifier.height(22.dp))
+    Text(text = title, style = sans(13.5f, colors.ink, FontWeight.Medium))
+    Spacer(Modifier.height(10.dp))
+    content()
+}
+
+@Composable
+private fun BodyText(text: String) {
+    Text(text = text, style = bodyStyle(LocalIlColors.current.ink.copy(alpha = 0.72f)))
+}
+
+private fun bodyStyle(color: Color) = TextStyle(
+    fontFamily = Lora,
+    fontWeight = FontWeight.Normal,
+    fontSize = 14.sp,
+    lineHeight = 23.8f.sp,
+    color = color,
+)
+
+/** Label/value rows in a card, hairline between rows. / Hàng nhãn/giá trị trong thẻ. */
+@Composable
+private fun InfoCard(rows: List<Pair<String, String>>) {
+    val colors = LocalIlColors.current
+    val shape = RoundedCornerShape(IlRadius.Card)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(colors.card)
+            .border(1.dp, colors.ink.copy(alpha = 0.08f), shape),
+    ) {
+        rows.forEachIndexed { index, (label, value) ->
+            if (index > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(colors.ink.copy(alpha = 0.07f)))
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(label, modifier = Modifier.width(112.dp), style = sans(12f, colors.ink.copy(alpha = 0.50f)))
+                Text(value, modifier = Modifier.weight(1f), style = sans(13f, colors.ink, lineHeight = 19.sp))
+            }
+        }
+    }
+}
+
 /**
- * Hero 290dp: gradient `--il-th-bg` (tan vào canvas) + quầng sáng lớn ở giữa-trên +
- * hai ngọn lửa + tên chùa + phụ đề (canh đáy).
+ * Hero 290dp: temple image (when present) under the `--il-th-bg` gradient that melts into the canvas, a
+ * glow, two flames, name and subtitle at the bottom. /
+ * Hero 290dp: ảnh chùa (nếu có) dưới gradient `--il-th-bg` tan vào canvas, quầng sáng, hai ngọn lửa, tên
+ * và phụ đề ở đáy.
  */
 @Composable
 private fun TempleHero(
-    detail: TempleDetail,
+    name: String,
+    subtitle: String,
+    imageUrl: String?,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalIlColors.current
-    Box(
-        modifier = modifier
-            .background(
-                Brush.verticalGradient(
-                    0f to colors.thBgTop,
-                    0.58f to colors.thBgMid,
-                    1f to colors.canvas,
-                ),
-            ),
-    ) {
-        // Quầng sáng 340dp ở giữa-trên (khớp `radial-gradient(circle, --il-th-glow, transparent 66%)`).
+    Box(modifier = modifier.background(colors.thBgTop)) {
+        if (imageUrl != null) {
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = name,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
         Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .offset(y = 20.dp)
-                .size(340.dp)
-                .background(Brush.radialGradient(listOf(colors.thGlow, Color.Transparent)), CircleShape),
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        0f to colors.thBgTop.copy(alpha = if (imageUrl != null) 0.15f else 1f),
+                        0.58f to colors.thBgMid.copy(alpha = if (imageUrl != null) 0.55f else 1f),
+                        1f to colors.canvas,
+                    ),
+                ),
         )
+        // Quầng sáng 340dp ở giữa-trên (khớp `radial-gradient(circle, --il-th-glow, transparent 66%)`).
+        if (imageUrl == null) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .offset(y = 20.dp)
+                    .size(340.dp)
+                    .background(Brush.radialGradient(listOf(colors.thGlow, Color.Transparent)), CircleShape),
+            )
+        }
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
@@ -258,7 +361,7 @@ private fun TempleHero(
             }
             Spacer(Modifier.height(14.dp))
             Text(
-                text = detail.name,
+                text = name,
                 style = TextStyle(
                     fontFamily = Lora,
                     fontWeight = FontWeight.Normal,
@@ -266,11 +369,13 @@ private fun TempleHero(
                     color = colors.featTitle, // --il-th-ink
                 ),
             )
-            Spacer(Modifier.height(5.dp))
-            Text(
-                text = "${detail.place} · ${detail.sect}",
-                style = sans(12f, colors.featSub), // --il-th-sub
-            )
+            if (subtitle.isNotEmpty()) {
+                Spacer(Modifier.height(5.dp))
+                Text(
+                    text = subtitle,
+                    style = sans(12f, colors.featSub), // --il-th-sub
+                )
+            }
         }
     }
 }
@@ -306,7 +411,7 @@ private fun TempleFlame(modifier: Modifier = Modifier) {
 /** Khối thống kê 3 cột, ngăn cách bằng hairline `ink-09`. */
 @Composable
 private fun TempleStats(
-    stats: List<TempleStat>,
+    stats: List<Pair<String, String>>,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalIlColors.current
@@ -320,7 +425,7 @@ private fun TempleStats(
             .padding(vertical = 16.dp, horizontal = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        stats.forEachIndexed { index, stat ->
+        stats.forEachIndexed { index, (value, label) ->
             if (index > 0) {
                 Box(Modifier.width(1.dp).height(36.dp).background(colors.ink.copy(alpha = 0.09f)))
             }
@@ -329,11 +434,13 @@ private fun TempleStats(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(
-                    text = stat.value,
-                    style = sans(19f, colors.ink, FontWeight.Medium),
+                    text = value,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = sans(if (value.length > 6) 14f else 19f, colors.ink, FontWeight.Medium),
                 )
                 Text(
-                    text = stat.label,
+                    text = label,
                     modifier = Modifier.padding(top = 3.dp),
                     style = sans(10.5f, colors.ink.copy(alpha = 0.50f)),
                 )
@@ -444,22 +551,6 @@ private val TempleFlameShape = object : Shape {
     }
 }
 
-/** Ánh xạ tông domain → `IlTone`. */
-private fun TempleTone.toIlTone(): IlTone = when (this) {
-    TempleTone.Gold -> IlTone.Gold
-    TempleTone.Green -> IlTone.Green
-    TempleTone.Rose -> IlTone.Rose
-    TempleTone.Ink -> IlTone.Ink
-}
-
-/** Ánh xạ hình tượng domain → `IlRowGlyph`. */
-private fun TempleGlyph.toIlRowGlyph(): IlRowGlyph = when (this) {
-    TempleGlyph.Leaf -> IlRowGlyph.Leaf
-    TempleGlyph.Book -> IlRowGlyph.Book
-    TempleGlyph.Circle -> IlRowGlyph.Circle
-    TempleGlyph.Dot -> IlRowGlyph.Dot
-}
-
 /** Vùng chạm không có ripple (prototype chỉ đổi nền, không ripple). */
 @Composable
 private fun Modifier.tappable(onClick: () -> Unit): Modifier = clickable(
@@ -491,7 +582,9 @@ private fun TemplePreview() {
         TempleContent(
             state = previewState(),
             callbacks = TempleCallbacks(),
-            onToggleFollow = {},
+            onRetry = {},
+            onToggleIntro = {},
+            onDirections = {},
         )
     }
 }
@@ -503,13 +596,35 @@ private fun TemplePreviewDark() {
         TempleContent(
             state = previewState(),
             callbacks = TempleCallbacks(),
-            onToggleFollow = {},
+            onRetry = {},
+            onToggleIntro = {},
+            onDirections = {},
         )
     }
 }
 
-private fun previewState(): TempleUiState =
-    TempleUiState(
-        detail = GetTempleDetailUseCase()("tu-quang"),
-        isFollowing = false,
-    )
+private fun previewState(): TempleUiState = TempleUiState(
+    status = ContentStatus.Loaded,
+    detail = TempleDetail(
+        id = "temple_north_011",
+        name = "Chùa Bích Động",
+        place = "Ninh Bình",
+        region = "Miền Bắc",
+        type = "Chùa",
+        sect = "Bắc tông",
+        heritageRank = "Di sản thế giới",
+        establishedYear = 1428,
+        imageUrl = null,
+        address = "Xã Ninh Hải, Huyện Hoa Lư, Tỉnh Ninh Bình",
+        lat = 20.2185,
+        lng = 105.9177,
+        aliases = listOf("Bạch Ngọc Thạch Sơn Động"),
+        founder = "Hai nhà sư Trí Kiên và Trí Thể",
+        currentAbbot = "Thích Đức Lợi",
+        operatingHours = "07:00 - 18:00",
+        amenities = TempleAmenities(parkingCar = true, parkingMotorcycle = true, vegetarianMeals = false, summerRetreat = false),
+        introduction = "Chùa Bích Động nằm trong dãy núi đá vôi ở Hoa Lư, Ninh Bình, khởi dựng năm 1428 thời Lê sơ.",
+        architectureHeritage = null,
+        visitingNotes = listOf("Đường lên chùa Thượng có nhiều bậc đá dốc; nên đi giày dép chống trơn."),
+    ),
+)
