@@ -2,49 +2,59 @@ package com.example.innerlamp.ui.screens.temple
 
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
-import com.example.innerlamp.domain.model.TempleDetail
+import androidx.lifecycle.viewModelScope
 import com.example.innerlamp.domain.usecase.GetTempleDetailUseCase
+import com.example.innerlamp.ui.components.ContentStatus
+import com.example.innerlamp.ui.components.toContentStatus
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 /**
- * ViewModel cho màn "Trang chùa" (`temple`).
+ * ViewModel of the "Trang chùa" screen: reads `GET /v1/temples/{id}` once per open, "Thử lại" reads again. /
+ * ViewModel màn "Trang chùa": mỗi lần mở đọc `GET /v1/temples/{id}` một lần, "Thử lại" đọc lại.
  *
- * - Nhận id chùa từ route arg (`TempleRoute.templeId`) qua [SavedStateHandle].
- * - Expose state qua `StateFlow`; screen dùng `collectAsStateWithLifecycle()`.
- * - Nội dung lấy từ [GetTempleDetailUseCase] (hiện là dữ liệu mẫu trong domain).
- *   TODO(il-data-builder): nối `TempleRepository` khi data layer có; lúc đó use case trả
- *   `Result<TempleDetail>` để UI xử lý được lỗi mạng.
- *
- * @author innerlamp
+ * @param savedStateHandle holds `templeId` (property of `TempleRoute`). / Giữ `templeId` của route.
  */
 class TempleViewModel(
     savedStateHandle: SavedStateHandle,
+    private val getDetail: GetTempleDetailUseCase,
 ) : ViewModel() {
 
-    private val getDetail = GetTempleDetailUseCase()
+    private val templeId: String = savedStateHandle.get<String>(KEY_TEMPLE_ID).orEmpty()
 
-    // id chùa từ route; không có (preview/fallback) thì dùng id mẫu.
-    private val templeId: String = savedStateHandle.get<String>(KEY_TEMPLE_ID)
-        ?: DEFAULT_TEMPLE_ID
-
-    private val detail: TempleDetail = getDetail(templeId)
-
-    private val _uiState = MutableStateFlow(TempleUiState(detail = detail, isFollowing = false))
+    private val _uiState = MutableStateFlow(TempleUiState())
     val uiState: StateFlow<TempleUiState> = _uiState.asStateFlow()
 
-    /** Đổi trạng thái "Theo dõi" ↔ "Đang theo dõi". */
-    fun toggleFollow() {
-        _uiState.update { it.copy(isFollowing = !it.isFollowing) }
+    private var loadJob: Job? = null
+
+    init {
+        load()
+    }
+
+    fun onRetry() {
+        if (_uiState.value.status == ContentStatus.Loading) return
+        _uiState.update { it.copy(status = ContentStatus.Loading) }
+        load()
+    }
+
+    fun toggleIntro() = _uiState.update { it.copy(introExpanded = !it.introExpanded) }
+
+    private fun load() {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            getDetail(templeId).fold(
+                onSuccess = { detail -> _uiState.update { it.copy(status = ContentStatus.Loaded, detail = detail) } },
+                onFailure = { error -> _uiState.update { it.copy(status = error.toContentStatus(), detail = null) } },
+            )
+        }
     }
 
     private companion object {
-        /** Tên arg route — khớp property `templeId` của `TempleRoute`. */
+        /** Route argument name — `TempleRoute.templeId`. / Tên arg route. */
         const val KEY_TEMPLE_ID = "templeId"
-
-        /** Id mẫu dùng khi không có route arg (preview/fallback). */
-        const val DEFAULT_TEMPLE_ID = "tu-quang"
     }
 }

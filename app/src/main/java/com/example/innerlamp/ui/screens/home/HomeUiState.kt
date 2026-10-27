@@ -3,7 +3,8 @@ package com.example.innerlamp.ui.screens.home
 import com.example.innerlamp.domain.calendar.LunarCalendar
 import com.example.innerlamp.domain.calendar.LunarDate
 import com.example.innerlamp.domain.model.Article
-import com.example.innerlamp.domain.model.BuddhaFigure
+import com.example.innerlamp.domain.model.DeitySummary
+import com.example.innerlamp.domain.model.HomePhotos
 import com.example.innerlamp.domain.model.Temple
 import com.example.innerlamp.domain.model.Verse
 import com.example.innerlamp.domain.usecase.HomeMonthCard
@@ -29,11 +30,20 @@ data class WeekPage(
     val days: List<WeekDay>,
 )
 
-/** Nội dung 3 khối chùa / Phật & Bồ Tát / bài viết lấy từ nguồn (API). */
+/**
+ * Content of the temple / deity / article / photo blocks. Temples, deities and photos come from the API
+ * (`/v1/temples/top`, `/v1/deities/top`, `/v1/gallery`); articles are still sample data. /
+ * Nội dung các khối chùa / Phật & Bồ Tát / bài viết / ảnh. Chùa, chư Phật và ảnh lấy từ API; bài viết
+ * vẫn là dữ liệu mẫu.
+ *
+ * @property photos `null` when the gallery could not be loaded (tiles stay placeholders). /
+ * `null` khi không tải được ảnh (các ô giữ nền placeholder).
+ */
 data class HomeSectionsContent(
     val temples: List<Temple>,
-    val buddhas: List<BuddhaFigure>,
+    val buddhas: List<DeitySummary>,
     val articles: List<Article>,
+    val photos: HomePhotos? = null,
 )
 
 /**
@@ -56,9 +66,10 @@ data class HomeUiState(
     val eventCards: List<HomeMonthCard> = emptyList(),
     /** `true` while the cards load and none is shown yet. */
     val eventsLoading: Boolean = false,
-    val photoMore: Int = HomeSampleData.PHOTO_MORE,
-    val temples: List<Temple> = HomeSampleData.temples,
-    val buddhas: List<BuddhaFigure> = HomeSampleData.buddhas,
+    /** Home "Ảnh đẹp" block; `null` until loaded or on error. / Khối ảnh; `null` khi chưa tải hoặc lỗi. */
+    val photos: HomePhotos? = null,
+    val temples: List<Temple> = emptyList(),
+    val buddhas: List<DeitySummary> = emptyList(),
     val articles: List<Article> = HomeSampleData.articles,
     /** `true` → 3 khối chùa/Phật/bài viết hiện skeleton; `false` + danh sách rỗng → thẻ rỗng. */
     val isContentLoading: Boolean = false,

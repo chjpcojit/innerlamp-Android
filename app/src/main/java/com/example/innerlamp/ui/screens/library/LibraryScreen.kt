@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -40,12 +41,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.innerlamp.domain.model.BuddhaProfile
+import com.example.innerlamp.domain.model.DeitySummary
 import com.example.innerlamp.domain.model.FeaturedTalk
 import com.example.innerlamp.domain.model.LibraryHub
 import com.example.innerlamp.domain.model.Sutra
 import com.example.innerlamp.domain.model.SutraTone
-import com.example.innerlamp.domain.usecase.GetBuddhaProfilesUseCase
+import coil3.compose.AsyncImage
+import com.example.innerlamp.di.DeityModule
+import com.example.innerlamp.ui.components.ContentStatus
+import com.example.innerlamp.ui.components.ContentText
 import com.example.innerlamp.domain.usecase.GetLibraryCatalogUseCase
 import com.example.innerlamp.ui.components.IlBottomNav
 import com.example.innerlamp.ui.components.IlBottomTab
@@ -99,12 +103,13 @@ class LibraryCallbacks(
 fun LibraryScreen(
     modifier: Modifier = Modifier,
     callbacks: LibraryCallbacks = LibraryCallbacks(),
-    viewModel: LibraryViewModel = viewModel(),
+    viewModel: LibraryViewModel = viewModel(factory = DeityModule.libraryViewModelFactory()),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     LibraryContent(
         state = state,
         callbacks = callbacks,
+        onRetryBuddhas = viewModel::onRetryBuddhas,
         modifier = modifier,
     )
 }
@@ -114,6 +119,7 @@ fun LibraryScreen(
 internal fun LibraryContent(
     state: LibraryUiState,
     callbacks: LibraryCallbacks,
+    onRetryBuddhas: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalIlColors.current
@@ -150,7 +156,16 @@ internal fun LibraryContent(
                 Spacer(Modifier.height(22.dp))
                 SectionHeader("Chư Phật & Bồ Tát", "Xem tất cả", callbacks.onBuddhaList)
                 Spacer(Modifier.height(12.dp))
-                BuddhaStrip(buddhas = state.buddhas, onBuddha = callbacks.onBuddha)
+                when {
+                    state.buddhasStatus == ContentStatus.Loading -> StripStatus("Đang tải…")
+                    state.buddhasStatus != ContentStatus.Loaded -> StripStatus(
+                        text = if (state.buddhasStatus == ContentStatus.Offline) ContentText.OFFLINE else ContentText.FAILED,
+                        action = ContentText.RETRY,
+                        onAction = onRetryBuddhas,
+                    )
+                    state.buddhas.isEmpty() -> StripStatus("Chưa có thông tin chư Phật và Bồ Tát.")
+                    else -> BuddhaStrip(buddhas = state.buddhas, onBuddha = callbacks.onBuddha)
+                }
 
                 Spacer(Modifier.height(22.dp))
                 SectionHeader("Kinh thường tụng", "Kinh sách", callbacks.onSutraList)
@@ -377,7 +392,7 @@ private fun HubTile(hub: LibraryHub, onClick: () -> Unit, modifier: Modifier = M
 /** Dải thẻ Phật/Bồ Tát cuộn ngang, tràn mép màn (bù padding 20dp của cột cha). */
 @Composable
 private fun BuddhaStrip(
-    buddhas: List<BuddhaProfile>,
+    buddhas: List<DeitySummary>,
     onBuddha: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -396,17 +411,25 @@ private fun BuddhaStrip(
     ) {
         buddhas.forEach { b ->
             Column(Modifier.width(118.dp).ilTap(onClick = { onBuddha(b.id) })) {
-                // TODO(il-data-builder): ảnh tôn tượng thật (prototype `image-slot`); hiện là nền gradient.
                 Box(
                     Modifier
                         .fillMaxWidth()
                         .height(150.dp)
                         .clip(RoundedCornerShape(IlRadius.Card))
                         .background(Brush.verticalGradient(listOf(colors.sunk2, colors.tint))),
-                )
+                ) {
+                    b.thumbnailUrl?.let { url ->
+                        AsyncImage(
+                            model = url,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = b.shortName,
+                    text = b.nameVi,
                     style = TextStyle(
                         fontFamily = Lora,
                         fontSize = 14.sp,
@@ -415,15 +438,42 @@ private fun BuddhaStrip(
                     ),
                 )
                 Spacer(Modifier.height(2.dp))
-                Text(
-                    text = "Vía ${b.viaLabel} âm",
-                    style = TextStyle(
-                        fontFamily = BeVietnamPro,
-                        fontSize = 10.5.sp,
-                        color = colors.ink.copy(alpha = 0.45f),
-                    ),
-                )
+                b.shortVirtue?.let { virtue ->
+                    Text(
+                        text = virtue,
+                        maxLines = 1,
+                        style = TextStyle(
+                            fontFamily = BeVietnamPro,
+                            fontSize = 10.5.sp,
+                            color = colors.ink.copy(alpha = 0.45f),
+                        ),
+                    )
+                }
             }
+        }
+    }
+}
+
+/** One-line status of the deity strip (loading / error + retry / empty). / Trạng thái một dòng của dải. */
+@Composable
+private fun StripStatus(text: String, action: String? = null, onAction: () -> Unit = {}) {
+    val colors = LocalIlColors.current
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.weight(1f),
+            style = TextStyle(fontFamily = BeVietnamPro, fontSize = 12.sp, color = colors.ink.copy(alpha = 0.50f)),
+        )
+        if (action != null) {
+            Text(
+                text = action,
+                modifier = Modifier.ilTap(onClick = onAction).padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
+                style = TextStyle(fontFamily = BeVietnamPro, fontSize = 12.sp, color = colors.link),
+            )
         }
     }
 }
@@ -487,4 +537,4 @@ private fun LibraryPreviewDark() {
 }
 
 private fun previewState(): LibraryUiState =
-    LibraryUiState.from(GetLibraryCatalogUseCase()(), GetBuddhaProfilesUseCase()())
+    LibraryUiState.from(GetLibraryCatalogUseCase()(), buddhas = emptyList())

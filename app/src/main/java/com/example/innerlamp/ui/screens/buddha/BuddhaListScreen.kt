@@ -26,6 +26,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -34,9 +36,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.innerlamp.domain.model.BuddhaCategory
-import com.example.innerlamp.domain.model.BuddhaProfile
-import com.example.innerlamp.domain.usecase.GetBuddhaProfilesUseCase
+import coil3.compose.AsyncImage
+import com.example.innerlamp.di.DeityModule
+import com.example.innerlamp.domain.model.DeitySummary
+import com.example.innerlamp.domain.model.DeityType
+import com.example.innerlamp.ui.components.ContentStatus
+import com.example.innerlamp.ui.components.IlContentError
+import com.example.innerlamp.ui.components.IlContentLoading
 import com.example.innerlamp.ui.components.IlBlurHeaderScaffold
 import com.example.innerlamp.ui.components.IlChip
 import com.example.innerlamp.ui.components.IlNavBar
@@ -74,13 +80,14 @@ class BuddhaListCallbacks(
 fun BuddhaListScreen(
     modifier: Modifier = Modifier,
     callbacks: BuddhaListCallbacks = BuddhaListCallbacks(),
-    viewModel: BuddhaListViewModel = viewModel(),
+    viewModel: BuddhaListViewModel = viewModel(factory = DeityModule.buddhaListViewModelFactory()),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     BuddhaListContent(
         state = state,
         callbacks = callbacks,
-        onCategorySelected = viewModel::onCategorySelected,
+        onTypeSelected = viewModel::onTypeSelected,
+        onRetry = viewModel::onRetry,
         modifier = modifier,
     )
 }
@@ -90,7 +97,8 @@ fun BuddhaListScreen(
 internal fun BuddhaListContent(
     state: BuddhaListUiState,
     callbacks: BuddhaListCallbacks,
-    onCategorySelected: (BuddhaCategory?) -> Unit,
+    onTypeSelected: (DeityType?) -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val scroll = rememberScrollState()
@@ -100,9 +108,9 @@ internal fun BuddhaListContent(
         header = {
             Header(
                 subtitle = state.subtitle,
-                selected = state.category,
+                selected = state.type,
                 onBack = callbacks.onBack,
-                onSelect = onCategorySelected,
+                onSelect = onTypeSelected,
             )
         },
         modifier = modifier,
@@ -114,14 +122,19 @@ internal fun BuddhaListContent(
                 .padding(horizontal = 20.dp),
         ) {
             Spacer(Modifier.height(headerHeight + 16.dp))
+            when (state.status) {
+                ContentStatus.Loading -> IlContentLoading()
+                ContentStatus.Loaded -> Unit
+                else -> IlContentError(status = state.status, onRetry = onRetry)
+            }
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Lưới 2 cột: 9 phần tử nên dựng bằng hàng 2 ô thay vì LazyGrid lồng trong cuộn dọc.
+                // Lưới 2 cột: ~20 phần tử nên dựng bằng hàng 2 ô thay vì LazyGrid lồng trong cuộn dọc.
                 state.filtered.chunked(2).forEach { pair ->
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        pair.forEach { profile ->
+                        pair.forEach { deity ->
                             BuddhaCard(
-                                profile = profile,
-                                onClick = { callbacks.onBuddha(profile.id) },
+                                deity = deity,
+                                onClick = { callbacks.onBuddha(deity.id) },
                                 modifier = Modifier.weight(1f),
                             )
                         }
@@ -138,9 +151,9 @@ internal fun BuddhaListContent(
 @Composable
 private fun Header(
     subtitle: String,
-    selected: BuddhaCategory?,
+    selected: DeityType?,
     onBack: () -> Unit,
-    onSelect: (BuddhaCategory?) -> Unit,
+    onSelect: (DeityType?) -> Unit,
 ) {
     Column(Modifier.fillMaxWidth()) {
         Box(Modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 6.dp)) {
@@ -154,14 +167,14 @@ private fun Header(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             IlChip("Tất cả", selected = selected == null, onClick = { onSelect(null) })
-            IlChip("Chư Phật", selected = selected == BuddhaCategory.Buddha, onClick = { onSelect(BuddhaCategory.Buddha) })
-            IlChip("Bồ Tát", selected = selected == BuddhaCategory.Bodhisattva, onClick = { onSelect(BuddhaCategory.Bodhisattva) })
+            IlChip("Chư Phật", selected = selected == DeityType.Buddha, onClick = { onSelect(DeityType.Buddha) })
+            IlChip("Bồ Tát", selected = selected == DeityType.Bodhisattva, onClick = { onSelect(DeityType.Bodhisattva) })
         }
     }
 }
 
 @Composable
-private fun BuddhaCard(profile: BuddhaProfile, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun BuddhaCard(deity: DeitySummary, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val colors = LocalIlColors.current
     val shape = RoundedCornerShape(IlRadius.Card)
     Column(
@@ -169,33 +182,50 @@ private fun BuddhaCard(profile: BuddhaProfile, onClick: () -> Unit, modifier: Mo
             .clip(shape)
             .background(colors.card)
             .border(1.dp, colors.ink.copy(alpha = 0.08f), shape)
-            .tappable(onClickLabel = profile.name, onClick = onClick),
+            .tappable(onClickLabel = deity.nameVi, onClick = onClick),
     ) {
         Box(Modifier.fillMaxWidth().height(CardImageHeight)) {
-            // TODO(il-data-builder): ảnh tôn tượng thật (prototype `image-slot`); hiện là nền gradient.
             Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(colors.sunk2, colors.tint))))
-            Text(
-                text = profile.kindLabel,
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(10.dp)
-                    .background(KindPillBg, RoundedCornerShape(IlRadius.Pill))
-                    .padding(horizontal = 9.dp, vertical = 4.dp),
-                style = sans(10f, KindPillInk, FontWeight.Medium),
-            )
+            deity.thumbnailUrl?.let { url ->
+                AsyncImage(
+                    model = url,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            deity.kindLabel?.let { kind ->
+                Text(
+                    text = kind,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(10.dp)
+                        .background(KindPillBg, RoundedCornerShape(IlRadius.Pill))
+                        .padding(horizontal = 9.dp, vertical = 4.dp),
+                    style = sans(10f, KindPillInk, FontWeight.Medium),
+                )
+            }
         }
         Column(Modifier.padding(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 14.dp)) {
-            Text(profile.name, style = serif(15f, colors.ink, lineHeight = 19.5f.sp))
-            Text(
-                text = profile.role,
-                modifier = Modifier.padding(top = 4.dp),
-                style = sans(11f, colors.ink.copy(alpha = 0.50f), lineHeight = 16.sp),
-            )
-            Text(
-                text = "Vía ${profile.viaLabel} âm lịch",
-                modifier = Modifier.padding(top = 8.dp),
-                style = sans(10.5f, colors.link, FontWeight.Medium),
-            )
+            Text(deity.nameVi, style = serif(15f, colors.ink, lineHeight = 19.5f.sp))
+            deity.coreVirtue?.let { virtue ->
+                Text(
+                    text = virtue,
+                    modifier = Modifier.padding(top = 4.dp),
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    style = sans(11f, colors.ink.copy(alpha = 0.50f), lineHeight = 16.sp),
+                )
+            }
+            deity.pureLand?.let { land ->
+                Text(
+                    text = land,
+                    modifier = Modifier.padding(top = 8.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = sans(10.5f, colors.link, FontWeight.Medium),
+                )
+            }
         }
     }
 }
@@ -226,9 +256,25 @@ private fun serif(size: Float, color: Color, lineHeight: TextUnit = TextUnit.Uns
 private fun BuddhaListPreview() {
     InnerLampTheme {
         BuddhaListContent(
-            state = BuddhaListUiState(profiles = GetBuddhaProfilesUseCase()()),
+            state = BuddhaListUiState(
+                deities = listOf(
+                    DeitySummary(
+                        id = "buddha_shakyamuni",
+                        type = DeityType.Buddha,
+                        nameVi = "Thích Ca Mâu Ni Phật",
+                        nameSanskrit = "Śākyamuni Buddha",
+                        titleHonorific = "Bổn Sư Thích Ca Mâu Ni Phật",
+                        thumbnailUrl = null,
+                        imageUrl = null,
+                        coreVirtue = "Toàn Giác",
+                        pureLand = "Cõi Ta Bà",
+                    ),
+                ),
+                status = ContentStatus.Loaded,
+            ),
             callbacks = BuddhaListCallbacks(),
-            onCategorySelected = {},
+            onTypeSelected = {},
+            onRetry = {},
         )
     }
 }

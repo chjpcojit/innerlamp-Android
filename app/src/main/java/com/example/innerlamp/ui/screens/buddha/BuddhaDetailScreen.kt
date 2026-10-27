@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,14 +39,21 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.createSavedStateHandle
+import androidx.compose.ui.layout.ContentScale
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
+import coil3.compose.AsyncImage
+import com.example.innerlamp.di.DeityModule
+import com.example.innerlamp.domain.model.BuddhaDetail
 import com.example.innerlamp.domain.model.BuddhaMantra
+import com.example.innerlamp.domain.model.BuddhaProfile
 import com.example.innerlamp.domain.model.BuddhaSutraRef
-import com.example.innerlamp.domain.usecase.GetBuddhaDetailUseCase
+import com.example.innerlamp.domain.model.BuddhaViaDay
+import com.example.innerlamp.domain.model.DeityType
+import com.example.innerlamp.ui.components.ContentStatus
+import com.example.innerlamp.ui.components.ContentText
+import com.example.innerlamp.ui.components.IlContentError
+import com.example.innerlamp.ui.components.IlContentLoading
 import com.example.innerlamp.ui.components.IlBlurHeaderScaffold
 import com.example.innerlamp.ui.components.IlNavBar
 import com.example.innerlamp.ui.components.IlRow
@@ -96,16 +104,32 @@ class BuddhaDetailCallbacks(
 fun BuddhaDetailScreen(
     modifier: Modifier = Modifier,
     callbacks: BuddhaDetailCallbacks = BuddhaDetailCallbacks(),
-    viewModel: BuddhaDetailViewModel = viewModel(
-        // VM có tham số ngoài SavedStateHandle nên cần factory tường minh.
-        factory = viewModelFactory {
-            initializer { BuddhaDetailViewModel(createSavedStateHandle()) }
-        },
-    ),
+    viewModel: BuddhaDetailViewModel = viewModel(factory = DeityModule.buddhaDetailViewModelFactory()),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val profile = state.profile
+    if (profile == null) {
+        // Loading / error / not found: back chip + status. / Đang tải / lỗi / không tìm thấy.
+        Column(modifier.fillMaxSize().background(LocalIlColors.current.canvas).statusBarsPadding()) {
+            Box(Modifier.padding(horizontal = 20.dp, vertical = 6.dp)) {
+                IlNavBar(title = "", onBack = callbacks.onBack)
+            }
+            if (state.status == ContentStatus.Loading) {
+                IlContentLoading(Modifier.padding(top = 40.dp))
+            } else {
+                IlContentError(
+                    status = state.status,
+                    onRetry = viewModel::onRetry,
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    notFoundTitle = "Không tìm thấy vị Phật / Bồ Tát này.",
+                )
+            }
+        }
+        return
+    }
     BuddhaDetailContent(
         state = state,
+        profile = profile,
         callbacks = callbacks,
         onToggleBio = viewModel::toggleBio,
         onToggleVows = viewModel::toggleVows,
@@ -117,6 +141,7 @@ fun BuddhaDetailScreen(
 @Composable
 internal fun BuddhaDetailContent(
     state: BuddhaDetailUiState,
+    profile: BuddhaProfile,
     callbacks: BuddhaDetailCallbacks,
     onToggleBio: () -> Unit,
     onToggleVows: () -> Unit,
@@ -126,7 +151,6 @@ internal fun BuddhaDetailContent(
     val scroll = rememberScrollState()
     val thresholdPx = with(LocalDensity.current) { TitleThreshold.toPx() }
     val showTitle by remember(thresholdPx) { derivedStateOf { scroll.value > thresholdPx } }
-    val profile = state.profile
 
     // Header trong suốt đè lên bìa; cuộn quá bìa thì blur dần và hiện tên ngắn.
     IlBlurHeaderScaffold(
@@ -143,24 +167,30 @@ internal fun BuddhaDetailContent(
         modifier = modifier,
     ) { _ ->
         Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
-            Hero(state)
+            Hero(profile)
             Column(Modifier.padding(start = 20.dp, end = 20.dp, bottom = 34.dp)) {
-                ViaCard(state, onFestivals = callbacks.onFestivals, modifier = Modifier.padding(top = 16.dp))
-                Text(
-                    text = profile.role,
-                    modifier = Modifier.padding(top = 10.dp),
-                    style = sans(13f, colors.ink.copy(alpha = 0.72f), lineHeight = 20.8f.sp),
-                )
+                profile.mainVia?.let { via ->
+                    ViaCard(state, via = via, onFestivals = callbacks.onFestivals, modifier = Modifier.padding(top = 16.dp))
+                }
+                profile.role?.let { role ->
+                    Text(
+                        text = role,
+                        modifier = Modifier.padding(top = 10.dp),
+                        style = sans(13f, colors.ink.copy(alpha = 0.72f), lineHeight = 20.8f.sp),
+                    )
+                }
 
                 SectionLabel("TIỂU SỬ")
                 Text(
-                    text = profile.bio,
+                    text = profile.bio ?: ContentText.UPDATING,
                     modifier = Modifier.padding(top = 10.dp),
                     maxLines = if (state.bioExpanded) Int.MAX_VALUE else BioCollapsedLines,
                     overflow = TextOverflow.Ellipsis,
                     style = serif(14.5f, colors.ink.copy(alpha = 0.72f), lineHeight = 25.375f.sp),
                 )
-                ToggleLink(state.bioToggleLabel, onToggleBio, Modifier.padding(top = 6.dp))
+                if (profile.bio != null) {
+                    ToggleLink(state.bioToggleLabel, onToggleBio, Modifier.padding(top = 6.dp))
+                }
 
                 Row(
                     Modifier.fillMaxWidth().padding(top = 26.dp),
@@ -170,11 +200,13 @@ internal fun BuddhaDetailContent(
                     Text("ĐẠI NGUYỆN", style = kicker(colors.ink.copy(alpha = 0.45f)))
                     Text(state.vowCountLabel, style = sans(11f, colors.ink.copy(alpha = 0.45f)))
                 }
-                Text(
-                    text = profile.vowIntro,
-                    modifier = Modifier.padding(top = 10.dp),
-                    style = serif(13f, colors.ink.copy(alpha = 0.72f), lineHeight = 20.8f.sp, italic = true),
-                )
+                profile.canonicalSource?.let { source ->
+                    Text(
+                        text = "Theo $source",
+                        modifier = Modifier.padding(top = 10.dp),
+                        style = serif(13f, colors.ink.copy(alpha = 0.72f), lineHeight = 20.8f.sp, italic = true),
+                    )
+                }
                 Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     state.visibleVows.forEachIndexed { index, vow -> VowRow(number = index + 1, text = vow) }
                 }
@@ -182,7 +214,7 @@ internal fun BuddhaDetailContent(
                     ToggleLink(state.vowToggleLabel, onToggleVows, Modifier.padding(top = 8.dp))
                 }
 
-                SectionLabel("THẦN CHÚ & DANH HIỆU")
+                if (profile.mantras.isNotEmpty()) SectionLabel("THẦN CHÚ & DANH HIỆU")
                 Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     profile.mantras.forEach { mantra ->
                         MantraCard(
@@ -193,7 +225,7 @@ internal fun BuddhaDetailContent(
                     }
                 }
 
-                SectionLabel("KINH LIÊN QUAN")
+                if (profile.sutras.isNotEmpty()) SectionLabel("KINH LIÊN QUAN")
                 Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     profile.sutras.forEach { sutra ->
                         IlRow(
@@ -208,7 +240,7 @@ internal fun BuddhaDetailContent(
                 }
 
                 Text(
-                    text = "Nội dung do Ban biên tập tổng hợp từ kinh điển · Báo thông tin sai",
+                    text = "Nội dung do Ban biên tập tổng hợp từ kinh điển",
                     modifier = Modifier.fillMaxWidth().padding(top = 20.dp),
                     textAlign = TextAlign.Center,
                     style = sans(11f, colors.ink.copy(alpha = 0.45f), lineHeight = 17.6f.sp),
@@ -220,36 +252,57 @@ internal fun BuddhaDetailContent(
 }
 
 /**
- * Bìa 420dp: nền gradient `th-bg` tan vào canvas (chưa có ảnh tôn tượng) + chip loại/cõi, tên,
- * tên Sanskrit canh đáy.
- *
- * TODO(il-data-builder): ảnh tôn tượng thật (prototype `image-slot` + lớp phủ `--il-hero-ov`).
+ * Cover 420dp: the deity image (when present) under the `th-bg` gradient that melts into the canvas, with
+ * the type/realm chips, name and Sanskrit name at the bottom. /
+ * Bìa 420dp: ảnh tôn tượng (nếu có) dưới gradient `th-bg` tan vào canvas, chip loại/cõi, tên và tên
+ * Sanskrit canh đáy.
  */
 @Composable
-private fun Hero(state: BuddhaDetailUiState) {
+private fun Hero(profile: BuddhaProfile) {
     val colors = LocalIlColors.current
-    val profile = state.profile
     Box(
         Modifier
             .fillMaxWidth()
             .height(HeroHeight)
-            .background(Brush.verticalGradient(listOf(colors.thBgTop, colors.thBgMid, colors.canvas))),
+            .background(colors.thBgTop),
     ) {
+        profile.imageUrl?.let { url ->
+            AsyncImage(
+                model = url,
+                contentDescription = profile.shortName,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        val overlay = if (profile.imageUrl != null) 0.35f else 1f
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        0f to colors.thBgTop.copy(alpha = overlay * 0.4f),
+                        0.5f to colors.thBgMid.copy(alpha = overlay),
+                        1f to colors.canvas,
+                    ),
+                ),
+        )
         Column(Modifier.align(Alignment.BottomStart).padding(start = 20.dp, end = 20.dp, bottom = 30.dp)) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                HeroChip(profile.kindLabel, colors.featKicker)
-                HeroChip(profile.realm, colors.featTitle)
+                profile.kindLabel?.let { HeroChip(it, colors.featKicker) }
+                profile.realm?.let { HeroChip(it, colors.featTitle) }
             }
             Text(
                 text = profile.name,
                 modifier = Modifier.padding(top = 12.dp),
                 style = serif(28f, colors.featTitle, lineHeight = 33.6f.sp),
             )
-            Text(
-                text = profile.sanskrit,
-                modifier = Modifier.padding(top = 6.dp),
-                style = serif(13f, colors.featTitle.copy(alpha = 0.8f), lineHeight = 19.5f.sp, italic = true),
-            )
+            profile.sanskrit?.let { sanskrit ->
+                Text(
+                    text = sanskrit,
+                    modifier = Modifier.padding(top = 6.dp),
+                    style = serif(13f, colors.featTitle.copy(alpha = 0.8f), lineHeight = 19.5f.sp, italic = true),
+                )
+            }
         }
     }
 }
@@ -268,7 +321,7 @@ private fun HeroChip(label: String, color: Color) {
 
 /** Thẻ ngày vía: ô ngày/tháng âm + tên vía + lần vía kế tiếp + link "Lịch lễ". */
 @Composable
-private fun ViaCard(state: BuddhaDetailUiState, onFestivals: () -> Unit, modifier: Modifier = Modifier) {
+private fun ViaCard(state: BuddhaDetailUiState, via: BuddhaViaDay, onFestivals: () -> Unit, modifier: Modifier = Modifier) {
     val colors = LocalIlColors.current
     val shape = RoundedCornerShape(IlRadius.Card)
     Row(
@@ -293,7 +346,7 @@ private fun ViaCard(state: BuddhaDetailUiState, onFestivals: () -> Unit, modifie
             Text(state.viaMonthText, style = sans(9f, colors.link, FontWeight.Medium, letterSpacing = 0.72f.sp))
         }
         Column(Modifier.weight(1f)) {
-            Text(state.profile.viaName, style = sans(13.5f, colors.ink, FontWeight.Medium))
+            Text(via.name, style = sans(13.5f, colors.ink, FontWeight.Medium))
             if (state.nextViaLabel.isNotEmpty()) {
                 Text(
                     text = state.nextViaLabel,
@@ -439,8 +492,30 @@ private fun serif(
 private fun BuddhaDetailPreview() {
     InnerLampTheme {
         val today = LocalDate.of(2026, 10, 8)
+        val profile = BuddhaProfile(
+            id = "bodhisattva_avalokiteshvara",
+            name = "Đại Bi Quán Thế Âm Bồ Tát",
+            shortName = "Quán Thế Âm Bồ Tát",
+            sanskrit = "Avalokiteśvara Bodhisattva",
+            type = DeityType.Bodhisattva,
+            kindLabel = "Bồ Tát",
+            realm = "Phổ Đà Lạc Ca Sơn",
+            role = "Đại Bi (Lắng nghe âm thanh cứu khổ tìm đến giải thoát)",
+            imageUrl = null,
+            viaDays = listOf(BuddhaViaDay(19, 2, "Ngày Đản sinh Quán Thế Âm"), BuddhaViaDay(19, 6, "Ngày Thành đạo Quán Thế Âm")),
+            bio = "Là hiện thân của lòng đại bi vô tận.",
+            canonicalSource = "Kinh Diệu Pháp Liên Hoa (Phẩm Phổ Môn)",
+            vows = listOf("Khi chúng sinh gặp khổ nạn ách tai, nhất tâm xưng tụng danh hiệu liền được cứu vớt."),
+            mantras = listOf(BuddhaMantra("TÂM CHÚ", "Án Ma Ni Bát Mê Hồng", "Oṃ Maṇi Padme Hūṃ", "Trì niệm hằng ngày.")),
+            sutras = emptyList(),
+        )
         BuddhaDetailContent(
-            state = BuddhaDetailUiState(detail = GetBuddhaDetailUseCase()("quanam"), today = today),
+            state = BuddhaDetailUiState(
+                today = today,
+                status = ContentStatus.Loaded,
+                detail = BuddhaDetail(profile, LocalDate.of(2027, 3, 26)),
+            ),
+            profile = profile,
             callbacks = BuddhaDetailCallbacks(),
             onToggleBio = {},
             onToggleVows = {},
