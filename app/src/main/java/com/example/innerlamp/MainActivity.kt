@@ -1,11 +1,15 @@
 package com.example.innerlamp
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.composable
@@ -13,6 +17,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.example.innerlamp.di.AuthModule
 import com.example.innerlamp.di.CurrentActivityProvider
+import com.example.innerlamp.di.MemorialModule
 import com.example.innerlamp.domain.model.AuthError
 import com.example.innerlamp.domain.model.CodeTiming
 import com.example.innerlamp.ui.navigation.ForgotPasswordRoute
@@ -42,6 +47,7 @@ import com.example.innerlamp.ui.navigation.GioRoute
 import com.example.innerlamp.ui.navigation.HomeRoute
 import com.example.innerlamp.ui.navigation.LibraryRoute
 import com.example.innerlamp.ui.navigation.LoginRoute
+import com.example.innerlamp.ui.navigation.MemorialDeepLink
 import com.example.innerlamp.ui.navigation.LunarDetailRoute
 import com.example.innerlamp.ui.navigation.MalaRoute
 import com.example.innerlamp.ui.navigation.OnboardingRoute
@@ -112,12 +118,27 @@ import com.example.innerlamp.ui.screens.splash.SplashScreen
 import com.example.innerlamp.ui.theme.InnerLampTheme
 
 class MainActivity : FragmentActivity() {
+
+    /** Id mục cần mở từ một nhắc giỗ; đọc từ Intent và tiêu thụ ngay sau khi điều hướng. */
+    private var openMemorialId by mutableStateOf<Long?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        openMemorialId = readOpenId(intent)
         enableEdgeToEdge()
         setContent {
             InnerLampTheme {
                 val navController = rememberNavController()
+                var splashDone by remember { mutableStateOf(false) }
+                // A reminder tap opens the book at that entry; the id is consumed once, and never before the
+                // splash has picked its destination (otherwise Home would replace the book).
+                // Bấm nhắc giỗ mở sổ ở đúng mục; id tiêu thụ một lần, không trước khi splash chọn đích.
+                LaunchedEffect(openMemorialId, splashDone) {
+                    if (!splashDone) return@LaunchedEffect
+                    val id = openMemorialId ?: return@LaunchedEffect
+                    openMemorialId = null
+                    navController.navigate(GioRoute(openId = id)) { launchSingleTop = true }
+                }
                 // Vào Home và xoá cả luồng onboarding/đăng nhập khỏi back stack (Back thoát app).
                 val enterHome: () -> Unit = {
                     navController.navigate(HomeRoute) {
@@ -145,10 +166,17 @@ class MainActivity : FragmentActivity() {
                         ilComposable(SplashRoute) {
                             SplashScreen(
                                 onFinished = {
-                                    // Có phiên đã lưu → vào thẳng Home; không thì onboarding.
-                                    // Xoá splash khỏi back stack: ấn Back không quay lại splash.
-                                    val destination: Any =
-                                        if (AuthModule.provideSessionStore().hasSession()) HomeRoute else OnboardingRoute
+                                    // Có phiên đã lưu → vào thẳng Home; không thì onboarding. Mở từ nhắc giỗ
+                                    // thì vào thẳng sổ của mục đó. Xoá splash khỏi back stack.
+                                    val hasSession = AuthModule.provideSessionStore().hasSession()
+                                    val openId = openMemorialId?.takeIf { hasSession }
+                                    val destination: Any = when {
+                                        openId != null -> GioRoute(openId = openId)
+                                        hasSession -> HomeRoute
+                                        else -> OnboardingRoute
+                                    }
+                                    openMemorialId = null
+                                    splashDone = true
                                     navController.navigate(destination) {
                                         popUpTo<SplashRoute> { inclusive = true }
                                     }
@@ -242,7 +270,7 @@ class MainActivity : FragmentActivity() {
                                         navController.navigate(FestivalDetailRoute(code, date.toString()))
                                     },
                                     onCalendar = { navController.navigate(CalRoute) },
-                                    onGio = { navController.navigate(GioRoute) },
+                                    onGio = { navController.navigate(GioRoute()) },
                                     onLunarDetail = { date -> navController.navigate(LunarDetailRoute(date.toEpochDay())) },
                                     onMala = { navController.navigate(MalaRoute) },
                                     onPhotos = { navController.navigate(PhotosRoute) },
@@ -396,23 +424,35 @@ class MainActivity : FragmentActivity() {
                                 onStartSilent = { },
                             )
                         }
-                        ilComposable(GioRoute) {
+                        ilComposable(GioRoute()) { entry ->
+                            val route = entry.toRoute<GioRoute>()
                             GioScreen(
-                                viewModel = viewModel(),
+                                viewModel = viewModel(
+                                    factory = MemorialModule.gioViewModelFactory(applicationContext),
+                                ),
+                                openId = route.openId,
                                 callbacks = GioCallbacks(
                                     onBack = { navController.popBackStack() },
                                     onEdit = { navController.navigate(GioEditRoute) },
-                                    // TODO(navigation): nối sang Gia phả (`GiaPhaRoute`) khi màn đó có.
-                                    onGiaPha = {},
+                                    onLogin = { navController.navigate(LoginRoute()) },
                                 ),
                             )
                         }
                         ilComposable(GioEditRoute) {
-                            // Dùng chung ViewModel với màn Sổ giỗ (cùng back stack entry của GioRoute).
-                            val gioEntry = remember(it) { navController.getBackStackEntry(GioRoute) }
+                            // Dùng chung ViewModel với màn Sổ giỗ: form luôn được đẩy từ màn sổ nên
+                            // entry trước đó là entry của GioRoute (kể cả khi mở từ nhắc giỗ).
+                            val gioEntry = remember(it) { navController.previousBackStackEntry ?: it }
                             GioEditScreen(
-                                viewModel = viewModel(gioEntry),
+                                viewModel = viewModel(
+                                    gioEntry,
+                                    factory = MemorialModule.gioViewModelFactory(applicationContext),
+                                ),
                                 onClose = { navController.popBackStack() },
+                                // Only the user's tap leaves the form after a 401; data is kept until then.
+                                // Chỉ khi người dùng bấm mới rời form sau 401; dữ liệu giữ tới lúc đó.
+                                onLogin = {
+                                    navController.navigate(LoginRoute(note = LoginNote.SessionExpired.name))
+                                },
                             )
                         }
                         ilComposable(PhotosRoute) {
@@ -547,5 +587,28 @@ class MainActivity : FragmentActivity() {
     override fun onPause() {
         super.onPause()
         CurrentActivityProvider.detach(this)
+    }
+
+    /** A reminder PendingIntent is delivered here when the activity already exists (singleTop). */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        readOpenId(intent)?.let { openMemorialId = it }
+    }
+
+    /**
+     * Only our own component may open the screen, and only a positive id is accepted (A6). The id is then
+     * resolved inside the signed-in account's book, so a forged value cannot reach another account.
+     * / Chỉ component của app và chỉ id dương (A6); id được tra trong sổ của tài khoản đang đăng nhập.
+     */
+    private fun readOpenId(intent: Intent?): Long? {
+        val component = intent?.component
+        if (component != null && component.packageName != packageName) return null
+        return MemorialDeepLink.parseOpenId(intent?.getLongExtra(MemorialDeepLink.EXTRA_OPEN_MEMORIAL_ID, 0L))
+    }
+
+    companion object {
+        /** Extra of the reminder PendingIntent: the memorial entry to open. / Id mục cần mở từ nhắc. */
+        const val EXTRA_OPEN_MEMORIAL_ID = MemorialDeepLink.EXTRA_OPEN_MEMORIAL_ID
     }
 }

@@ -33,6 +33,8 @@ class AuthUseCasesTest {
         }
 
         override fun hasSession() = has
+
+        override fun currentUserId(): Long? = null
     }
 
     private class FakeAuthRepo(val signIn: Result<AuthSession>, val reset: Result<Unit> = Result.success(Unit)) :

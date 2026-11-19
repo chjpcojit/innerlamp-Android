@@ -78,7 +78,7 @@ android {
 androidComponents {
     onVariants { variant ->
         val url = when (variant.flavorName) {
-            "dev" -> "https://dev-api.innerlamp.vn/"
+            "dev" -> "https://innerlamp-app-3f53tei42a-as.a.run.app/"
             "staging" -> "https://staging-api.innerlamp.vn/"
             "prod" -> "https://api.innerlamp.vn/"
             else -> ""
@@ -86,6 +86,13 @@ androidComponents {
         variant.buildConfigFields?.put(
             "BASE_URL",
             BuildConfigField("String", "\"$url\"", "Backend REST base URL"),
+        )
+        // The photo routes are live on dev/staging; prod keeps the UI off until it is deployed there.
+        // Route ảnh đã chạy trên dev/staging; prod vẫn tắt UI tới khi deploy.
+        val photoEnabled = variant.flavorName != "prod"
+        variant.buildConfigFields?.put(
+            "MEMORIAL_PHOTO_ENABLED",
+            BuildConfigField("boolean", photoEnabled.toString(), "Memorial photo routes live"),
         )
     }
 }
@@ -104,6 +111,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.exifinterface)
     implementation(libs.androidx.lifecycle.runtime.ktx)
 
     // Architecture stack

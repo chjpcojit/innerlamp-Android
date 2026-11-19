@@ -1,0 +1,26 @@
+# Android verification commands for the spec workflow (v1.5/v1.6).
+# Paths are relative to the repository root.
+spec_root: Docs/Specs
+folder_case: PascalCase
+language: vi
+architecture_rules: AGENTS.md
+platforms:
+  - { path: ./, profile: android }
+verify:
+  android:
+    A: ./gradlew :app:assembleDevDebug
+    B: ./gradlew :app:testDevDebugUnitTest
+    C: ./gradlew :app:installDevDebug
+    # Needs a device/emulator: the owner or QA runs it, never an agent (AGENTS.md).
+    E: ./gradlew :app:connectedDevDebugAndroidTest
+    security: ./gradlew :app:lintDevDebug
+    pre_push: ./gradlew :app:assembleDevDebug :app:testDevDebugUnitTest
+implement:
+  base_branch: main
+  max_rounds: 2
+  sensitive_paths:
+    - app/src/main/AndroidManifest.xml
+    - app/src/main/java/com/example/innerlamp/core/network/
+    - app/src/main/java/com/example/innerlamp/di/
+upstream:
+  contract: Docs/Specs/Memorial/client-contract.md

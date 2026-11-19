@@ -20,6 +20,9 @@ interface AuthSessionStore {
     suspend fun clear()
 
     fun hasSession(): Boolean
+
+    /** Server id of the signed-in account, or `null` before a session is stored. / Id tài khoản đang đăng nhập. */
+    fun currentUserId(): Long?
 }
 
 /** A feature registers one to delete its account-scoped data on sign-out. / Mỗi feature đăng ký một cleaner để xoá dữ liệu theo tài khoản khi đăng xuất. */

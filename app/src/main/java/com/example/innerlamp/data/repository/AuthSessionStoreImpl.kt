@@ -65,6 +65,11 @@ class AuthSessionStoreImpl(
 
     override fun hasSession(): Boolean = cache.refreshToken() != null
 
+    override fun currentUserId(): Long? {
+        val id = prefs.getLong(KEY_USER_ID, 0L)
+        return id.takeIf { it > 0L }
+    }
+
     private companion object {
         const val KEY_ACCESS = "auth.access_token"
         const val KEY_REFRESH = "auth.refresh_token"

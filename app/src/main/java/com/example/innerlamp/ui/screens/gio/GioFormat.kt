@@ -14,10 +14,12 @@ internal object GioFormat {
     private val TimeFormat = DateTimeFormatter.ofPattern("HH:mm")
     private val DateFormat = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
-    /** "23 tháng Tám âm lịch" hoặc "14/12 dương lịch". */
+    /** "23 tháng Tám âm lịch (nhuận)" hoặc "14/12 dương lịch". / The leap marker is shown as entered. */
     fun dateLabel(entry: MemorialEntry): String = when (entry.calendar) {
-        MemorialCalendarType.Lunar ->
-            "${entry.day} tháng ${LunarCalendar.MONTH_NAMES[entry.month - 1]} âm lịch"
+        MemorialCalendarType.Lunar -> {
+            val leap = if (entry.leapMonth) " (nhuận)" else ""
+            "${entry.day} tháng ${LunarCalendar.MONTH_NAMES[entry.month - 1]}$leap âm lịch"
+        }
         MemorialCalendarType.Solar -> "%02d/%02d dương lịch".format(entry.day, entry.month)
     }
 
@@ -39,12 +41,11 @@ internal object GioFormat {
         else -> "Giỗ lần thứ $ordinal"
     }
 
-    /** "Trước 3 ngày · 07:00" hoặc "Chưa bật". */
+    /** "Trước 3 ngày · 07:00" hoặc "Chưa bật". / Never mentions the removed Reminders switch. */
     fun reminderLabel(entry: MemorialEntry): String {
         if (!entry.remind) return "Chưa bật"
         val lead = if (entry.leadDays > 0) "Trước ${entry.leadDays} ngày" else "Đúng ngày"
-        val sync = if (entry.syncReminders) " · có trong Lời nhắc" else ""
-        return "$lead · ${entry.remindTime.format(TimeFormat)}$sync"
+        return "$lead · ${entry.remindTime.format(TimeFormat)}"
     }
 
     /** Nhãn giờ nhắc "07:00". */
