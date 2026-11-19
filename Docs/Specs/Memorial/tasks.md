@@ -87,12 +87,13 @@ Paths are relative to `app/src/main/java/com/example/innerlamp/`.
 
 ## A9 — Photos (flag)
 
-- [x] Photo picker + upload/remove in the form, 413/415 messages.
+- [x] Photo picker + upload/remove/change in the form, 413/415/404 messages, initials when there is no photo.
+- [x] Flag on for dev/staging (`MEMORIAL_PHOTO_ENABLED=true`), off for prod until deployed there.
 - [x] `MemorialPhotoNormalizer` — real MIME from magic bytes, HEIC/HEIF → JPEG with EXIF rotation,
       2048 px cap, JPEG q85, 5 MiB check on the bytes sent, 32 MiB raw read cap, IO dispatcher;
       `PhotoEncodingTest`; repository no longer hardcodes `image/jpeg`/`photo.jpg`.
 - [x] UI hidden unless `BuildConfig.MEMORIAL_PHOTO_ENABLED`.
-- [ ] E2E after the backend deploys the routes (F1–F3), then turn the flag on. `[DEFERRED]` — photo
+- [ ] E2E on a device: upload → see it in the book → change → remove → initials (owner/QA; no emulator here). `[DEFERRED]` — photo
       routes not deployed, flag false.
 
 ## G1 security rework — Hộ Pháp, 2026-11-17
@@ -126,8 +127,8 @@ Paths are relative to `app/src/main/java/com/example/innerlamp/`.
       worker uses it (`core/reminder/MemorialReminderWorker.kt:72`) so a catch-up on the giỗ day reads
       "Hôm nay…", and the payload keeps its four keys. `MemorialReminderTest.kt:120` compiles, QA has not
       re-run it. `[NOT RUN]`
-- [ ] Deferred (Q-2): picking a photo while creating a new entry — the photo flag is off and the form only
-      offers the picker after the entry has a server id. `[DEFERRED]`
+- [x] Deferred item closed (Q-2): a new entry still takes its photo after the first save — the server id is
+      required by the route, so this is the MEM-IMG-08 two-step design, not a missing feature. `[DEFERRED]`
 
 ## Gates
 

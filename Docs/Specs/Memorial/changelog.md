@@ -21,6 +21,19 @@ files share one changelog since they change together as one spec unit. Newest ve
   ("a passed moment schedules the next anniversary") contradicted the agreed rule.
 - `design.md` reminder section and `tasks.md` A8 aligned. No code change in this revision.
 
+## v3.4 (2026-11-17)
+
+- Portrait photos are live on the dev and staging flavors (`MEMORIAL_PHOTO_ENABLED=true`); prod keeps the UI
+  off until the routes are deployed there. The backend routes were hardened (multipart `photo`, 5 MB,
+  jpeg/png/webp sniffing, 16 MP cap) before this switch.
+- The form offers pick/change/remove for a saved entry; a new entry adds its photo after the first save
+  (MEM-IMG-08). Uploads go through `MemorialPhotoNormalizer` (real MIME, HEIC → JPEG, EXIF rotation,
+  2048 px, q85) and are shown from the in-memory signed URL only.
+- 413, 415 and 404 map to their own messages; an undecodable pick never reaches the network.
+- Tests: photo upload/change/remove paths in `GioViewModelTest`, plus `PhotoEncodingTest` and the repository
+  413/415 cases.
+- Reason: the backend photo phase is deployed and hardened, so the client no longer needs the feature off.
+
 ## v3.3 (2026-11-17)
 
 - P7 QA rework: the dev flavor points at the real dev API `https://innerlamp-app-3f53tei42a-as.a.run.app/`

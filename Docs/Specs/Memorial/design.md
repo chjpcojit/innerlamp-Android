@@ -74,9 +74,10 @@ the general message.
 
 ## Photos (flag, D4)
 
-`BuildConfig.MEMORIAL_PHOTO_ENABLED=false` for every variant. The form shows the picker/remove block only
-when the flag is true and the entry already has an id. The picker is the Android Photo Picker (no storage
-or camera permission). `photo_url` lives in screen state only.
+`BuildConfig.MEMORIAL_PHOTO_ENABLED` is true for dev/staging and false for prod. The form shows the
+picker/remove block only when the flag is true and the entry already has an id, so a new entry adds its
+photo after the first save (MEM-IMG-08). The picker is the Android Photo Picker (no storage or camera
+permission). `photo_url` lives in screen state only.
 
 `MemorialPhotoNormalizer` (core/media) runs on the IO dispatcher before any upload:
 

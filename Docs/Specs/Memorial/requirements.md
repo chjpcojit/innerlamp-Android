@@ -31,8 +31,10 @@ and `lintDevDebug` run, unit tests written but not executed (AGENTS.md forbids a
   anniversary, channel `memorial_reminders`, `POST_NOTIFICATIONS` asked once on API 33+. The payload sent
   to the server is only `{days_before, time}` (D3). When server push ships, the DI provider changes to a
   no-op scheduler and `cancelAll()` runs once (D1 cutover).
-- **Photos are flag-gated**: `BuildConfig.MEMORIAL_PHOTO_ENABLED = false` until the two photo routes are
-  deployed (D4). With the flag off the UI is hidden and no photo route is called.
+- **Photos are live on dev/staging and flag-gated on prod**: `BuildConfig.MEMORIAL_PHOTO_ENABLED` is true
+  for the dev and staging flavors (the routes are deployed) and false for prod until it is deployed there
+  (D4). With the flag off the UI is hidden and no photo route is called. A new entry takes its photo after
+  the first save, when it has a server id (MEM-IMG-08, two steps).
 - **Privacy (G1 rework 2026-11-17)**: no name, note, `photo_url` or token in logs/analytics —
   `LoggingInterceptor` never logs `/v1/memorials*` (A1). `android:allowBackup="false"`, and the memorial
   and WorkManager databases are excluded from both cloud backup and device transfer (A2). WorkManager input

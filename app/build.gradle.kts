@@ -87,10 +87,12 @@ androidComponents {
             "BASE_URL",
             BuildConfigField("String", "\"$url\"", "Backend REST base URL"),
         )
-        // Kept off in this commit; the photo routes are switched on for dev/staging in the next one.
+        // The photo routes are live on dev/staging; prod keeps the UI off until it is deployed there.
+        // Route ảnh đã chạy trên dev/staging; prod vẫn tắt UI tới khi deploy.
+        val photoEnabled = variant.flavorName != "prod"
         variant.buildConfigFields?.put(
             "MEMORIAL_PHOTO_ENABLED",
-            BuildConfigField("boolean", "false", "Memorial photo routes live"),
+            BuildConfigField("boolean", photoEnabled.toString(), "Memorial photo routes live"),
         )
     }
 }
