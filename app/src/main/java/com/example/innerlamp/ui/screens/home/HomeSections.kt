@@ -155,8 +155,13 @@ private fun serif(
 
 /** Vùng chạm không có ripple (prototype chỉ đổi nền/scale nhẹ, không ripple). */
 @Composable
-internal fun Modifier.tappable(onClickLabel: String? = null, onClick: () -> Unit): Modifier =
+internal fun Modifier.tappable(
+    enabled: Boolean = true,
+    onClickLabel: String? = null,
+    onClick: () -> Unit,
+): Modifier =
     clickable(
+        enabled = enabled,
         interactionSource = remember { MutableInteractionSource() },
         indication = null,
         onClickLabel = onClickLabel,

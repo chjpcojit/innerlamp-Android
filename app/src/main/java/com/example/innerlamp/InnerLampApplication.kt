@@ -6,6 +6,7 @@ import com.example.innerlamp.core.database.InnerLampDatabase
 import com.example.innerlamp.di.AuthModule
 import com.example.innerlamp.di.CalendarModule
 import com.example.innerlamp.di.DatabaseModule
+import com.example.innerlamp.di.MemorialModule
 import com.example.innerlamp.domain.repository.CalendarEventRepository
 import com.example.innerlamp.domain.repository.CalendarImageRepository
 import kotlinx.coroutines.CoroutineScope
@@ -32,7 +33,9 @@ class InnerLampApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        AuthModule.init(this)
+        // The memorial cleaner cancels its reminders and drops its read copy on sign-out.
+        // Cleaner của sổ giỗ huỷ nhắc và xoá bản đọc khi đăng xuất.
+        AuthModule.init(this, cleaners = listOf(MemorialModule.provideAccountCleaner(this)))
         Log.i(TAG, "Local DB: Room ${InnerLampDatabase.NAME} v${InnerLampDatabase.VERSION}")
         // Seed quote Pháp Cú ở background; lỗi được log, lần đọc sau sẽ seed lại nếu DB rỗng.
         // Nạp token đã lưu vào cache để request đầu tiên đã có Bearer. / Load stored tokens into the cache.

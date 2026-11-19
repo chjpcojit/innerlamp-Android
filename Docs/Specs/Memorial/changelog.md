@@ -3,6 +3,80 @@
 Tracks version history for `requirements.md`, `design.md`, and `tasks.md` in this folder. All three
 files share one changelog since they change together as one spec unit. Newest version first.
 
+## v3.5 (2026-11-17)
+
+- `tasks.md` audit: 47/53 ticked; the 6 open items (full unit-test run, photo E2E, G1 re-sign + device
+  logcat, TC-AND-RMD-03 re-run, Q-2, unit-test gate) each keep `[NOT RUN]`/`[DEFERRED]` and a reason.
+  No item changed state.
+- Added the tick rule to `tasks.md`: tick an item in the same change that lands its code and gate
+  evidence; finished work is never left open.
+- Corrected the lint gate evidence: 4 known errors (Onboarding/Splash, TD-MEM-CLIENT-07) + 33 warnings,
+  not "8 known warnings".
+
+## v3.4 (2026-11-17)
+
+- `requirements.md` MEM-RMD-02 re-stated to BR-MEM-13: a passed moment is caught up immediately while the
+  giỗ day is still current (including a lead-day moment that fell the previous day), the period is skipped
+  after the day ends, and delivery is once per `entryId + kỳ giỗ`. Added the T1–T6 vectors. The old wording
+  ("a passed moment schedules the next anniversary") contradicted the agreed rule.
+- `design.md` reminder section and `tasks.md` A8 aligned. No code change in this revision.
+
+## v3.3 (2026-11-17)
+
+- P7 QA rework: the dev flavor points at the real dev API `https://innerlamp-app-3f53tei42a-as.a.run.app/`
+  (staging/prod untouched); a 401 on save/delete no longer clears the form — the draft stays with
+  "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại." and an explicit "Đăng nhập lại" action, and nothing is
+  cleared until the user taps it or signs out for real.
+- `MemorialCacheDao.getById(ownerId, id)` is account-scoped; the reminder worker resolves the owner from the
+  session, so two accounts with the same server id can never cross (`MemorialCacheDaoTest`, instrumented).
+- Deferred, recorded: picking a photo while creating a new entry (flag off, Q-2).
+- Reason: QA could not run any dev case against the unresolvable `dev-api.innerlamp.vn`, a 401 wiped typed
+  data, and Hộ Pháp flagged the owner-less DAO lookup (Low).
+
+## v3.2 (2026-11-17)
+
+- Photo pipeline fixed for P6: `MemorialPhotoNormalizer` sniffs the real format from magic bytes, converts
+  HEIC/HEIF (and AVIF) to JPEG with the EXIF orientation applied, caps the long side at 2048 px (JPEG q85)
+  and checks 5 MiB on the bytes actually sent. JPEG/PNG/WebP inside the cap keep their format and bytes.
+- `MemorialRepository.uploadPhoto` now takes the bytes plus the MIME type and filename that match them; the
+  `image/jpeg` / `photo.jpg` hardcode is gone. The multipart part name stays `photo`.
+- Raw picker stream capped at 32 MiB; undecodable input is `Validation("photo")`, never a network call.
+- Tests: `PhotoEncodingTest` (sniffing JPEG/PNG/WebP/HEIC/garbage, 4000 → 2048, MIME pairing, filenames).
+- Reason: the Android P1 review found HEIC images rejected with 415 and every upload labelled
+  `image/jpeg` / `photo.jpg` regardless of the real bytes.
+
+## v3.1 (2026-11-17)
+
+- Security rework for the G1 review (Hộ Pháp): A1 `LoggingInterceptor` no-log list now covers
+  `/v1/memorials*`; A2 `allowBackup=false` plus memorial/WorkManager database exclusions in both backup
+  rule files; A3 WorkManager input reduced to `entry_id`/`days_before`/`time`/`anniversary_key` with the
+  worker reading the device copy; A4 `INTERNET` declared; A5 `VISIBILITY_PRIVATE`; A6 immutable
+  PendingIntent + validated positive id; A0 `impact.md` §6 corrected (two false claims removed, A1–A3
+  added to the review focus and stop conditions).
+- Tests added: `LoggingInterceptorTest`, `MemorialReminderPayloadTest`, `MemorialDeepLinkTest`,
+  `MemorialSecurityConfigTest`.
+- Reason: the Android client was blocked at G1 because §6 claimed no memorial body logging and backup
+  exclusions that the code did not have.
+
+## v3.0 (2026-11-16)
+
+- Spec rewritten in English for the v1.5/v1.6 workflow and moved to the client contract v1 pinned at
+  `Docs/Specs/Memorial/client-contract.md` (2026-11-16, openapi working tree 3.1.0).
+- `requirements.md`: behaviour traced by the new `MEM-API-*`, `MEM-IMG-*`, `MEM-RMD-*`, `MEM-AND-01` AC IDs
+  (legacy 1–39 kept as history). Local reminders (D1) recorded as a time-boxed deviation; photo UI behind
+  `BuildConfig.MEMORIAL_PHOTO_ENABLED=false` (D4); server-first with a read-only, account-scoped Room copy
+  (D5); minimal reminder payload (D3); no `photo_url` persistence (D8); no PII in logs or backup (D9).
+- `design.md`: architecture, load state machine, device copy, reminder planner/scheduler/worker and deep
+  link, photo flag, DI/navigation, error mapping, testing.
+- `tasks.md`: A1–A9 with the files delivered on `feat/memorial-integration`, plus the gates and follow-ups.
+- `docs/spec.config.yaml` added at the repository root (`spec_root: Docs/Specs`, PascalCase, Android
+  profile, A/B/C/E/security/pre_push). Deviation from the generic §0.1 template: the repo's existing spec
+  tree is `Docs/Specs/<Feature>` with PascalCase folders, so `spec_root` follows the repo instead of
+  `docs/specs/features`.
+- Tech debt `TD-MEM-CLIENT-01…05` recorded in `Docs/Tech-Debt/Memorial/`.
+- Reasons: BE CRUD is deployed (5 routes) while photo routes and server reminders are not; the Tech Lead
+  froze the client contract on 2026-11-16 and asked all three clients to integrate.
+
 ## v2.1 (2026-10-14)
 
 - Bước 4 của đợt viết lại tài liệu: xoá `Docs/gio_assumptions.md` (product spec v2.1 đã thay thế); hai ghi chú build chuyển sang `AGENTS.md` và `CLAUDE.md`. `tasks.md` Phase 6: tick mục này.

@@ -4,4 +4,12 @@
 -->
 <full-backup-content>
     <exclude domain="sharedpref" path="innerlamp_secure.xml" />
+    <!-- Personal names and notes of the memorial book stay on the device (NFR-MEM-02). -->
+    <exclude domain="database" path="innerlamp_memorial.db" />
+    <exclude domain="database" path="innerlamp_memorial.db-wal" />
+    <exclude domain="database" path="innerlamp_memorial.db-shm" />
+    <!-- WorkManager's database holds reminder keys and time; keep it off backup too (A2). -->
+    <exclude domain="database" path="androidx.work.workdb" />
+    <exclude domain="database" path="androidx.work.workdb-wal" />
+    <exclude domain="database" path="androidx.work.workdb-shm" />
 </full-backup-content>

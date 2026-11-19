@@ -271,12 +271,14 @@ object SutraListRoute : IlDestination
 
 /**
  * Sổ giỗ chạp — danh sách ngày giỗ người thân, kỳ giỗ gần nhất nổi bật. Vào từ Trang chủ
- * (liên kết "Sổ giỗ" trên dải tuần). Dùng transition mặc định (crossfade).
+ * (liên kết "Sổ giỗ" trên dải tuần) và từ một nhắc giỗ.
+ *
+ * @property openId id mục cần mở khi vào từ nhắc; `null` = mở danh sách.
  *
  * `GioViewModel` được gắn vào back stack entry của route này và dùng chung với [GioEditRoute].
  */
 @Serializable
-object GioRoute : IlDestination
+data class GioRoute(val openId: Long? = null) : IlDestination
 
 /**
  * Thêm/sửa ngày giỗ — form của một người thân. Chỉ mở từ [GioRoute] (màn đó đã nạp bản nháp

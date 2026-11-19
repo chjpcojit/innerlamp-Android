@@ -1,0 +1,121 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "ba05ebd6896c7075dabaf9fda8a40f6e",
+    "entities": [
+      {
+        "tableName": "memorial_cache",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`ownerId` INTEGER NOT NULL, `id` INTEGER NOT NULL, `name` TEXT NOT NULL, `relation_code` TEXT NOT NULL, `calendar_code` TEXT NOT NULL, `day` INTEGER NOT NULL, `month` INTEGER NOT NULL, `death_year` INTEGER, `leap_month` INTEGER NOT NULL, `note` TEXT NOT NULL, `remind` INTEGER NOT NULL, `lead_days` INTEGER NOT NULL, `remind_time` TEXT NOT NULL, PRIMARY KEY(`ownerId`, `id`))",
+        "fields": [
+          {
+            "fieldPath": "ownerId",
+            "columnName": "ownerId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "relationCode",
+            "columnName": "relation_code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "calendarCode",
+            "columnName": "calendar_code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "day",
+            "columnName": "day",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "month",
+            "columnName": "month",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deathYear",
+            "columnName": "death_year",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "leapMonth",
+            "columnName": "leap_month",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "remind",
+            "columnName": "remind",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "leadDays",
+            "columnName": "lead_days",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "remindTime",
+            "columnName": "remind_time",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "ownerId",
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "memorial_reminder_delivery",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`delivery_key` TEXT NOT NULL, PRIMARY KEY(`delivery_key`))",
+        "fields": [
+          {
+            "fieldPath": "key",
+            "columnName": "delivery_key",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "delivery_key"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ba05ebd6896c7075dabaf9fda8a40f6e')"
+    ]
+  }
+}

@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -37,14 +39,18 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.AsyncImage
 import com.example.innerlamp.domain.calendar.MemorialSchedule
 import com.example.innerlamp.domain.model.MemorialCalendarType
 import com.example.innerlamp.domain.model.MemorialEntry
 import com.example.innerlamp.domain.model.MemorialRelation
 import com.example.innerlamp.ui.components.IlAvatar
 import com.example.innerlamp.ui.components.IlButton
+import com.example.innerlamp.ui.components.IlButtonVariant
 import com.example.innerlamp.ui.components.IlNavBar
 import com.example.innerlamp.ui.screens.home.tappable
 import com.example.innerlamp.ui.theme.BeVietnamPro
@@ -64,38 +70,56 @@ import java.time.LocalTime
 private const val FlashDurationMillis = 3600L
 private val Gutter = 20.dp
 
-// Ô "譜" (phổ) của hàng "Lấy từ gia phả": đỏ son + chữ giấy — lấy từ prototype.
-private val GiaPhaTileBg = Color(0xFF9E3B2C)
-private val GiaPhaTileFg = Color(0xFFF4EBD6)
-
 /**
  * Các điểm điều hướng đi ra khỏi màn "Sổ giỗ chạp". Màn không giữ `NavController`:
- * mọi điều hướng đi qua callback; route chưa có thì để mặc định no-op.
+ * mọi điều hướng đi qua callback.
  *
- * @property onEdit mở form Thêm/sửa — màn đã gọi `startNew()`/`startEdit()` trước đó.
- * @property onGiaPha mở Gia phả để chọn người đã khuất (chưa có màn Gia phả).
+ * @property onEdit mở form Thêm/sửa — ViewModel đã có bản nháp trước đó.
+ * @property onLogin mở màn đăng nhập khi sổ thuộc tài khoản mà máy chưa có phiên.
  */
 @Immutable
 class GioCallbacks(
     val onBack: () -> Unit = {},
     val onEdit: () -> Unit = {},
-    val onGiaPha: () -> Unit = {},
+    val onLogin: () -> Unit = {},
 )
 
 /**
  * Màn "Sổ giỗ chạp" — dựng lại từ prototype `Docs/innerlamp-project/` (màn `gio`, `gioEmpty`).
  *
- * Bố cục: header → (thông báo xanh) → thẻ nổi bật kỳ giỗ gần nhất → danh sách "Theo ngày
- * giỗ sắp tới"; sổ trống thì hiện minh họa + 3 lợi ích + hàng "Lấy từ gia phả". Nút
- * "Thêm người thân" dính đáy.
+ * Bố cục: header → (banner offline/lỗi) → (thông báo xanh) → thẻ nổi bật kỳ giỗ gần nhất → danh sách
+ * "Theo ngày giỗ sắp tới". Sổ trống thì hiện minh họa + 3 lợi ích; chưa đăng nhập thì mời đăng nhập.
+ * Nút "Thêm người thân" dính đáy.
  */
 @Composable
 fun GioScreen(
     viewModel: GioViewModel,
     modifier: Modifier = Modifier,
+    openId: Long? = null,
     callbacks: GioCallbacks = GioCallbacks(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Recompute the list for a new day and re-place reminders after a time-zone change.
+    // Tính lại danh sách khi sang ngày mới và đặt lại nhắc khi đổi múi giờ.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.onForeground()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    LaunchedEffect(openId) {
+        if (openId != null) viewModel.openFromReminder(openId)
+    }
+
+    // The draft is the single signal that the editor must open (add, edit or a reminder).
+    // Bản nháp là tín hiệu duy nhất để mở form (thêm, sửa hoặc từ nhắc).
+    LaunchedEffect(state.draft != null) {
+        if (state.draft != null) callbacks.onEdit()
+    }
 
     LaunchedEffect(state.flash) {
         if (state.flash.isNotEmpty()) {
@@ -107,14 +131,9 @@ fun GioScreen(
     GioContent(
         state = state,
         callbacks = callbacks,
-        onAdd = {
-            viewModel.startNew()
-            callbacks.onEdit()
-        },
-        onOpen = { id ->
-            viewModel.startEdit(id)
-            callbacks.onEdit()
-        },
+        onAdd = viewModel::startNew,
+        onOpen = viewModel::startEdit,
+        onRetry = viewModel::refresh,
         modifier = modifier,
     )
 }
@@ -125,7 +144,8 @@ internal fun GioContent(
     state: GioUiState,
     callbacks: GioCallbacks,
     onAdd: () -> Unit,
-    onOpen: (String) -> Unit,
+    onOpen: (Long) -> Unit,
+    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = LocalIlColors.current
@@ -142,40 +162,69 @@ internal fun GioContent(
                 .verticalScroll(rememberScrollState())
                 .padding(start = Gutter, end = Gutter, bottom = 20.dp),
         ) {
+            if (state.banner.isNotEmpty()) {
+                InfoBanner(state.banner, Modifier.padding(top = 14.dp))
+            }
             if (state.flash.isNotEmpty()) {
                 FlashBanner(state.flash, Modifier.padding(top = 14.dp))
             }
-            val next = state.nextUp
-            if (next == null) {
-                EmptyBook(onGiaPha = callbacks.onGiaPha)
-            } else {
-                FeaturedCard(item = next, onClick = { onOpen(next.entry.id) }, modifier = Modifier.padding(top = 18.dp))
-                Text(
-                    text = "THEO NGÀY GIỖ SẮP TỚI",
-                    modifier = Modifier.padding(start = 4.dp, top = 24.dp, bottom = 10.dp),
-                    style = sans(10f, colors.ink.copy(alpha = 0.42f), FontWeight.SemiBold, letterSpacing = 1.4.sp),
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    state.items.forEach { item ->
-                        MemorialRow(item = item, onClick = { onOpen(item.entry.id) })
+            when {
+                state.status == GioStatus.Loading && state.items.isEmpty() -> LoadingState()
+                state.status == GioStatus.Guest -> GuestState(onLogin = callbacks.onLogin)
+                state.status == GioStatus.Failed -> FailedState(onRetry = onRetry)
+                state.showEmpty -> EmptyBook()
+                else -> {
+                    val next = state.nextUp
+                    if (next != null) {
+                        FeaturedCard(item = next, onClick = { onOpen(next.entry.id) }, modifier = Modifier.padding(top = 18.dp))
+                        Text(
+                            text = "THEO NGÀY GIỖ SẮP TỚI",
+                            modifier = Modifier.padding(start = 4.dp, top = 24.dp, bottom = 10.dp),
+                            style = sans(10f, colors.ink.copy(alpha = 0.42f), FontWeight.SemiBold, letterSpacing = 1.4.sp),
+                        )
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            state.items.forEach { item ->
+                                MemorialRow(item = item, onClick = { onOpen(item.entry.id) })
+                            }
+                        }
                     }
                 }
             }
         }
 
-        Box(
-            Modifier
-                .fillMaxWidth()
-                .background(colors.canvas)
-                .navigationBarsPadding(),
-        ) {
-            Box(Modifier.fillMaxWidth().height(1.dp).background(colors.ink.copy(alpha = 0.06f)))
-            IlButton(
-                label = "Thêm người thân",
-                onClick = onAdd,
-                modifier = Modifier.padding(start = Gutter, end = Gutter, top = 12.dp, bottom = 16.dp),
-            )
+        if (state.status != GioStatus.Guest && state.status != GioStatus.Loading) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .background(colors.canvas)
+                    .navigationBarsPadding(),
+            ) {
+                Box(Modifier.fillMaxWidth().height(1.dp).background(colors.ink.copy(alpha = 0.06f)))
+                IlButton(
+                    label = "Thêm người thân",
+                    onClick = onAdd,
+                    modifier = Modifier.padding(start = Gutter, end = Gutter, top = 12.dp, bottom = 16.dp),
+                )
+            }
         }
+    }
+}
+
+/** Câu báo bản offline hoặc lỗi tải: nền vàng nhạt, không phải lỗi form. */
+@Composable
+private fun InfoBanner(message: String, modifier: Modifier = Modifier) {
+    val colors = LocalIlColors.current
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(IlGold.copy(alpha = 0.12f))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text("•", style = sans(14f, IlGold, FontWeight.Bold))
+        Text(message, modifier = Modifier.weight(1f), style = sans(12.5f, colors.ink, lineHeight = 19.sp))
     }
 }
 
@@ -196,6 +245,60 @@ private fun FlashBanner(message: String, modifier: Modifier = Modifier) {
             Text("✓", style = sans(10f, Color.White, FontWeight.SemiBold))
         }
         Text(message, modifier = Modifier.weight(1f), style = sans(12.5f, colors.ink, lineHeight = 19.sp))
+    }
+}
+
+@Composable
+private fun LoadingState() {
+    val colors = LocalIlColors.current
+    Box(Modifier.fillMaxWidth().padding(top = 80.dp), contentAlignment = Alignment.Center) {
+        Text("Đang tải sổ giỗ…", style = sans(13f, colors.ink.copy(alpha = 0.5f)))
+    }
+}
+
+/** Chưa đăng nhập: không gọi API, không hiện bản trên máy (AC2). / Guest state. */
+@Composable
+private fun GuestState(onLogin: () -> Unit) {
+    val colors = LocalIlColors.current
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = 44.dp, start = 8.dp, end = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        LampIllustration()
+        Text(
+            text = "Đăng nhập để mở sổ giỗ",
+            modifier = Modifier.padding(top = 18.dp),
+            style = TextStyle(fontFamily = Lora, fontSize = 24.sp, lineHeight = 31.sp, color = colors.ink),
+        )
+        Text(
+            text = "Sổ giỗ thuộc tài khoản của bạn nên cần đăng nhập để xem và sửa.",
+            modifier = Modifier.padding(top = 8.dp).widthIn(max = 300.dp),
+            textAlign = TextAlign.Center,
+            style = sans(13f, colors.ink.copy(alpha = 0.52f), lineHeight = 21.sp),
+        )
+        IlButton(
+            label = "Đăng nhập",
+            onClick = onLogin,
+            modifier = Modifier.padding(top = 24.dp).widthIn(max = 280.dp),
+        )
+    }
+}
+
+/** Tải lỗi và không có bản trên máy: câu báo + thử lại (AC33). / Load failed without a device copy. */
+@Composable
+private fun FailedState(onRetry: () -> Unit) {
+    val colors = LocalIlColors.current
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(top = 64.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text("Không tải được sổ giỗ", style = TextStyle(fontFamily = Lora, fontSize = 22.sp, color = colors.ink))
+        IlButton(
+            label = "Thử lại",
+            variant = IlButtonVariant.Ghost,
+            onClick = onRetry,
+            modifier = Modifier.padding(top = 18.dp).widthIn(max = 220.dp),
+        )
     }
 }
 
@@ -223,7 +326,7 @@ private fun FeaturedCard(item: GioItem, onClick: () -> Unit, modifier: Modifier 
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            IlAvatar(initials = initialsOf(entry.name), size = 64.dp)
+            MemorialAvatar(entry = entry, size = 64.dp)
             Column(Modifier.weight(1f)) {
                 Text(
                     text = entry.name,
@@ -273,7 +376,7 @@ private fun MemorialRow(item: GioItem, onClick: () -> Unit, modifier: Modifier =
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        IlAvatar(initials = initialsOf(entry.name), size = 46.dp)
+        MemorialAvatar(entry = entry, size = 46.dp)
         Column(Modifier.weight(1f)) {
             Text(entry.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = sans(14f, colors.ink, FontWeight.Medium))
             Text(
@@ -296,9 +399,25 @@ private fun MemorialRow(item: GioItem, onClick: () -> Unit, modifier: Modifier =
     }
 }
 
-/** Trạng thái sổ trống: ngọn đèn, tiêu đề, 3 lợi ích và lối tắt "Lấy từ gia phả". */
+/** Ảnh chân dung khi có (chỉ trong bộ nhớ, URL 15 phút); không có thì chữ viết tắt (AC38). */
 @Composable
-private fun EmptyBook(onGiaPha: () -> Unit) {
+private fun MemorialAvatar(entry: MemorialEntry, size: androidx.compose.ui.unit.Dp) {
+    val url = entry.photoUrl
+    if (url.isNullOrBlank()) {
+        IlAvatar(initials = initialsOf(entry.name), size = size)
+    } else {
+        AsyncImage(
+            model = url,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.size(size).clip(CircleShape),
+        )
+    }
+}
+
+/** Trạng thái sổ trống: ngọn đèn, tiêu đề, 3 lợi ích. Không còn hàng "Lấy từ gia phả" (FR-MEM-002). */
+@Composable
+private fun EmptyBook() {
     val colors = LocalIlColors.current
     Column(
         modifier = Modifier.fillMaxWidth().padding(top = 44.dp, start = 8.dp, end = 8.dp),
@@ -349,40 +468,11 @@ private fun EmptyBook(onGiaPha: () -> Unit) {
             }
         }
     }
-
-    Row(
-        modifier = Modifier
-            .padding(top = 12.dp)
-            .fillMaxWidth()
-            .clip(cardShape)
-            .background(colors.card)
-            .border(1.dp, colors.ink.copy(alpha = 0.08f), cardShape)
-            .tappable(onClick = onGiaPha)
-            .padding(horizontal = 18.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Box(
-            Modifier.size(38.dp).background(GiaPhaTileBg, RoundedCornerShape(10.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text("譜", style = TextStyle(fontSize = 17.sp, fontWeight = FontWeight.SemiBold, color = GiaPhaTileFg))
-        }
-        Column(Modifier.weight(1f)) {
-            Text("Lấy từ gia phả", style = sans(13.5f, colors.ink, FontWeight.Medium))
-            Text(
-                text = "Chọn người đã khuất trong cây gia phả để thêm nhanh",
-                modifier = Modifier.padding(top = 2.dp),
-                style = sans(11.5f, colors.ink.copy(alpha = 0.5f)),
-            )
-        }
-        Text("›", style = sans(18f, colors.ink.copy(alpha = 0.35f)))
-    }
 }
 
 private val EmptyBenefits = listOf(
     "Tự đổi âm sang dương" to "Nhập ngày giỗ theo âm lịch, mỗi năm app tự tính ngày dương tương ứng.",
-    "Nhắc trước để chuẩn bị" to "Chọn nhắc trước 1–7 ngày, kèm giờ nhắc phù hợp với gia đình.",
+    "Nhắc trước để chuẩn bị" to "Chọn nhắc trước 0–7 ngày, kèm giờ nhắc phù hợp với gia đình.",
     "Đếm giỗ đầu, giỗ hết" to "Ghi năm mất để biết đây là giỗ lần thứ mấy.",
 )
 
@@ -463,7 +553,7 @@ internal fun sans(
 private val PreviewToday = LocalDate.of(2026, 10, 9)
 
 private fun previewItem(
-    id: String,
+    id: Long,
     name: String,
     relation: MemorialRelation,
     calendar: MemorialCalendarType,
@@ -472,8 +562,8 @@ private fun previewItem(
     year: Int,
 ): GioItem {
     val entry = MemorialEntry(
-        id, name, relation, calendar, day, month, year, note = "",
-        remind = true, leadDays = 1, remindTime = LocalTime.of(7, 0), syncReminders = false,
+        id = id, name = name, relation = relation, calendar = calendar, day = day, month = month,
+        deathYear = year, note = "", remind = true, leadDays = 1, remindTime = LocalTime.of(7, 0),
     )
     return GioItem(entry, MemorialSchedule.next(entry, PreviewToday))
 }
@@ -484,15 +574,17 @@ private fun GioContentPreview() {
     InnerLampTheme {
         GioContent(
             state = GioUiState(
+                status = GioStatus.Ready,
                 items = listOf(
-                    previewItem("1", "Trần Thị Mai", MemorialRelation.MaternalGrandmother, MemorialCalendarType.Lunar, 23, 8, 2015),
-                    previewItem("2", "Nguyễn Văn Minh", MemorialRelation.Father, MemorialCalendarType.Solar, 14, 12, 2019),
+                    previewItem(1, "Trần Thị Mai", MemorialRelation.MaternalGrandmother, MemorialCalendarType.Lunar, 23, 8, 2015),
+                    previewItem(2, "Nguyễn Văn Minh", MemorialRelation.Father, MemorialCalendarType.Solar, 14, 12, 2019),
                 ).sortedBy { it.occurrence.daysUntil },
                 flash = "Đã lưu vào sổ giỗ.",
             ),
             callbacks = GioCallbacks(),
             onAdd = {},
             onOpen = {},
+            onRetry = {},
         )
     }
 }
@@ -501,6 +593,12 @@ private fun GioContentPreview() {
 @Composable
 private fun GioEmptyPreview() {
     InnerLampTheme {
-        GioContent(state = GioUiState(), callbacks = GioCallbacks(), onAdd = {}, onOpen = {})
+        GioContent(
+            state = GioUiState(status = GioStatus.Ready),
+            callbacks = GioCallbacks(),
+            onAdd = {},
+            onOpen = {},
+            onRetry = {},
+        )
     }
 }
